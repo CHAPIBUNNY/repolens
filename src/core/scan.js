@@ -1,8 +1,13 @@
 import fg from "fast-glob";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { info, warn } from "../utils/logger.js";
 
 const norm = (p) => p.replace(/\\/g, "/");
+
+// Performance guardrails
+const MAX_FILES_WARNING = 10000;
+const MAX_FILES_LIMIT = 50000;
 
 function isNextRoute(file) {
   const f = norm(file);
@@ -109,6 +114,18 @@ export async function scanRepo(cfg) {
     ignore: cfg.scan.ignore,
     onlyFiles: true
   });
+
+  // Performance guardrails
+  if (files.length > MAX_FILES_LIMIT) {
+    throw new Error(
+      `Repository too large: ${files.length} files matched scan patterns. ` +
+      `Maximum supported: ${MAX_FILES_LIMIT}. Consider refining scan.include patterns.`
+    );
+  }
+
+  if (files.length > MAX_FILES_WARNING) {
+    warn(`Large repository detected: ${files.length} files. Scan may take longer than usual.`);
+  }
 
   const moduleCounts = new Map();
 

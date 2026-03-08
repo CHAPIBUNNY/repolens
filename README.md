@@ -2,7 +2,11 @@
 
 > Automated architecture documentation for your repository
 
+**Current Status**: v0.x — Early Access
+
 RepoLens automatically generates and maintains architecture documentation, detecting your system structure, API surfaces, routes, and tracking architectural changes over time.
+
+⚠️ **Early Access Notice**: The CLI commands and configuration format may evolve until v1.0. We will provide migration guides for any breaking changes. v1.0 will guarantee stable CLI behavior and config schema.
 
 ## Quick Start
 
@@ -176,6 +180,8 @@ When you open a PR, RepoLens posts a comment:
 Example `.repolens.yml`:
 
 ```yaml
+configVersion: 1
+
 project:
   name: "my-project"
   docs_title_prefix: "RepoLens"
@@ -203,7 +209,27 @@ outputs:
     - key: "system_overview"
       title: "System Overview"
       description: "High-level snapshot of the repo"
+
+# Optional: Feature flags for experimental features
+features:
+  architecture_diff: true
+  route_map: true
 ```
+
+### Configuration Schema
+
+- **configVersion** (number, optional): Schema version. Current: `1`. Used for future migration support.
+- **project** (required): Project metadata
+  - **name** (string, required): Project name
+  - **docs_title_prefix** (string, optional): Prefix for documentation titles
+- **publishers** (array, required): Output destinations. Supported: `notion`, `markdown`
+- **scan** (required): File scanning configuration
+  - **include** (array, required): Glob patterns for files to scan
+  - **ignore** (array, required): Glob patterns to exclude
+- **module_roots** (array, optional): Root directories for module organization
+- **outputs** (required): Documentation pages to generate
+  - **pages** (array, required): Page definitions with `key`, `title`, `description`
+- **features** (object, optional): Feature flags for experimental capabilities
 
 ## Environment Variables
 
@@ -302,6 +328,25 @@ RepoLens automatically generates a GitHub Actions workflow that:
 Required repository secrets:
 - `NOTION_TOKEN`
 - `NOTION_PARENT_PAGE_ID`
+
+## Roadmap to v1.0
+
+RepoLens is targeting v1.0 with guaranteed stability for:
+
+✅ **Stable CLI Commands** - `init`, `doctor`, `publish` with consistent behavior  
+✅ **Stable Config Schema** - `.repolens.yml` format locked at schema version 1  
+✅ **Stable Publisher Interface** - Consistent output formats  
+✅ **Migration Guides** - Clear upgrade paths for breaking changes  
+
+**Current Progress**: ~92% product-ready
+
+**Remaining for v1.0**:
+- Comprehensive integration testing ✅ (Complete)
+- Schema validation with versioning ✅ (Complete)
+- Performance guardrails ✅ (Complete)
+- Production stability validation (in progress)
+
+See [ROADMAP.md](./ROADMAP.md) for detailed feature planning and timeline.
 
 ## License
 
