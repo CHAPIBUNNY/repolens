@@ -1,0 +1,32 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import { info } from "../utils/logger.js";
+
+function outputDir(cfg) {
+  return path.join(cfg.__repoRoot, ".repolens");
+}
+
+function pageFileName(key) {
+  const mapping = {
+    system_overview: "system_overview.md",
+    module_catalog: "module_catalog.md",
+    api_surface: "api_surface.md",
+    arch_diff: "architecture_diff.md",
+    route_map: "route_map.md",
+    system_map: "system_map.md"
+  };
+
+  return mapping[key] || `${key}.md`;
+}
+
+export async function publishToMarkdown(cfg, renderedPages) {
+  const dir = outputDir(cfg);
+  await fs.mkdir(dir, { recursive: true });
+
+  for (const [key, content] of Object.entries(renderedPages)) {
+    const filePath = path.join(dir, pageFileName(key));
+    await fs.writeFile(filePath, content, "utf8");
+  }
+
+  info(`markdown docs written to ${dir}`);
+}

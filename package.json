@@ -1,0 +1,46 @@
+{
+  "name": "repolens",
+  "version": "0.1.1",
+  "description": "Repo intelligence CLI for architecture docs, route maps, diffs, and publishing",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/cli.js",
+  "bin": {
+    "repolens": "./bin/repolens.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "package.json",
+    "README.md",
+    "CHANGELOG.md",
+    "RELEASE.md"
+  ],
+  "keywords": [
+    "cli",
+    "docs",
+    "architecture",
+    "github",
+    "notion",
+    "markdown",
+    "developer-tools"
+  ],
+  "scripts": {
+    "test:notion": "node notion-test.js",
+    "publish": "node src/cli.js publish --config ../../.repolens.yml",
+    "init:test": "node src/cli.js init --target /tmp/repolens-init-test",
+    "test": "NODE_ENV=test vitest run --no-watch --reporter=verbose",
+    "pack:check": "npm pack",
+    "release:check": "npm test && npm pack",
+    "test:install": "./test-install.sh"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "fast-glob": "^3.3.3",
+    "js-yaml": "^4.1.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.18"
+  }
+}
