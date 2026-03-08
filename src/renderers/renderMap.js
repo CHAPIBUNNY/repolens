@@ -39,15 +39,8 @@ export function renderSystemMap(scan) {
   const modules = (scan.modules || []).slice(0, 50);
   const groups = groupModules(modules);
 
-  const lines = [
-    "# System Map",
-    "",
-    "Generated Mermaid diagram from detected modules.",
-    "",
-    "```mermaid",
-    "flowchart TD"
-  ];
-
+  // Build Mermaid code
+  const mermaidLines = ["flowchart TD"];
   const order = ["app", "components", "lib", "hooks", "store", "other"];
 
   for (const groupName of order) {
@@ -55,21 +48,39 @@ export function renderSystemMap(scan) {
     if (!items.length) continue;
 
     const subgraphId = sanitizeNodeId(groupName);
-    lines.push(`  subgraph ${subgraphId}["${groupName}"]`);
+    mermaidLines.push(`  subgraph ${subgraphId}["${groupName}"]`);
 
     for (const label of items) {
       const id = sanitizeNodeId(label);
-      lines.push(`    ${id}["${label}"]`);
+      mermaidLines.push(`    ${id}["${label}"]`);
     }
 
-    lines.push("  end");
+    mermaidLines.push("  end");
   }
 
-  lines.push("```", "");
+  const mermaidCode = mermaidLines.join("\n");
+
+  // Build markdown output
+  const lines = [
+    "# System Map",
+    "",
+    "Generated Mermaid diagram from detected modules.",
+    "",
+    "```mermaid",
+    mermaidCode,
+    "```",
+    ""
+  ];
 
   if (!modules.length) {
     lines.push("No modules detected.", "");
   }
 
-  return lines.join("\n");
+  const markdown = lines.join("\n");
+  
+  // Return both markdown and raw mermaid for flexible rendering
+  return {
+    markdown,
+    mermaid: modules.length > 0 ? mermaidCode : null
+  };
 }

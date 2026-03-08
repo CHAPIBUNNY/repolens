@@ -306,13 +306,51 @@ function markdownToNotionBlocks(markdown) {
   return blocks;
 }
 
-export async function replacePageContent(pageId, markdown) {
+function generateMermaidImageUrl(mermaidCode) {
+  // Use mermaid.ink service to render Mermaid diagrams as images
+  // Base64 encode the Mermaid code (URL-safe)
+  const base64 = Buffer.from(mermaidCode).toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+  
+  return `https://mermaid.ink/img/${base64}`;
+}
+
+export async function replacePageContent(pageId, markdown, mermaid = null, diagramUrl = null) {
   // Ensure page is unarchived before editing
   await unarchivePage(pageId);
   
   await clearPage(pageId);
 
   const children = markdownToNotionBlocks(markdown);
+
+  // If there's a Mermaid diagram, add it as an image after the markdown content
+  if (mermaid) {
+    // Use provided diagramUrl (GitHub raw URL), or fallback to mermaid.ink
+    const imageUrl = diagramUrl || generateMermaidImageUrl(mermaid);
+    
+    children.push({
+      object: "block",
+      type: "image",
+      image: {
+        type: "external",
+        external: {
+          url: imageUrl
+        },
+        caption: [
+          {
+            type: "text",
+            text: {
+              content: diagramUrl 
+                ? "System architecture diagram (rendered SVG from repository)"
+                : "System architecture diagram (auto-generated via mermaid.ink)"
+            }
+          }
+        ]
+      }
+    });
+  }
 
   if (!children.length) return;
 

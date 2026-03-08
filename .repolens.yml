@@ -4,6 +4,11 @@ project:
   name: "RepoLens"
   docs_title_prefix: "RepoLens"
 
+# GitHub repository info (for SVG diagram hosting)
+github:
+  owner: "CHAPIBUNNY"
+  repo: "repolens"
+
 publishers:
   - markdown
   - notion

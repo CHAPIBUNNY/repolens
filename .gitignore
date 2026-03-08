@@ -1,5 +1,7 @@
 node_modules/
-.repolens/
+.repolens/*.md
+.repolens/.temp-*
+!.repolens/diagrams/
 *.tgz
 .env
 .DS_Store
