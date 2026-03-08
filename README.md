@@ -1,72 +1,91 @@
 # RepoLens
 
-Repo intelligence CLI for architecture docs, route maps, diffs, and publishing.
+> Automated architecture documentation for your repository
 
-**Autonomous Operation**: RepoLens runs automatically on every push via GitHub Actions and can be triggered locally with `npm run repolens`.
+RepoLens automatically generates and maintains architecture documentation, detecting your system structure, API surfaces, routes, and tracking architectural changes over time.
+
+## Quick Start
+
+```bash
+# Install from GitHub
+npm install github:CHAPIBUNNY/repolens
+
+# Initialize in your repo
+npx repolens init
+
+# Publish documentation
+npx repolens publish
+```
+
+## What RepoLens Does
+
+RepoLens scans your repository and generates comprehensive documentation:
+
+- **System Overview** - High-level snapshot of your architecture
+- **Module Catalog** - Complete inventory of all modules and their relationships
+- **API Surface** - Detected REST endpoints, GraphQL schemas, RPC definitions
+- **Route Map** - Frontend routes with component associations
+- **System Map** - Visual Mermaid diagram of module dependencies
+- **Architecture Diff** - Track architectural changes in pull requests
 
 ## Features
 
-- **`init`** - Scaffold RepoLens configuration and GitHub Actions workflow
-- **`doctor`** - Validate repository RepoLens setup
-- **`publish`** - Scan repository, render documentation, and publish to configured outputs
-- **Config auto-discovery** - Automatically finds `.repolens.yml` in current or parent directories
-- **`version`** - Print current RepoLens version
-- **`help`** - Display usage information
+✅ **Autonomous Operation** - Runs automatically via GitHub Actions  
+✅ **Config Auto-Discovery** - Finds `.repolens.yml` automatically  
+✅ **Multiple Publishers** - Outputs to Notion, Markdown, or both  
+✅ **PR Comments** - Posts architecture diffs to pull requests  
+✅ **Zero Configuration Start** - Sensible defaults for common frameworks  
 
-### Publishers
+## Installation
 
-- **Notion** - Publish documentation pages to Notion workspace
-- **Markdown** - Generate local markdown files in `.repolens/` directory
-
-### Generated Outputs
-
-RepoLens can generate and maintain:
-- System Overview
-- Module Catalog
-- API Surface
-- Architecture Diff
-- Route Map
-- System Map (Mermaid diagram)
-
-## Install
-
-### Local Development
-
-From this repository:
+### Option A: GitHub Install (Recommended)
 
 ```bash
-cd tools/repolens
+npm install github:CHAPIBUNNY/repolens
+```
+
+Then use globally:
+
+```bash
+npx repolens init
+```
+
+### Option B: Local Development
+
+Clone the repository:
+
+```bash
+git clone https://github.com/CHAPIBUNNY/repolens.git
+cd repolens
 npm link
 ```
 
-### Packed Artifact
-
-For testing the packaged version:
+### Option C: GitHub Release Tarball
 
 ```bash
-npm pack
-npm install repolens-0.1.1.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v0.1.1/repolens-0.1.1.tgz
 ```
 
-### Future npm Registry
+### Option D: npm Registry (Coming Soon)
 
-Once published:
+Once published to npm:
 
 ```bash
 npm install -g repolens
+npx repolens init
 ```
 
-## Commands
+## Usage
 
 ### Initialize a Repository
 
-Scaffold RepoLens files in a target repository:
+Set up RepoLens in your project:
 
 ```bash
-repolens init --target /path/to/repo
+repolens init
 ```
 
-Creates:
+This creates:
 - `.repolens.yml` - Configuration file
 - `.github/workflows/repolens.yml` - GitHub Actions workflow
 - `.env.example` - Environment variable template
@@ -108,6 +127,48 @@ npm run repolens
 ```bash
 repolens --version
 repolens --help
+```
+
+## Example Output
+
+After running `repolens publish`, you'll get:
+
+```
+.repolens/
+├── system_overview.md      # High-level architecture snapshot
+├── module_catalog.md       # Complete module inventory
+├── api_surface.md          # REST/GraphQL/RPC endpoints
+├── route_map.md            # Frontend routes and components
+└── system_map.md           # Mermaid dependency diagram
+```
+
+### System Map Example
+
+```mermaid
+graph TD
+    A[src/app] --> B[src/components]
+    A --> C[src/lib]
+    B --> C
+    C --> D[src/utils]
+```
+
+### Architecture Diff Example
+
+When you open a PR, RepoLens posts a comment:
+
+```markdown
+## 📐 Architecture Diff
+
+**Modules Changed**: 3
+**New Endpoints**: 2
+**Routes Modified**: 1
+
+### New API Endpoints
+- POST /api/users/:id/verify
+- GET /api/users/:id/settings
+
+### Modified Routes
+- /dashboard → components/Dashboard.tsx (updated)
 ```
 
 ## Configuration
@@ -203,18 +264,31 @@ tools/repolens/
 
 ## Release Process
 
-See [RELEASE.md](./RELEASE.md) for detailed release workflow.
+RepoLens uses automated releases via GitHub Actions.
 
-Quick version:
+### Creating a Release
 
 ```bash
-npm test                    # Verify tests pass
-npm version patch           # Bump version
-git commit -am "Release vX.Y.Z"
-git tag vX.Y.Z
-git push origin <branch>
-git push origin vX.Y.Z
+# For patch version (0.1.1 → 0.1.2)
+npm run release:patch
+
+# For minor version (0.1.1 → 0.2.0)
+npm run release:minor
+
+# For major version (0.1.1 → 1.0.0)
+npm run release:major
+
+# Push the tag to trigger release workflow
+git push --follow-tags
 ```
+
+The GitHub Actions workflow will:
+1. Run all tests
+2. Build the package
+3. Create a GitHub release
+4. Attach the tarball artifact
+
+See [RELEASE.md](./RELEASE.md) for detailed release workflow.
 
 ## GitHub Actions Integration
 

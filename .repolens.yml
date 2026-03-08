@@ -1,0 +1,42 @@
+project:
+  name: "RepoLens"
+  docs_title_prefix: "RepoLens"
+
+publishers:
+  - markdown
+
+scan:
+  include:
+    - "src/**/*.js"
+    - "bin/**/*.js"
+    - "tests/**/*.js"
+  ignore:
+    - "node_modules/**"
+    - "dist/**"
+    - ".repolens/**"
+    - "coverage/**"
+
+module_roots:
+  - "src/core"
+  - "src/publishers"
+  - "src/renderers"
+  - "src/delivery"
+  - "src/utils"
+
+outputs:
+  pages:
+    - key: "system_overview"
+      title: "System Overview"
+      description: "High-level architecture snapshot of RepoLens CLI"
+    - key: "module_catalog"
+      title: "Module Catalog"
+      description: "Complete inventory of all RepoLens modules"
+    - key: "api_surface"
+      title: "API Surface"
+      description: "Public CLI interface and commands"
+    - key: "route_map"
+      title: "Command Map"
+      description: "CLI command structure"
+    - key: "system_map"
+      title: "System Map"
+      description: "Visual dependency diagram"

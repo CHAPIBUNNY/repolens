@@ -91,9 +91,9 @@ publish: []
     // Run in temp dir with no config
     const { stderr, error } = await runCli(["publish"], tempDir);
 
-    // Should fail with error (logger suppressed in test mode, so check error object or exit code)
+    // Should fail with error (exit code 2 for validation errors)
     expect(error).toBeDefined();
-    expect(error.code).toBe(1);
+    expect(error.code).toBe(2);
   });
 
   it("prefers --config over auto-discovery", async () => {

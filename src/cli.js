@@ -32,6 +32,12 @@ async function getPackageVersion() {
   return pkg.version || "0.0.0";
 }
 
+async function printBanner() {
+  const version = await getPackageVersion();
+  console.log(`\nRepoLens v${version}`);
+  console.log("─".repeat(40));
+}
+
 function getArg(name) {
   const index = process.argv.indexOf(name);
   return index >= 0 ? process.argv[index + 1] : undefined;
@@ -113,23 +119,68 @@ async function main() {
   }
 
   if (command === "init") {
+    await printBanner();
     const targetDir = getArg("--target") || process.cwd();
-    await runInit(targetDir);
+    info(`Initializing RepoLens in: ${targetDir}`);
+    try {
+      await runInit(targetDir);
+      info("✓ RepoLens initialized successfully");
+    } catch (err) {
+      error("Failed to initialize RepoLens:");
+      error(err.message);
+      process.exit(1);
+    }
     return;
   }
 
   if (command === "doctor") {
+    await printBanner();
     const targetDir = getArg("--target") || process.cwd();
-    await runDoctor(targetDir);
+    info(`Validating RepoLens setup in: ${targetDir}`);
+    try {
+      await runDoctor(targetDir);
+      info("✓ RepoLens validation passed");
+    } catch (err) {
+      error("Validation failed:");
+      error(err.message);
+      process.exit(2);
+    }
     return;
   }
 
   if (command === "publish" || !command || command.startsWith("--")) {
+    await printBanner();
+    
     // Auto-discover config if not provided
-    const configPath = getArg("--config") || await findConfig();
+    let configPath;
+    try {
+      configPath = getArg("--config") || await findConfig();
+      info(`Using config: ${configPath}`);
+    } catch (err) {
+      error(err.message);
+      process.exit(2);
+    }
 
-    const cfg = await loadConfig(configPath);
-    const scan = await scanRepo(cfg);
+    let cfg, scan;
+    try {
+      info("Loading configuration...");
+      cfg = await loadConfig(configPath);
+    } catch (err) {
+      error("Failed to load configuration:");
+      error(err.message);
+      process.exit(2);
+    }
+
+    try {
+      info("Scanning repository...");
+      scan = await scanRepo(cfg);
+      info(`Detected ${scan.modules?.length || 0} modules`);
+    } catch (err) {
+      error("Failed to scan repository:");
+      error(err.message);
+      process.exit(1);
+    }
+
     const rawDiff = getGitDiff("origin/main");
     const diffData = buildArchitectureDiffData(rawDiff);
 
@@ -142,10 +193,17 @@ async function main() {
       system_map: renderSystemMap(scan)
     };
 
-    await publishDocs(cfg, renderedPages);
-    await upsertPrComment(diffData);
+    try {
+      info("Publishing documentation...");
+      await publishDocs(cfg, renderedPages);
+      await upsertPrComment(diffData);
+      info("✓ Documentation published successfully");
+    } catch (err) {
+      error("Failed to publish documentation:");
+      error(err.message);
+      process.exit(1);
+    }
 
-    info("documentation published to Notion successfully.");
     return;
   }
 
@@ -155,7 +213,26 @@ async function main() {
 }
 
 main().catch((err) => {
-  error("RepoLens failed:");
-  error(err);
+  console.error("\n❌ RepoLens encountered an unexpected error:\n");
+  
+  if (err.code === "ENOENT") {
+    error(`File not found: ${err.path}`);
+    error("Check that all required files exist and paths are correct.");
+  } else if (err.code === "EACCES") {
+    error(`Permission denied: ${err.path}`);
+    error("Check file permissions and try again.");
+  } else if (err.message) {
+    error(err.message);
+  } else {
+    error(err);
+  }
+  
+  if (process.env.VERBOSE || process.argv.includes("--verbose")) {
+    console.error("\nStack trace:");
+    console.error(err.stack);
+  } else {
+    console.error("\nRun with --verbose for full error details.");
+  }
+  
   process.exit(1);
 });

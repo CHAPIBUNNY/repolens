@@ -32,7 +32,10 @@
     "test": "NODE_ENV=test vitest run --no-watch --reporter=verbose",
     "pack:check": "npm pack",
     "release:check": "npm test && npm pack",
-    "test:install": "./test-install.sh"
+    "test:install": "./test-install.sh",
+    "release:patch": "npm version patch",
+    "release:minor": "npm version minor",
+    "release:major": "npm version major"
   },
   "dependencies": {
     "dotenv": "^17.3.1",

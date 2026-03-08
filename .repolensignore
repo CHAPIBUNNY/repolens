@@ -1,0 +1,59 @@
+# RepoLens Ignore Patterns
+# Files and directories to exclude from scanning
+
+# Dependencies
+node_modules/
+vendor/
+packages/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+.vercel/
+.netlify/
+
+# Test coverage
+coverage/
+.nyc_output/
+__coverage__/
+
+# Test files (optional - uncomment if you want to exclude)
+# *.test.*
+# *.spec.*
+# __tests__/
+# __mocks__/
+
+# Generated files
+*.min.js
+*.min.css
+*.bundle.js
+*.chunk.js
+
+# Static assets
+public/
+static/
+assets/images/
+assets/fonts/
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# Documentation outputs
+.repolens/
+docs/generated/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
