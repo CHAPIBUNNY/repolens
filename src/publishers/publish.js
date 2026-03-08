@@ -1,28 +1,47 @@
 import { ensurePage, replacePageContent } from "./notion.js";
 import { getCurrentBranch, getBranchQualifiedTitle } from "../utils/branch.js";
 import { renderMermaidToSvg, getGitHubRawUrl } from "../utils/mermaid.js";
+import fetch from "node-fetch";
 import path from "node:path";
+import { log } from "../utils/logger.js";
 
 async function prepareDiagramUrl(content, cfg, pageKey) {
   // If content has mermaid code, generate SVG and get URL
   if (typeof content === 'object' && content.mermaid) {
     const outputPath = path.join(cfg.__repoRoot, ".repolens", "diagrams", `${pageKey}.svg`);
-    await renderMermaidToSvg(content.mermaid, outputPath);
+    const svgPath = await renderMermaidToSvg(content.mermaid, outputPath);
+    
+    if (!svgPath) {
+      // Mermaid CLI not available, will use mermaid.ink fallback
+      return null;
+    }
     
     // Try to construct GitHub URL if we can detect repo info
-    // This allows Notion to display the committed SVG
     const repoPath = `.repolens/diagrams/${pageKey}.svg`;
-    
-    // Try to get repo info from environment or config
     const owner = process.env.GITHUB_REPOSITORY_OWNER || cfg.github?.owner;
     const repo = process.env.GITHUB_REPOSITORY?.split('/')[1] || cfg.github?.repo;
     const branch = getCurrentBranch();
     
     if (owner && repo) {
-      return getGitHubRawUrl(repoPath, owner, repo, branch);
+      const githubUrl = getGitHubRawUrl(repoPath, owner, repo, branch);
+      
+      // Check if the URL is accessible (file might not be committed yet)
+      try {
+        const response = await fetch(githubUrl, { method: 'HEAD', timeout: 3000 });
+        if (response.ok) {
+          log(`Using GitHub-hosted SVG: ${githubUrl}`);
+          return githubUrl;
+        } else {
+          log(`GitHub URL not yet accessible (${response.status}), using mermaid.ink fallback`);
+          return null; // Fall back to mermaid.ink
+        }
+      } catch (error) {
+        log(`GitHub URL check failed: ${error.message}, using mermaid.ink fallback`);
+        return null; // Fall back to mermaid.ink
+      }
     }
     
-    // Fallback to mermaid.ink if we can't construct GitHub URL
+    // No GitHub info, use fallback
     return null;
   }
   
