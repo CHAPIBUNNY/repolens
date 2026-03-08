@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { info } from "./utils/logger.js";
+import { createInterface } from "node:readline/promises";
+import { info, warn } from "./utils/logger.js";
 
 const DETECTABLE_ROOTS = [
   "app",
@@ -290,23 +291,107 @@ function detectProjectName(repoRoot) {
   return path.basename(repoRoot) || "my-project";
 }
 
+async function promptNotionCredentials() {
+  // Skip prompts in CI environments or non-interactive terminals
+  if (!process.stdin.isTTY || process.env.CI) {
+    return null;
+  }
+
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  try {
+    info("\n📝 Notion Setup (optional)");
+    const useNotion = await rl.question("Would you like to publish to Notion? (Y/n): ");
+
+    if (useNotion.toLowerCase() === 'n') {
+      info("Skipping Notion setup. You can configure it later via environment variables.");
+      return null;
+    }
+
+    info("\nTo find your Notion Parent Page ID:");
+    info("  1. Open the Notion page where you want docs published");
+    info("  2. Copy the page URL (looks like: notion.so/workspace/abc123...)");
+    info("  3. The page ID is the 32-character code at the end\n");
+
+    const parentPageId = await rl.question("NOTION_PARENT_PAGE_ID: ");
+
+    if (!parentPageId || parentPageId.trim() === '') {
+      warn("No parent page ID provided. Skipping Notion configuration.");
+      return null;
+    }
+
+    info("\nTo get your Notion Integration Token:");
+    info("  1. Go to https://www.notion.so/my-integrations");
+    info("  2. Create a new integration or use an existing one");
+    info("  3. Copy the 'Internal Integration Token'");
+    info("  4. Share the parent page with your integration\n");
+
+    const token = await rl.question("NOTION_TOKEN: ");
+
+    if (!token || token.trim() === '') {
+      warn("No token provided. Skipping Notion configuration.");
+      return null;
+    }
+
+    return {
+      parentPageId: parentPageId.trim(),
+      token: token.trim()
+    };
+  } finally {
+    rl.close();
+  }
+}
+
+async function ensureEnvInGitignore(repoRoot) {
+  const gitignorePath = path.join(repoRoot, ".gitignore");
+  
+  try {
+    let gitignoreContent = '';
+    
+    if (await fileExists(gitignorePath)) {
+      gitignoreContent = await fs.readFile(gitignorePath, "utf8");
+    }
+
+    // Check if .env is already in .gitignore
+    const lines = gitignoreContent.split('\n');
+    const hasEnvEntry = lines.some(line => line.trim() === '.env');
+
+    if (!hasEnvEntry) {
+      // Add .env to .gitignore
+      const newContent = gitignoreContent.trim() + (gitignoreContent.trim() ? '\n' : '') + '.env\n';
+      await fs.writeFile(gitignorePath, newContent, "utf8");
+      info("Added .env to .gitignore");
+    }
+  } catch (error) {
+    warn(`Could not update .gitignore: ${error.message}`);
+  }
+}
+
 export async function runInit(targetDir = process.cwd()) {
   const repoRoot = path.resolve(targetDir);
 
   // Ensure target directory exists
   await fs.mkdir(repoRoot, { recursive: true });
 
+  // Prompt for Notion credentials interactively
+  const notionCredentials = await promptNotionCredentials();
+
   const repolensConfigPath = path.join(repoRoot, ".repolens.yml");
   const workflowDir = path.join(repoRoot, ".github", "workflows");
   const workflowPath = path.join(workflowDir, "repolens.yml");
 
   const envExamplePath = path.join(repoRoot, ".env.example");
+  const envPath = path.join(repoRoot, ".env");
   const readmePath = path.join(repoRoot, "README.repolens.md");
 
   const configExists = await fileExists(repolensConfigPath);
   const workflowExists = await fileExists(workflowPath);
 
   const envExampleExists = await fileExists(envExamplePath);
+  const envExists = await fileExists(envPath);
   const readmeExists = await fileExists(readmePath);
 
   const projectName = detectProjectName(repoRoot);
@@ -347,17 +432,47 @@ export async function runInit(targetDir = process.cwd()) {
     info(`Skipped existing ${envExamplePath}`);
   }
 
-if (!readmeExists) {
-  await fs.writeFile(readmePath, DEFAULT_REPOLENS_README, "utf8");
+  // Create .env file with collected credentials
+  if (notionCredentials && !envExists) {
+    const envContent = `NOTION_TOKEN=${notionCredentials.token}
+NOTION_PARENT_PAGE_ID=${notionCredentials.parentPageId}
+NOTION_VERSION=2022-06-28
+`;
+    await fs.writeFile(envPath, envContent, "utf8");
+    info(`✅ Created ${envPath} with your Notion credentials`);
+    
+    // Ensure .env is in .gitignore
+    await ensureEnvInGitignore(repoRoot);
+  } else if (notionCredentials && envExists) {
+    warn(`Skipped existing ${envPath} - your credentials were not overwritten`);
+  }
+
+  if (!readmeExists) {
+    await fs.writeFile(readmePath, DEFAULT_REPOLENS_README, "utf8");
     info(`Created ${readmePath}`);
   } else {
     info(`Skipped existing ${readmePath}`);
   }
 
-info("Next steps:");
-info("  1. Review .repolens.yml");
-info("  2. Review README.repolens.md");
-info("  3. Copy .env.example into your local environment setup if needed");
-info("  4. Add GitHub secrets: NOTION_TOKEN, NOTION_PARENT_PAGE_ID");
-info("  5. Commit the generated files");
+  info("\n✨ RepoLens initialization complete!\n");
+  
+  if (notionCredentials) {
+    info("🎉 Notion publishing is ready!");
+    info("   Your credentials are stored in .env (gitignored)\n");
+    info("Next steps:");
+    info("  1. Review .repolens.yml to customize your documentation");
+    info("  2. Run 'npx repolens publish' to generate your first docs");
+    info("  3. For GitHub Actions, add these repository secrets:");
+    info("     - NOTION_TOKEN");
+    info("     - NOTION_PARENT_PAGE_ID");
+    info("  4. Commit the generated files (workflow will run automatically)");
+  } else {
+    info("Next steps:");
+    info("  1. Review .repolens.yml to customize your documentation");
+    info("  2. To enable Notion publishing:");
+    info("     - Copy .env.example to .env and add your credentials, OR");
+    info("     - Add GitHub secrets: NOTION_TOKEN, NOTION_PARENT_PAGE_ID");
+    info("  3. Run 'npx repolens publish' to test locally");
+    info("  4. Commit the generated files");
+  }
 }
