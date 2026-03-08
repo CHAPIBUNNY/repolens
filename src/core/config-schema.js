@@ -127,6 +127,33 @@ export function validateConfig(config) {
     }
   }
 
+  // Validate notion configuration (optional)
+  if (config.notion !== undefined) {
+    if (typeof config.notion !== "object" || Array.isArray(config.notion)) {
+      errors.push("notion must be an object");
+    } else {
+      // Validate branches filter
+      if (config.notion.branches !== undefined) {
+        if (!Array.isArray(config.notion.branches)) {
+          errors.push("notion.branches must be an array");
+        } else {
+          config.notion.branches.forEach((branch, idx) => {
+            if (typeof branch !== "string") {
+              errors.push(`notion.branches[${idx}] must be a string`);
+            }
+          });
+        }
+      }
+
+      // Validate includeBranchInTitle
+      if (config.notion.includeBranchInTitle !== undefined) {
+        if (typeof config.notion.includeBranchInTitle !== "boolean") {
+          errors.push("notion.includeBranchInTitle must be a boolean");
+        }
+      }
+    }
+  }
+
   // Validate feature flags (optional)
   if (config.features !== undefined) {
     if (typeof config.features !== "object" || Array.isArray(config.features)) {

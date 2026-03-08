@@ -223,6 +223,9 @@ features:
   - **name** (string, required): Project name
   - **docs_title_prefix** (string, optional): Prefix for documentation titles
 - **publishers** (array, required): Output destinations. Supported: `notion`, `markdown`
+- **notion** (object, optional): Notion-specific configuration
+  - **branches** (array, optional): Whitelist of branches allowed to publish. Supports exact names or glob patterns (`main`, `release/*`). If omitted, all branches can publish.
+  - **includeBranchInTitle** (boolean, optional): Include branch name in Notion page titles. Default: `true`. Main/master branches never include name.
 - **scan** (required): File scanning configuration
   - **include** (array, required): Glob patterns for files to scan
   - **ignore** (array, required): Glob patterns to exclude
@@ -230,6 +233,41 @@ features:
 - **outputs** (required): Documentation pages to generate
   - **pages** (array, required): Page definitions with `key`, `title`, `description`
 - **features** (object, optional): Feature flags for experimental capabilities
+
+### Branch-Aware Publishing
+
+RepoLens supports branch-aware publishing to prevent documentation conflicts:
+
+**Problem**: Multiple branches pushing to the same Notion pages creates chaos.
+
+**Solution**: Configure which branches publish to Notion:
+
+```yaml
+notion:
+  branches:
+    - main          # Only main branch
+    - staging       # And staging
+    - release/*     # All release branches (glob pattern)
+  includeBranchInTitle: true  # Adds [branch-name] to titles
+```
+
+**Behavior**:
+- **Without `notion.branches`**: All branches publish (may cause conflicts)
+- **With `notion.branches`**: Only listed branches publish to Notion
+- **Branch names in titles**: Non-main branches get `[feature-name]` suffix
+- **Markdown publisher**: Always runs on all branches (local only, no conflicts)
+
+**Example**:
+- Main branch → "MyApp — System Overview"
+- Feature branch → "MyApp — System Overview [feature-auth]"
+- Staging branch → "MyApp — System Overview [staging]"
+
+**Recommendation**: Limit Notion publishing to `main` only:
+```yaml
+notion:
+  branches:
+    - main
+```
 
 ## Environment Variables
 

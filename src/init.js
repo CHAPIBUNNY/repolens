@@ -197,12 +197,22 @@ function buildRepoLensConfig(projectName, detectedRoots) {
   const ignorePatterns = buildIgnorePatterns();
 
   const lines = [
+    `configVersion: 1`,
+    ``,
     `project:`,
     `  name: "${projectName}"`,
     `  docs_title_prefix: "RepoLens"`,
     ``,
     `publishers:`,
-    `  - notion`,
+    `  - markdown  # Start with markdown only`,
+    `  # - notion  # Uncomment to enable Notion publishing`,
+    ``,
+    `# Optional: Configure Notion publishing behavior`,
+    `# notion:`,
+    `#   branches:`,
+    `#     - main        # Only publish from main branch`,
+    `#     - staging     # Or add specific branches`,
+    `#   includeBranchInTitle: true  # Include branch name in page titles`,
     ``,
     `scan:`,
     `  include:`

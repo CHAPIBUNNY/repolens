@@ -6,6 +6,14 @@ project:
 
 publishers:
   - markdown
+  - notion
+
+# Multi-branch publishing with namespaced titles
+# All branches publish to Notion, but with [branch-name] suffix to prevent conflicts
+# Example: "System Overview [feature-auth]" vs "System Overview" (main)
+notion:
+  # branches not specified = all branches allowed
+  includeBranchInTitle: true  # Automatically adds [branch-name] to non-main branches
 
 scan:
   include:
