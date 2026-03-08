@@ -163,9 +163,11 @@ export function renderSystemMap(scan) {
   
   if (modules.length === 0) {
     const markdown = [
-      "# System Map",
+      "# 🏗️ System Map",
       "",
-      "No modules detected.",
+      "> **What is this?** This page shows how different parts of your codebase connect and depend on each other.",
+      "",
+      "No modules detected. Configure `module_roots` in `.repolens.yml` to visualize your architecture.",
       ""
     ].join("\n");
     
@@ -177,13 +179,17 @@ export function renderSystemMap(scan) {
 
   // Build markdown output
   const lines = [
-    "# System Map",
+    "# 🏗️ System Map",
     "",
-    `Dependency graph showing ${nodes.length} detected modules and their relationships.`,
+    "> **What is this?** This visual diagram shows how different parts of your codebase connect to each other. Arrows indicate dependencies (which modules use which).",
     "",
-    "```mermaid",
-    mermaidCode,
-    "```",
+    `**Showing**: ${nodes.length} modules and ${relationships.length} relationships`,
+    "",
+    "---",
+    "",
+    "## Architecture Diagram",
+    "",
+    "Below is an interactive diagram of your system architecture:",
     ""
   ];
 

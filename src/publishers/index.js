@@ -3,12 +3,20 @@ import { publishToMarkdown } from "./markdown.js";
 import { shouldPublishToNotion, getCurrentBranch } from "../utils/branch.js";
 import { info, warn } from "../utils/logger.js";
 
+function hasNotionSecrets() {
+  return !!process.env.NOTION_TOKEN && !!process.env.NOTION_PARENT_PAGE_ID;
+}
+
 export async function publishDocs(cfg, renderedPages) {
-  const publishers = cfg.publishers || ["notion"];
+  const publishers = cfg.publishers || ["markdown", "notion"];
   const currentBranch = getCurrentBranch();
 
-  if (publishers.includes("notion")) {
-    if (shouldPublishToNotion(cfg, currentBranch)) {
+  // Always try Notion publishing if secrets are configured
+  if (publishers.includes("notion") || hasNotionSecrets()) {
+    if (!hasNotionSecrets()) {
+      info("Skipping Notion publish: NOTION_TOKEN or NOTION_PARENT_PAGE_ID not configured");
+      info("To enable Notion publishing, set these environment variables or GitHub Actions secrets");
+    } else if (shouldPublishToNotion(cfg, currentBranch)) {
       info(`Publishing to Notion from branch: ${currentBranch}`);
       await publishToNotion(cfg, renderedPages);
     } else {
@@ -18,7 +26,8 @@ export async function publishDocs(cfg, renderedPages) {
     }
   }
 
-  if (publishers.includes("markdown")) {
+  // Always generate markdown output
+  if (publishers.includes("markdown") || !publishers.includes("notion")) {
     await publishToMarkdown(cfg, renderedPages);
   }
 }
