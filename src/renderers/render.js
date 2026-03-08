@@ -1,4 +1,45 @@
 export function renderSystemOverview(cfg, scan) {
+  const notes = [];
+  
+  // Generate meaningful notes based on detected metadata
+  if (scan.metadata?.frameworks?.length) {
+    notes.push(`**Tech Stack**: ${scan.metadata.frameworks.join(", ")}`);
+  }
+  
+  if (scan.metadata?.languages?.size) {
+    notes.push(`**Languages**: ${[...scan.metadata.languages].join(", ")}`);
+  }
+  
+  if (scan.metadata?.buildTools?.length) {
+    notes.push(`**Build Tools**: ${scan.metadata.buildTools.join(", ")}`);
+  }
+  
+  if (scan.metadata?.testFrameworks?.length) {
+    notes.push(`**Testing**: ${scan.metadata.testFrameworks.join(", ")}`);
+  }
+  
+  // Add architectural insights
+  if (scan.modules.length > 50) {
+    notes.push(`**Architecture**: Large modular codebase with ${scan.modules.length} identified modules`);
+  } else if (scan.modules.length > 20) {
+    notes.push(`**Architecture**: Medium-sized modular structure with ${scan.modules.length} modules`);
+  } else if (scan.modules.length > 0) {
+    notes.push(`**Architecture**: Compact modular design with ${scan.modules.length} modules`);
+  }
+  
+  if (scan.api?.length > 0) {
+    notes.push(`**API Coverage**: ${scan.api.length} API endpoints detected`);
+  }
+  
+  if (scan.pages?.length > 0) {
+    notes.push(`**UI Pages**: ${scan.pages.length} application pages detected`);
+  }
+  
+  // If no meaningful data, show default message
+  if (notes.length === 0) {
+    notes.push("This is an overview based on filesystem heuristics. Add a package.json to see framework and tooling details.");
+  }
+  
   return [
     `# ${cfg.project.name} — System Overview`,
     ``,
@@ -15,9 +56,9 @@ export function renderSystemOverview(cfg, scan) {
     ``,
     ...(scan.modules.slice(0, 10).map((m) => `- \`${m.key}\` — ${m.fileCount} files`)),
     ``,
-    `## Notes`,
+    `## Technical Profile`,
     ``,
-    `This is an MVP overview based on filesystem heuristics.`,
+    ...notes.map(note => note),
     ``
   ].join("\n");
 }

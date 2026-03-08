@@ -106,6 +106,62 @@ function routePathFromFile(file) {
   return file;
 }
 
+async function extractRepoMetadata(repoRoot) {
+  const metadata = {
+    hasPackageJson: false,
+    frameworks: [],
+    languages: new Set(),
+    buildTools: [],
+    testFrameworks: []
+  };
+
+  // Try to read package.json
+  try {
+    const pkgPath = path.join(repoRoot, "package.json");
+    const pkgContent = await fs.readFile(pkgPath, "utf8");
+    const pkg = JSON.parse(pkgContent);
+    metadata.hasPackageJson = true;
+
+    const allDeps = {
+      ...pkg.dependencies,
+      ...pkg.devDependencies,
+      ...pkg.optionalDependencies
+    };
+
+    // Detect frameworks
+    if (allDeps["next"]) metadata.frameworks.push("Next.js");
+    if (allDeps["react"]) metadata.frameworks.push("React");
+    if (allDeps["vue"]) metadata.frameworks.push("Vue");
+    if (allDeps["angular"] || allDeps["@angular/core"]) metadata.frameworks.push("Angular");
+    if (allDeps["express"]) metadata.frameworks.push("Express");
+    if (allDeps["fastify"]) metadata.frameworks.push("Fastify");
+    if (allDeps["nestjs"] || allDeps["@nestjs/core"]) metadata.frameworks.push("NestJS");
+    if (allDeps["svelte"]) metadata.frameworks.push("Svelte");
+    if (allDeps["solid-js"]) metadata.frameworks.push("Solid");
+
+    // Detect test frameworks
+    if (allDeps["vitest"]) metadata.testFrameworks.push("Vitest");
+    if (allDeps["jest"]) metadata.testFrameworks.push("Jest");
+    if (allDeps["mocha"]) metadata.testFrameworks.push("Mocha");
+    if (allDeps["playwright"]) metadata.testFrameworks.push("Playwright");
+    if (allDeps["cypress"]) metadata.testFrameworks.push("Cypress");
+
+    // Detect build tools
+    if (allDeps["vite"]) metadata.buildTools.push("Vite");
+    if (allDeps["webpack"]) metadata.buildTools.push("Webpack");
+    if (allDeps["rollup"]) metadata.buildTools.push("Rollup");
+    if (allDeps["esbuild"]) metadata.buildTools.push("esbuild");
+    if (allDeps["turbo"]) metadata.buildTools.push("Turborepo");
+
+    // Detect TypeScript
+    if (allDeps["typescript"]) metadata.languages.add("TypeScript");
+  } catch {
+    // No package.json or invalid JSON
+  }
+
+  return metadata;
+}
+
 export async function scanRepo(cfg) {
   const repoRoot = cfg.__repoRoot;
 
@@ -165,10 +221,14 @@ export async function scanRepo(cfg) {
     path: routePathFromFile(file)
   }));
 
+  // Extract repository metadata
+  const metadata = await extractRepoMetadata(repoRoot);
+
   return {
     filesCount: files.length,
     modules,
     api,
-    pages
+    pages,
+    metadata
   };
 }
