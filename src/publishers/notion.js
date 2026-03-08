@@ -169,15 +169,64 @@ export async function clearPage(pageId) {
 }
 
 function markdownToNotionBlocks(markdown) {
-  const lines = markdown
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 100);
-
+  const lines = markdown.split("\n");
   const blocks = [];
+  let i = 0;
 
-  for (const line of lines) {
+  while (i < lines.length && blocks.length < 100) {
+    const line = lines[i].trim();
+
+    // Skip empty lines
+    if (!line) {
+      i++;
+      continue;
+    }
+
+    // Handle code blocks (```language...```)
+    if (line.startsWith("```")) {
+      const language = line.slice(3).trim() || "plain text";
+      const codeLines = [];
+      i++; // Move past opening ```
+
+      // Collect code block content
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+
+      // Create Notion code block
+      const codeContent = codeLines.join("\n");
+      if (codeContent.trim()) {
+        blocks.push({
+          object: "block",
+          type: "code",
+          code: {
+            rich_text: [
+              {
+                type: "text",
+                text: {
+                  content: codeContent.slice(0, 2000) // Notion limit
+                }
+              }
+            ],
+            language: language === "mermaid" ? "plain text" : language,
+            caption: language === "mermaid" ? [
+              {
+                type: "text",
+                text: {
+                  content: "Mermaid diagram - paste into mermaid.live to visualize"
+                }
+              }
+            ] : []
+          }
+        });
+      }
+
+      i++; // Move past closing ```
+      continue;
+    }
+
+    // Handle headings
     if (line.startsWith("# ")) {
       blocks.push({
         object: "block",
@@ -193,6 +242,7 @@ function markdownToNotionBlocks(markdown) {
           ]
         }
       });
+      i++;
       continue;
     }
 
@@ -211,9 +261,11 @@ function markdownToNotionBlocks(markdown) {
           ]
         }
       });
+      i++;
       continue;
     }
 
+    // Handle bullet lists
     if (line.startsWith("- ")) {
       blocks.push({
         object: "block",
@@ -229,9 +281,11 @@ function markdownToNotionBlocks(markdown) {
           ]
         }
       });
+      i++;
       continue;
     }
 
+    // Handle regular paragraphs
     blocks.push({
       object: "block",
       type: "paragraph",
@@ -246,6 +300,7 @@ function markdownToNotionBlocks(markdown) {
         ]
       }
     });
+    i++;
   }
 
   return blocks;
