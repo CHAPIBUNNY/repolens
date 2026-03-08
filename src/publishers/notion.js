@@ -306,104 +306,13 @@ function markdownToNotionBlocks(markdown) {
   return blocks;
 }
 
-function generateMermaidImageUrl(mermaidCode) {
-  // Use mermaid.ink service to render Mermaid diagrams as images
-  // Base64 encode the Mermaid code (URL-safe)
-  const base64 = Buffer.from(mermaidCode).toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-  
-  return `https://mermaid.ink/img/${base64}`;
-}
-
-export async function replacePageContent(pageId, markdown, mermaid = null, diagramUrl = null) {
+export async function replacePageContent(pageId, markdown) {
   // Ensure page is unarchived before editing
   await unarchivePage(pageId);
   
   await clearPage(pageId);
 
   const children = markdownToNotionBlocks(markdown);
-
-  // If there's a Mermaid diagram, add it as an image after the markdown content
-  if (mermaid) {
-    // Use provided diagramUrl (GitHub raw URL), or fallback to mermaid.ink
-    const imageUrl = diagramUrl || generateMermaidImageUrl(mermaid);
-    
-    // Notion has a 2000 character limit on image URLs
-    // If URL is too long, skip the image and show the mermaid code instead
-    if (imageUrl.length > 2000) {
-      log(`Warning: Diagram URL exceeds Notion's 2000 char limit (${imageUrl.length} chars). Displaying as code block.`);
-      
-      children.push({
-        object: "block",
-        type: "callout",
-        callout: {
-          icon: { emoji: "⚠️" },
-          rich_text: [
-            {
-              type: "text",
-              text: {
-                content: "Diagram too complex for inline display. Visit "
-              }
-            },
-            {
-              type: "text",
-              text: {
-                content: "mermaid.live",
-                link: { url: "https://mermaid.live" }
-              },
-              annotations: { underline: true }
-            },
-            {
-              type: "text",
-              text: {
-                content: " and paste the code below to visualize."
-              }
-            }
-          ]
-        }
-      });
-      
-      children.push({
-        object: "block",
-        type: "code",
-        code: {
-          rich_text: [
-            {
-              type: "text",
-              text: {
-                content: mermaid.slice(0, 2000) // Notion's text limit
-              }
-            }
-          ],
-          language: "plain text"
-        }
-      });
-    } else {
-      // URL is within limits, add the image
-      children.push({
-        object: "block",
-        type: "image",
-        image: {
-          type: "external",
-          external: {
-            url: imageUrl
-          },
-          caption: [
-            {
-              type: "text",
-              text: {
-                content: diagramUrl 
-                  ? "System architecture diagram (rendered SVG from repository)"
-                  : "System architecture diagram (auto-generated via mermaid.ink)"
-              }
-            }
-          ]
-        }
-      });
-    }
-  }
 
   if (!children.length) return;
 

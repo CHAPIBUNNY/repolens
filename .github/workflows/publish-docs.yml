@@ -7,7 +7,7 @@ on:
   workflow_dispatch:  # Manual trigger option
 
 permissions:
-  contents: write  # Required to push SVG diagrams back to repo
+  contents: read
 
 jobs:
   publish:
@@ -16,9 +16,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  # Full history for proper git operations
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -28,24 +25,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Install Mermaid CLI for diagram generation
-        run: npm install -g @mermaid-js/mermaid-cli
-      
-      - name: Generate documentation and diagrams
+      - name: Generate and publish documentation
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
         run: npx repolens publish
-      
-      - name: Commit generated SVG diagrams
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add .repolens/diagrams/*.svg || true
-          git diff --cached --quiet || git commit -m "docs: Update generated SVG diagrams [skip ci]"
-      
-      - name: Push diagram changes
-        run: |
-          git push origin HEAD:${GITHUB_REF#refs/heads/}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

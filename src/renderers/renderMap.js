@@ -108,61 +108,90 @@ function categorizeModule(key) {
   return "other";
 }
 
-function generateModuleDiagram(nodes, relationships) {
-  const mermaidLines = [
-    "graph LR",
-    "  %% Module Dependency Graph",
-    ""
-  ];
-
-  // Group nodes by category for better layout
+function generateUnicodeArchitectureDiagram(nodes, relationships) {
+  // Group nodes by category
   const categories = {
-    cli: { color: "#E1BEE7", label: "CLI Entry" },
-    core: { color: "#FFF9C4", label: "Core Logic" },
-    business: { color: "#E8F5E9", label: "Business Logic" },
-    integration: { color: "#E0F2F1", label: "Integration" },
-    util: { color: "#ECEFF1", label: "Utilities" },
-    test: { color: "#FFCCBC", label: "Testing" },
-    other: { color: "#F5F5F5", label: "Other" }
+    cli: { icon: "🎯", label: "CLI Entry", nodes: [] },
+    core: { icon: "⚙️", label: "Core Logic", nodes: [] },
+    business: { icon: "📋", label: "Business Logic", nodes: [] },
+    integration: { icon: "🔌", label: "Integration", nodes: [] },
+    util: { icon: "🛠️", label: "Utilities", nodes: [] },
+    test: { icon: "✅", label: "Testing", nodes: [] },
+    other: { icon: "📦", label: "Other", nodes: [] }
   };
 
-  // Create nodes with details
+  // Organize nodes by category
   for (const node of nodes) {
-    const shortLabel = node.label.split('/').pop() || node.label;
-    const detail = `${node.fileCount} file${node.fileCount !== 1 ? 's' : ''}`;
-    const config = categories[node.category] || categories.other;
+    const category = categories[node.category] || categories.other;
+    category.nodes.push(node);
+  }
+
+  const lines = [];
+  lines.push("```");
+  lines.push("┌─────────────────────────────────────────────────────────────┐");
+  lines.push("│              🏗️  SYSTEM ARCHITECTURE MAP                    │");
+  lines.push("└─────────────────────────────────────────────────────────────┘");
+  lines.push("");
+
+  // Build dependency map for annotations
+  const dependencyMap = new Map();
+  for (const rel of relationships) {
+    if (!dependencyMap.has(rel.from)) {
+      dependencyMap.set(rel.from, []);
+    }
+    dependencyMap.get(rel.from).push({ to: rel.to, type: rel.type });
+  }
+
+  // Render each category with its nodes
+  for (const [catKey, category] of Object.entries(categories)) {
+    if (category.nodes.length === 0) continue;
+
+    lines.push(`${category.icon}  ${category.label.toUpperCase()}`);
+    lines.push("│");
+
+    category.nodes.forEach((node, idx) => {
+      const isLast = idx === category.nodes.length - 1;
+      const prefix = isLast ? "└──" : "├──";
+      const shortLabel = node.label.split('/').pop() || node.label;
+      const fileInfo = `(${node.fileCount} file${node.fileCount !== 1 ? 's' : ''})`;
+      
+      lines.push(`${prefix} ${shortLabel} ${fileInfo}`);
+      
+      // Show dependencies for this node
+      const deps = dependencyMap.get(node.id) || [];
+      if (deps.length > 0) {
+        const connector = isLast ? "    " : "│   ";
+        deps.slice(0, 3).forEach((dep, depIdx) => {
+          const depNode = nodes.find(n => n.id === dep.to);
+          if (depNode) {
+            const depLabel = depNode.label.split('/').pop() || depNode.label;
+            const arrow = dep.type === "tests" ? "╌→" : "→";
+            lines.push(`${connector}   ${arrow} ${depLabel}`);
+          }
+        });
+        if (deps.length > 3) {
+          lines.push(`${connector}   ... +${deps.length - 3} more`);
+        }
+      }
+    });
     
-    mermaidLines.push(`  ${node.id}["<b>${shortLabel}</b><br/><small>${detail}</small>"]`);
-    mermaidLines.push(`  style ${node.id} fill:${config.color},stroke:#333,stroke-width:2px`);
+    lines.push("│");
   }
 
-  mermaidLines.push("");
-  mermaidLines.push("  %% Dependencies");
-
-  // Deduplicate relationships
-  const seen = new Set();
-  const uniqueRelationships = relationships.filter(rel => {
-    const key = `${rel.from}-${rel.to}-${rel.type}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
-  // Draw relationships
-  for (const rel of uniqueRelationships) {
-    const arrow = rel.type === "tests" ? "-.->": "-->";
-    const label = rel.type.replace(/-/g, " ");
-    mermaidLines.push(`  ${rel.from} ${arrow}|${label}| ${rel.to}`);
-  }
-
-  return mermaidLines.join("\n");
+  lines.push("");
+  lines.push("Legend:");
+  lines.push("  →  depends on / uses");
+  lines.push("  ╌→ tests");
+  lines.push("```");
+  
+  return lines.join("\n");
 }
 
 export function renderSystemMap(scan) {
   const modules = (scan.modules || []).slice(0, 30); // Limit for readability
   
   if (modules.length === 0) {
-    const markdown = [
+    return [
       "# 🏗️ System Map",
       "",
       "> **What is this?** This page shows how different parts of your codebase connect and depend on each other.",
@@ -170,12 +199,10 @@ export function renderSystemMap(scan) {
       "No modules detected. Configure `module_roots` in `.repolens.yml` to visualize your architecture.",
       ""
     ].join("\n");
-    
-    return { markdown, mermaid: null };
   }
 
   const { nodes, relationships } = buildModuleGraph(modules);
-  const mermaidCode = generateModuleDiagram(nodes, relationships);
+  const architectureDiagram = generateUnicodeArchitectureDiagram(nodes, relationships);
 
   // Build markdown output
   const lines = [
@@ -189,14 +216,9 @@ export function renderSystemMap(scan) {
     "",
     "## Architecture Diagram",
     "",
-    "Below is an interactive diagram of your system architecture:",
+    architectureDiagram,
     ""
   ];
 
-  const markdown = lines.join("\n");
-  
-  return {
-    markdown,
-    mermaid: mermaidCode
-  };
+  return lines.join("\n");
 }
