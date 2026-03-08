@@ -6,6 +6,9 @@ on:
       - "**"  # All branches - namespacing prevents conflicts
   workflow_dispatch:  # Manual trigger option
 
+permissions:
+  contents: write  # Required to push SVG diagrams back to repo
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -13,6 +16,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Full history for proper git operations
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,7 +45,7 @@ jobs:
           git diff --cached --quiet || git commit -m "docs: Update generated SVG diagrams [skip ci]"
       
       - name: Push diagram changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
+        run: |
+          git push origin HEAD:${GITHUB_REF#refs/heads/}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
