@@ -39,16 +39,27 @@ jobs:
           REPOLENS_AI_ENABLED: true
           REPOLENS_AI_API_KEY: ${{ secrets.REPOLENS_AI_API_KEY }}
           REPOLENS_TELEMETRY_ENABLED: false
-        run: npx @chappibunny/repolens@latest publish
+        run: |
+          # Use local version since Phase 4 features aren't published yet
+          npm link
+          npx repolens publish
       
       - name: Create dashboard index
         run: |
           mkdir -p .repolens/public
-          cp .repolens/dashboard/index.html .repolens/public/index.html
-          cp -r .repolens/*.md .repolens/public/ 2>/dev/null || true
-          echo "# Documentation Dashboard" > .repolens/public/README.md
-          echo "" >> .repolens/public/README.md
-          echo "Visit the [interactive dashboard](./index.html) for metrics and trends." >> .repolens/public/README.md
+          
+          # Check if dashboard was generated
+          if [ -f .repolens/dashboard/index.html ]; then
+            echo "✓ Dashboard found, copying to public/"
+            cp .repolens/dashboard/index.html .repolens/public/index.html
+            cp -r .repolens/*.md .repolens/public/ 2>/dev/null || true
+            echo "# Documentation Dashboard" > .repolens/public/README.md
+            echo "" >> .repolens/public/README.md
+            echo "Visit the [interactive dashboard](./index.html) for metrics and trends." >> .repolens/public/README.md
+          else
+            echo "⚠️  Dashboard not yet generated, creating placeholder"
+            echo '<!DOCTYPE html><html><head><title>RepoLens Dashboard</title></head><body><h1>Dashboard Coming Soon</h1><p>The RepoLens dashboard will be available after the next documentation publish.</p></body></html>' > .repolens/public/index.html
+          fi
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
