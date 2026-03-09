@@ -1,5 +1,5 @@
 {
-  "name": "repolens",
+  "name": "@chappibunny/repolens",
   "version": "0.4.1",
   "description": "AI-assisted documentation intelligence system for technical and non-technical audiences",
   "license": "MIT",
@@ -36,7 +36,7 @@
   "author": "Charl van Zyl",
   "scripts": {
     "test:notion": "node notion-test.js",
-    "publish": "node src/cli.js publish --config ../../.repolens.yml",
+    "docs:publish": "node src/cli.js publish --config ../../.repolens.yml",
     "init:test": "node src/cli.js init --target /tmp/repolens-init-test",
     "test": "NODE_ENV=test vitest run --no-watch --reporter=verbose",
     "pack:check": "npm pack",

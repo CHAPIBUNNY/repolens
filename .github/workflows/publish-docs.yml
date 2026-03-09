@@ -35,4 +35,4 @@ jobs:
           REPOLENS_AI_MODEL: gpt-4-turbo-preview
           REPOLENS_AI_TEMPERATURE: 0.3
           REPOLENS_AI_MAX_TOKENS: 2000
-        run: npx repolens publish
+        run: npx @chappibunny/repolens@latest publish

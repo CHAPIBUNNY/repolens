@@ -27,7 +27,7 @@ npm install github:CHAPIBUNNY/repolens
 
 **Step 2: Initialize** (creates config + GitHub Actions workflow)
 ```bash
-npx repolens init
+npx @chappibunny/repolens init
 ```
 
 **Step 3: Configure Notion** (optional, skip if using Markdown only)
@@ -39,13 +39,13 @@ NOTION_PARENT_PAGE_ID=xxx
 
 **Step 4: Publish**
 ```bash
-npx repolens publish
+npx @chappibunny/repolens publish
 ```
 
 **Done!** Your docs are now live in Notion and/or `.repolens/` directory.
 
 **🔄 Upgrading from v0.3.0 or earlier?**
-Run `npx repolens migrate` to automatically update your workflow files. See [MIGRATION.md](MIGRATION.md) for details.
+Run `npx @chappibunny/repolens migrate` to automatically update your workflow files. See [MIGRATION.md](MIGRATION.md) for details.
 
 ---
 
@@ -166,7 +166,7 @@ npm install -g repolens
 Run this in your project root:
 
 ```bash
-npx repolens init
+npx @chappibunny/repolens init
 ```
 
 **What it creates:**
@@ -343,7 +343,7 @@ module_roots:
 Run locally to test:
 
 ```bash
-npx repolens publish
+npx @chappibunny/repolens publish
 ```
 
 **Expected output:**
@@ -413,12 +413,12 @@ git push
 
 Auto-discovers `.repolens.yml`:
 ```bash
-npx repolens publish
+npx @chappibunny/repolens publish
 ```
 
 Specify config path explicitly:
 ```bash
-npx repolens publish --config /path/to/.repolens.yml
+npx @chappibunny/repolens publish --config /path/to/.repolens.yml
 ```
 
 Via npm script (add to package.json):
@@ -435,7 +435,7 @@ Via npm script (add to package.json):
 Check if your RepoLens setup is valid:
 
 ```bash
-npx repolens doctor
+npx @chappibunny/repolens doctor
 ```
 
 Validates:
@@ -450,17 +450,17 @@ Validates:
 **🚨 Upgrading from v0.3.0 or earlier?** Automatically update your GitHub Actions workflows:
 
 ```bash
-npx repolens migrate
+npx @chappibunny/repolens migrate
 ```
 
 Preview changes without applying:
 ```bash
-npx repolens migrate --dry-run
+npx @chappibunny/repolens migrate --dry-run
 ```
 
 What it fixes:
 - ❌ Removes outdated `cd tools/repolens` commands
-- ✅ Updates to `npx repolens@latest publish`
+- ✅ Updates to `npx @chappibunny/repolens@latest publish`
 - ✅ Adds Node.js setup step if missing
 - ✅ Adds environment variables (NOTION_TOKEN, REPOLENS_AI_API_KEY)
 - 💾 Creates backup files for safety
@@ -477,8 +477,8 @@ See [MIGRATION.md](MIGRATION.md) for detailed upgrade guide.
 ### Get Help
 
 ```bash
-npx repolens --help
-npx repolens --version
+npx @chappibunny/repolens --help
+npx @chappibunny/repolens --version
 ```
 
 ---

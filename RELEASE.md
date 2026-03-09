@@ -47,6 +47,6 @@ To test that users can upgrade successfully:
 
 ```bash
 # In a test project
-npx repolens@latest --version
-npx repolens@latest publish
+npx @chappibunny/repolens@latest --version
+npx @chappibunny/repolens@latest publish
 ```

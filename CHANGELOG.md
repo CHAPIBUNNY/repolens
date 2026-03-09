@@ -21,6 +21,7 @@ All notable changes to RepoLens will be documented in this file.
 - Detects `npx repolens` without `@latest` suffix
 - Detects missing `actions/setup-node@v4` setup
 - Detects missing environment variables (NOTION_TOKEN, REPOLENS_AI_API_KEY)
+- Migrates to `@chappibunny/repolens` scoped package
 - Automatically adds AI environment variables to existing env sections
 - Skips already-migrated workflows (no-op when up to date)
 
@@ -188,7 +189,7 @@ RepoLens is no longer just a "flashy code intelligence toy" — it's now a **doc
 ### 📦 Package Changes
 - Removed test artifacts from repository (cleaner npm package)
 - Updated .gitignore to exclude test files
-- Simplified workflow template to use `npx repolens@latest`
+- Simplified workflow template to use `npx @chappibunny/repolens@latest`
 
 ## 0.2.0
 

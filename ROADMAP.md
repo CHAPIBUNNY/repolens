@@ -42,7 +42,7 @@ Core functionality is complete and stable. Focus is on schema stability, testing
 - ✅ Migration guides for any breaking changes
 
 **Additional Features:**
-- **npm Registry Publishing** - Available via `npm install -g repolens`
+- **npm Registry Publishing** - Available via `npm install -g @chappibunny/repolens`
 - **VS Code Extension** - In-editor architecture visualization
 - **GitHub App** - Automated setup and status checks
 - **Plugin Ecosystem** - Third-party renderer and publisher support
