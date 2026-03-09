@@ -23,7 +23,9 @@ jobs:
           node-version: 20
       
       - name: Install dependencies
-        run:       - name: Generate and publish documentation
+        run: npm ci
+      
+      - name: Generate and publish documentation
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}

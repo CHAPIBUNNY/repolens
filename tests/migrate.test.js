@@ -244,4 +244,48 @@ jobs:
     expect(migrated).toContain("REPOLENS_AI_API_KEY");
     expect(migrated).toContain("REPOLENS_AI_PROVIDER: openai");
   });
+
+  it("does not create duplicate run keys when adding env vars", async () => {
+    const workflowWithSimpleRun = `name: RepoLens Documentation
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Generate and publish documentation
+        run: npx repolens publish
+`;
+
+    const workflowPath = path.join(tempDir, ".github", "workflows", "repolens.yml");
+    await fs.writeFile(workflowPath, workflowWithSimpleRun, "utf8");
+
+    await runMigrate(tempDir, { dryRun: false, force: true });
+
+    const migrated = await fs.readFile(workflowPath, "utf8");
+
+    // Count occurrences of 'run:' in the step (should be exactly 1)
+    const stepMatch = migrated.match(/- name: Generate and publish documentation[\s\S]*?(?=\n\s{0,4}-|\n\n|$)/);
+    expect(stepMatch).toBeTruthy();
+    
+    const runKeyCount = (stepMatch[0].match(/^\s+run:/gm) || []).length;
+    expect(runKeyCount).toBe(1);
+    
+    // Verify env block exists and is properly positioned before run
+    expect(migrated).toContain("env:");
+    expect(migrated).toContain("NOTION_TOKEN");
+    
+    // Verify the structure is correct (env comes before run)
+    const envIndex = migrated.indexOf("env:");
+    const runIndex = migrated.indexOf("run:", envIndex);
+    expect(envIndex).toBeLessThan(runIndex);
+  });
 });

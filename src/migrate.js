@@ -70,17 +70,18 @@ function migrateWorkflowContent(content) {
 
   // Add environment variables if missing
   if (!migrated.includes("NOTION_TOKEN") && !migrated.includes("env:")) {
-    // Find the publish/generate documentation step
-    const publishPattern = /(- name: .*(?:publish|generate).*documentation.*\n)/i;
+    // Find the publish/generate documentation step with its run command
+    // Pattern captures: step name, indentation before run, and run command
+    const publishPattern = /(- name: .*(?:publish|generate).*documentation.*\n)(\s+)(run:.*)/i;
     if (publishPattern.test(migrated)) {
       migrated = migrated.replace(
         publishPattern,
-        `$1        env:
-          NOTION_TOKEN: \${{ secrets.NOTION_TOKEN }}
-          NOTION_PARENT_PAGE_ID: \${{ secrets.NOTION_PARENT_PAGE_ID }}
-          REPOLENS_AI_API_KEY: \${{ secrets.REPOLENS_AI_API_KEY }}
-          REPOLENS_AI_PROVIDER: openai
-        `
+        `$1$2env:
+$2  NOTION_TOKEN: \${{ secrets.NOTION_TOKEN }}
+$2  NOTION_PARENT_PAGE_ID: \${{ secrets.NOTION_PARENT_PAGE_ID }}
+$2  REPOLENS_AI_API_KEY: \${{ secrets.REPOLENS_AI_API_KEY }}
+$2  REPOLENS_AI_PROVIDER: openai
+$2$3`
       );
     }
   }
