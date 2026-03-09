@@ -161,6 +161,74 @@ export function validateConfig(config) {
     }
   }
 
+  // Validate Discord configuration (optional)
+  if (config.discord !== undefined) {
+    if (typeof config.discord !== "object" || Array.isArray(config.discord)) {
+      errors.push("discord must be an object");
+    } else {
+      // Validate notifyOn
+      if (config.discord.notifyOn !== undefined) {
+        const validOptions = ["always", "significant", "never"];
+        if (!validOptions.includes(config.discord.notifyOn)) {
+          errors.push(`discord.notifyOn must be one of: ${validOptions.join(", ")}`);
+        }
+      }
+
+      // Validate significantThreshold
+      if (config.discord.significantThreshold !== undefined) {
+        if (typeof config.discord.significantThreshold !== "number") {
+          errors.push("discord.significantThreshold must be a number");
+        } else if (config.discord.significantThreshold < 0 || config.discord.significantThreshold > 100) {
+          errors.push("discord.significantThreshold must be between 0 and 100");
+        }
+      }
+
+      // Validate branches filter
+      if (config.discord.branches !== undefined) {
+        if (!Array.isArray(config.discord.branches)) {
+          errors.push("discord.branches must be an array");
+        } else {
+          config.discord.branches.forEach((branch, idx) => {
+            if (typeof branch !== "string") {
+              errors.push(`discord.branches[${idx}] must be a string`);
+            }
+          });
+        }
+      }
+
+      // Validate enabled flag
+      if (config.discord.enabled !== undefined && typeof config.discord.enabled !== "boolean") {
+        errors.push("discord.enabled must be a boolean");
+      }
+    }
+  }
+
+  // Validate dashboard configuration (optional)
+  if (config.dashboard !== undefined) {
+    if (typeof config.dashboard !== "object" || Array.isArray(config.dashboard)) {
+      errors.push("dashboard must be an object");
+    } else {
+      // Validate enabled flag
+      if (config.dashboard.enabled !== undefined && typeof config.dashboard.enabled !== "boolean") {
+        errors.push("dashboard.enabled must be a boolean");
+      }
+
+      // Validate githubPages flag
+      if (config.dashboard.githubPages !== undefined && typeof config.dashboard.githubPages !== "boolean") {
+        errors.push("dashboard.githubPages must be a boolean");
+      }
+
+      // Validate staleThreshold
+      if (config.dashboard.staleThreshold !== undefined) {
+        if (typeof config.dashboard.staleThreshold !== "number") {
+          errors.push("dashboard.staleThreshold must be a number");
+        } else if (config.dashboard.staleThreshold < 1) {
+          errors.push("dashboard.staleThreshold must be at least 1");
+        }
+      }
+    }
+  }
+
   // Validate feature flags (optional)
   if (config.features !== undefined) {
     if (typeof config.features !== "object" || Array.isArray(config.features)) {

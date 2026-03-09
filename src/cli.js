@@ -296,7 +296,7 @@ async function main() {
       
       info("Publishing documentation...");
       const publishTimer = startTimer("publish_docs");
-      await publishDocs(cfg, renderedPages);
+      await publishDocs(cfg, renderedPages, scan);
       stopTimer(publishTimer);
       
       await upsertPrComment(diffData);

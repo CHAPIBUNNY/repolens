@@ -1,0 +1,63 @@
+name: Deploy Dashboard to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
+        with:
+          node-version: 20
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate documentation
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL}}
+          REPOLENS_AI_ENABLED: true
+          REPOLENS_AI_API_KEY: ${{ secrets.REPOLENS_AI_API_KEY }}
+          REPOLENS_TELEMETRY_ENABLED: false
+        run: npx @chappibunny/repolens@latest publish
+      
+      - name: Create dashboard index
+        run: |
+          mkdir -p .repolens/public
+          cp .repolens/dashboard/index.html .repolens/public/index.html
+          cp -r .repolens/*.md .repolens/public/ 2>/dev/null || true
+          echo "# Documentation Dashboard" > .repolens/public/README.md
+          echo "" >> .repolens/public/README.md
+          echo "Visit the [interactive dashboard](./index.html) for metrics and trends." >> .repolens/public/README.md
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.repolens/public'
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
