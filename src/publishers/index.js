@@ -5,6 +5,7 @@ import { info, warn } from "../utils/logger.js";
 import { trackPublishing } from "../utils/telemetry.js";
 import { collectMetrics } from "../utils/metrics.js";
 import { generateDashboard } from "../renderers/renderDashboard.js";
+import { publishDashboardToNotion } from "./notion.js";
 import {
   sendDiscordNotification,
   buildDocUpdateNotification,
@@ -72,6 +73,18 @@ export async function publishDocs(cfg, renderedPages, scanResult) {
       // Generate dashboard
       const dashboardPath = path.join(docsPath, "dashboard", "index.html");
       await generateDashboard(metrics, cfg, dashboardPath);
+      
+      // Publish dashboard to Notion if enabled
+      if (hasNotionSecrets() && shouldPublishToNotion(cfg, currentBranch)) {
+        try {
+          const parentPageId = process.env.NOTION_PARENT_PAGE_ID;
+          await publishDashboardToNotion(parentPageId, metrics, cfg);
+          info("✓ Dashboard published to Notion");
+        } catch (err) {
+          warn(`Failed to publish dashboard to Notion: ${err.message}`);
+          // Don't fail the whole publish if Notion dashboard fails
+        }
+      }
       
       // Send Discord notification if configured
       const webhookUrl = process.env.DISCORD_WEBHOOK_URL;

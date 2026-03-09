@@ -8,7 +8,7 @@ export async function publishToNotion(cfg, renderedPages) {
     throw new Error("Missing NOTION_PARENT_PAGE_ID in tools/repolens/.env");
   }
 
-  const prefix = cfg.project.docs_title_prefix || "RepoLens";
+  const prefix = cfg.project.docs_title_prefix || "Documentation";
   const currentBranch = getCurrentBranch();
   const includeBranchInTitle = cfg.notion?.includeBranchInTitle !== false; // Default true
 
