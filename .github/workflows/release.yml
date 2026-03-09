@@ -43,8 +43,8 @@ jobs:
         run: |
           echo "Scanning for accidentally committed secrets..."
           
-          # Check for common secret patterns
-          if git grep -E "(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36}|AKIA[0-9A-Z]{16}|secret_[a-zA-Z0-9]{30,})" -- '*.js' '*.ts' '*.json' '*.yml' '*.yaml' ':!node_modules' ':!.git' 2>/dev/null; then
+          # Check for common secret patterns (exclude test fixtures)
+          if git grep -E "(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36}|AKIA[0-9A-Z]{16}|secret_[a-zA-Z0-9]{30,})" -- '*.js' '*.ts' '*.json' '*.yml' '*.yaml' ':!node_modules' ':!.git' ':!tests' 2>/dev/null; then
             echo "❌ Potential secrets found in code!"
             exit 1
           fi
