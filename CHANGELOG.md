@@ -2,6 +2,15 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 0.4.3
+
+### 🐛 Bug Fixes
+- **Migration Tool**: Fixed over-aggressive npm install removal
+  - Now only removes `npm install/ci` from legacy `cd tools/repolens` multi-line blocks
+  - Preserves legitimate dependency installation steps in release workflows
+  - Fixes YAML corruption that broke workflows with standalone npm ci/install steps
+  - Added test case to verify legitimate npm install steps are preserved
+
 ## 0.4.2
 
 ### 🐛 Bug Fixes
