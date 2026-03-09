@@ -9,6 +9,21 @@ github:
   owner: "CHAPIBUNNY"
   repo: "repolens"
 
+# AI-assisted documentation features
+ai:
+  enabled: true
+  mode: hybrid              # hybrid = deterministic + AI enhancements
+  temperature: 0.3          # Lower = more focused (0.0-1.0)
+  max_tokens: 2000          # Token limit per request
+
+features:
+  executive_summary: true    # Non-technical project overview
+  business_domains: true     # Business function descriptions
+  architecture_overview: true # Layered technical analysis
+  data_flows: true           # How information moves through system
+  developer_onboarding: true # Getting started guide
+  change_impact: true        # Architecture diff explanations
+
 publishers:
   - markdown
   - notion
@@ -33,6 +48,9 @@ scan:
 
 module_roots:
   - "src/core"
+  - "src/analyzers"
+  - "src/ai"
+  - "src/docs"
   - "src/publishers"
   - "src/renderers"
   - "src/delivery"
@@ -40,9 +58,29 @@ module_roots:
 
 outputs:
   pages:
+    # Non-technical documents (AI-generated)
+    - key: "executive_summary"
+      title: "Executive Summary"
+      description: "Non-technical project overview for leadership and stakeholders"
+    - key: "business_domains"
+      title: "Business Domains"
+      description: "What the system does by functional area"
+    
+    # Mixed-audience documents
     - key: "system_overview"
       title: "System Overview"
       description: "High-level architecture snapshot of RepoLens CLI"
+    - key: "developer_onboarding"
+      title: "Developer Onboarding"
+      description: "Getting started guide for new contributors"
+    
+    # Technical documents (AI-enhanced or deterministic)
+    - key: "architecture_overview"
+      title: "Architecture Overview"
+      description: "Layered technical analysis of system architecture"
+    - key: "data_flows"
+      title: "Data Flows"
+      description: "How information moves through the RepoLens system"
     - key: "module_catalog"
       title: "Module Catalog"
       description: "Complete inventory of all RepoLens modules"
@@ -55,3 +93,6 @@ outputs:
     - key: "system_map"
       title: "System Map"
       description: "Visual dependency diagram"
+    - key: "arch_diff"
+      title: "Architecture Diff"
+      description: "Changes in repository structure and architecture"
