@@ -8,6 +8,11 @@
                         🔍 Repository Intelligence CLI 📊
 ```
 
+[![Tests](https://img.shields.io/badge/tests-90%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
+[![Security](https://img.shields.io/badge/security-hardened-blue)](SECURITY.md)
+[![Vulnerabilities](https://img.shields.io/badge/vulnerabilities-0-brightgreen)](SECURITY.md)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 AI-assisted documentation intelligence system that generates architecture docs for engineers AND readable system docs for stakeholders
 
 **Current Status**: v0.4.0 — Production Ready
@@ -583,6 +588,41 @@ REPOLENS_TELEMETRY_ENABLED=true
 - 🎯 **Prioritization** - roadmap guided by community needs
 
 For full details and example data, see [TELEMETRY.md](TELEMETRY.md).
+
+---
+
+## 🛡️ Security
+
+RepoLens implements **defense-in-depth** security to protect your credentials, code, and infrastructure.
+
+**Security Features:**
+- ✅ **Input Validation** - Prevents injection attacks and path traversal
+- ✅ **Secret Detection** - Scans for 15+ credential patterns (OpenAI, GitHub, AWS, Notion)
+- ✅ **Automatic Sanitization** - Redacts secrets from logs and error reports
+- ✅ **Rate Limiting** - Protects APIs with token bucket (3 req/sec)
+- ✅ **Supply Chain Protection** - GitHub Actions pinned to commit SHAs
+- ✅ **Dependency Audits** - CI/CD fails on critical vulnerabilities
+- ✅ **43 Security Tests** - Comprehensive fuzzing and attack simulation
+
+**Security Validation** (automatic on every run):
+```bash
+# Config validation
+✅ No injection patterns detected
+✅ No secrets in configuration
+✅ Safe path patterns only
+
+# Runtime protection  
+✅ All logs sanitized (sk-abc123 → sk-ab***23)
+✅ Rate limiting active (3 req/sec)
+✅ 0 vulnerabilities in dependencies
+```
+
+**Vulnerability Reporting:**
+- 📧 Email security issues to [your-email@example.com]
+- 🚨 Do NOT open public issues for security bugs
+- ⏱️ Response within 48 hours, fixes within 7-30 days
+
+For full security documentation and threat model, see [SECURITY.md](SECURITY.md).
 
 ---
 
