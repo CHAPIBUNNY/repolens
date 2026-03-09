@@ -66,9 +66,9 @@ export const DOCUMENT_PLAN = [
     description: "Major information flows through the system"
   },
   {
-    key: "change_impact",
+    key: "arch_diff",
     filename: "08-change-impact.md",
-    title: "Change Impact",
+    title: "Architecture Diff",
     audience: "mixed",
     ai: true,
     description: "Git diff analysis and impact assessment"

@@ -20,6 +20,12 @@ export async function publishToNotion(cfg, renderedPages) {
     const pageId = await ensurePage(parentPageId, title, cacheKey);
     const markdown = renderedPages[page.key];
     
+    // Skip if content not generated (e.g., disabled feature or generation error)
+    if (!markdown) {
+      console.log(`⚠️  Skipping ${page.key}: No content generated`);
+      continue;
+    }
+    
     await replacePageContent(pageId, markdown);
   }
 }

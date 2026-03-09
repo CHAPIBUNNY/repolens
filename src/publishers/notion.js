@@ -169,6 +169,12 @@ export async function clearPage(pageId) {
 }
 
 function markdownToNotionBlocks(markdown) {
+  // Safety check: handle undefined/null markdown
+  if (!markdown || typeof markdown !== 'string') {
+    console.warn(`Warning: markdownToNotionBlocks received invalid markdown: ${typeof markdown}`);
+    return [];
+  }
+  
   const lines = markdown.split("\n");
   const blocks = [];
   let i = 0;

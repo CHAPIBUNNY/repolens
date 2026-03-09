@@ -104,9 +104,9 @@ async function generateDocument(docPlan, context) {
     case "data_flows":
       return await generateDataFlows(flows, aiContext);
       
-    case "change_impact":
+    case "arch_diff":
       if (!diffData) {
-        return "# Change Impact\n\nNo changes detected.";
+        return "# Architecture Diff\n\nNo changes detected.";
       }
       return renderArchitectureDiff(diffData);
       
