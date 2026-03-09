@@ -49,9 +49,19 @@ jobs:
         run: npx repolens@latest publish
 `;
 
-const DEFAULT_ENV_EXAMPLE = `NOTION_TOKEN=
+const DEFAULT_ENV_EXAMPLE = `# Notion Publishing
+NOTION_TOKEN=
 NOTION_PARENT_PAGE_ID=
 NOTION_VERSION=2022-06-28
+
+# AI-Assisted Documentation (Optional)
+# Enable AI features for natural language explanations
+# REPOLENS_AI_ENABLED=true
+# REPOLENS_AI_API_KEY=sk-...
+# REPOLENS_AI_BASE_URL=https://api.openai.com/v1
+# REPOLENS_AI_MODEL=gpt-4-turbo-preview
+# REPOLENS_AI_TEMPERATURE=0.3
+# REPOLENS_AI_MAX_TOKENS=2000
 `;
 
 const DEFAULT_REPOLENS_README = `# RepoLens Documentation
@@ -95,9 +105,52 @@ For automated publishing on every push:
 
 ## 📊 Generated Documentation
 
-RepoLens generates:
+RepoLens generates documentation in two modes:
 
-- **System Overview** — High-level project snapshot
+### Deterministic Mode (Default - Free)
+- **System Overview** — Technical profile and stats
+- **Module Catalog** — Complete code inventory
+- **API Surface** — Internal endpoints + external integrations
+- **Route Map** — Application routes
+- **System Map** — Unicode architecture diagram
+- **Architecture Diff** — Change tracking
+
+### AI-Enhanced Mode (Optional - Requires API Key)
+Adds 5 natural language documents readable by non-technical audiences:
+- **Executive Summary** — Project overview for leadership
+- **Business Domains** — What the system does by function
+- **Architecture Overview** — Layered technical analysis
+- **Data Flows** — How information moves through system
+- **Developer Onboarding** — Getting started guide
+
+## 🤖 Enabling AI Features
+
+AI features add natural language explanations for non-technical stakeholders.
+
+1. Get an OpenAI API key from https://platform.openai.com/api-keys
+2. Add to your \`.env\` file:
+   \`\`\`bash
+   REPOLENS_AI_ENABLED=true
+   REPOLENS_AI_API_KEY=sk-...
+   \`\`\`
+3. (Optional) Configure in \`.repolens.yml\`:
+   \`\`\`yaml
+   ai:
+     enabled: true
+     mode: hybrid
+     temperature: 0.3
+   
+   features:
+     executive_summary: true
+     business_domains: true
+     architecture_overview: true
+     data_flows: true
+     developer_onboarding: true
+   \`\`\`
+
+**Cost estimate**: $0.10-$0.40 per run for typical projects
+
+See [AI.md](https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md) for full documentation
 - **Module Catalog** — Detected code modules
 - **API Surface** — REST API endpoints
 - **Route Map** — Application routes
@@ -461,18 +514,27 @@ NOTION_VERSION=2022-06-28
     info("   Your credentials are stored in .env (gitignored)\n");
     info("Next steps:");
     info("  1. Review .repolens.yml to customize your documentation");
-    info("  2. Run 'npx repolens publish' to generate your first docs");
-    info("  3. For GitHub Actions, add these repository secrets:");
+    info("  2. Run 'npx repolens publish' to generate your first docs (deterministic mode)");
+    info("  3. (Optional) Enable AI features by adding to .env:");
+    info("     REPOLENS_AI_ENABLED=true");
+    info("     REPOLENS_AI_API_KEY=sk-...");
+    info("     See AI.md for full guide: https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md");
+    info("  4. For GitHub Actions, add these repository secrets:");
     info("     - NOTION_TOKEN");
     info("     - NOTION_PARENT_PAGE_ID");
-    info("  4. Commit the generated files (workflow will run automatically)");
+    info("     - REPOLENS_AI_API_KEY (if using AI features)");
+    info("  5. Commit the generated files (workflow will run automatically)");
   } else {
     info("Next steps:");
     info("  1. Review .repolens.yml to customize your documentation");
     info("  2. To enable Notion publishing:");
     info("     - Copy .env.example to .env and add your credentials, OR");
     info("     - Add GitHub secrets: NOTION_TOKEN, NOTION_PARENT_PAGE_ID");
-    info("  3. Run 'npx repolens publish' to test locally");
-    info("  4. Commit the generated files");
+    info("  3. (Optional) Enable AI features by adding to .env:");
+    info("     REPOLENS_AI_ENABLED=true");
+    info("     REPOLENS_AI_API_KEY=sk-...");
+    info("     See: https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md");
+    info("  4. Run 'npx repolens publish' to test locally");
+    info("  5. Commit the generated files");
   }
 }
