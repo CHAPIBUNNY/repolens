@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { log } from "../utils/logger.js";
 import { fetchWithRetry } from "../utils/retry.js";
+import { executeNotionRequest } from "../utils/rate-limit.js";
 
 function notionHeaders() {
   const token = process.env.NOTION_TOKEN;
@@ -20,23 +21,25 @@ function notionHeaders() {
 }
 
 async function notionRequest(method, url, body) {
-  const res = await fetchWithRetry(`https://api.notion.com/v1${url}`, {
-    method,
-    headers: notionHeaders(),
-    body: body ? JSON.stringify(body) : undefined
-  }, {
-    retries: 3,
-    baseDelayMs: 500,
-    maxDelayMs: 4000,
-    label: `Notion ${method} ${url}`
+  return await executeNotionRequest(async () => {
+    const res = await fetchWithRetry(`https://api.notion.com/v1${url}`, {
+      method,
+      headers: notionHeaders(),
+      body: body ? JSON.stringify(body) : undefined
+    }, {
+      retries: 3,
+      baseDelayMs: 500,
+      maxDelayMs: 4000,
+      label: `Notion ${method} ${url}`
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Notion API error ${res.status}: ${text}`);
+    }
+
+    return await res.json();
   });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Notion API error ${res.status}: ${text}`);
-  }
-
-  return await res.json();
 }
 
 const CACHE_DIR = path.join(process.cwd(), ".cache");

@@ -1,6 +1,7 @@
 // Provider-agnostic AI text generation
 
 import { warn, info } from "../utils/logger.js";
+import { executeAIRequest } from "../utils/rate-limit.js";
 
 const DEFAULT_TIMEOUT_MS = 60000;
 const DEFAULT_TEMPERATURE = 0.2;
@@ -68,54 +69,56 @@ export async function generateText({ system, user, temperature, maxTokens }) {
 }
 
 async function callOpenAICompatibleAPI({ baseUrl, apiKey, model, system, user, temperature, maxTokens, timeoutMs }) {
-  const url = `${baseUrl}/chat/completions`;
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user }
-        ],
-        temperature,
-        max_tokens: maxTokens
-      }),
-      signal: controller.signal
-    });
+  return await executeAIRequest(async () => {
+    const url = `${baseUrl}/chat/completions`;
     
-    clearTimeout(timeoutId);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API error (${response.status}): ${errorText}`);
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user }
+          ],
+          temperature,
+          max_tokens: maxTokens
+        }),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API error (${response.status}): ${errorText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.choices || data.choices.length === 0) {
+        throw new Error("No completion returned from API");
+      }
+      
+      return data.choices[0].message.content;
+      
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === "AbortError") {
+        throw new Error(`Request timeout after ${timeoutMs}ms`);
+      }
+      
+      throw error;
     }
-    
-    const data = await response.json();
-    
-    if (!data.choices || data.choices.length === 0) {
-      throw new Error("No completion returned from API");
-    }
-    
-    return data.choices[0].message.content;
-    
-  } catch (error) {
-    clearTimeout(timeoutId);
-    
-    if (error.name === "AbortError") {
-      throw new Error(`Request timeout after ${timeoutMs}ms`);
-    }
-    
-    throw error;
-  }
+  });
 }
 
 export function isAIEnabled() {

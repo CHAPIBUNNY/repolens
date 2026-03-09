@@ -21,6 +21,8 @@ describe("loadConfig", () => {
     await fs.writeFile(
       configPath,
       `
+configVersion: 1
+
 project:
   name: "test-project"
 publishers:

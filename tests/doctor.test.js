@@ -21,6 +21,8 @@ describe("runDoctor", () => {
     await fs.writeFile(
       path.join(tempDir, ".repolens.yml"),
       `
+configVersion: 1
+
 project:
   name: "doctor-test"
 

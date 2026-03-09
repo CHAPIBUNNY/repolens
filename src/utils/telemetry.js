@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/node";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { sanitizeSecrets } from "./secrets.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -67,8 +68,24 @@ export function initTelemetry() {
                 return frame;
               });
             }
+            
+            // Sanitize exception messages for secrets
+            if (exception.value) {
+              exception.value = sanitizeSecrets(exception.value);
+            }
+            
             return exception;
           });
+        }
+        
+        // Sanitize event message
+        if (event.message) {
+          event.message = sanitizeSecrets(event.message);
+        }
+        
+        // Sanitize extra context
+        if (event.extra) {
+          event.extra = JSON.parse(sanitizeSecrets(JSON.stringify(event.extra)));
         }
         
         return event;
