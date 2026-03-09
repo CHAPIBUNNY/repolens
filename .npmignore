@@ -1,0 +1,33 @@
+# Test files
+tests/
+*.test.js
+vitest.config.js
+test-install.sh
+notion-test.js
+
+# Development files
+.github/
+.vscode/
+.cache/
+node_modules/
+
+# Documentation (keep README, CHANGELOG, RELEASE)
+ROADMAP.md
+MIGRATION.md
+PRODUCTION_CHECKLIST.md
+KNOWN_ISSUES.md
+SECURITY.md
+TELEMETRY.md
+AI.md
+*.instructions.md
+
+# Build artifacts
+*.log
+*.backup
+.DS_Store
+.repolens/
+
+# Environment
+.env
+.env.*
+!.env.example

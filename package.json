@@ -18,12 +18,19 @@
   ],
   "keywords": [
     "cli",
-    "docs",
+    "documentation",
     "architecture",
     "github",
     "notion",
     "markdown",
-    "developer-tools"
+    "developer-tools",
+    "rabitai",
+    "repolens",
+    "observability",
+    "dashboard",
+    "metrics",
+    "team-collaboration",
+    "discord"
   ],
   "repository": {
     "type": "git",
@@ -34,6 +41,10 @@
     "url": "https://github.com/CHAPIBUNNY/repolens/issues"
   },
   "author": "Charl van Zyl",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "test:notion": "node notion-test.js",
     "docs:publish": "node src/cli.js publish --config ../../.repolens.yml",
