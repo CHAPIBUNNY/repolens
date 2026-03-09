@@ -224,11 +224,89 @@ export async function scanRepo(cfg) {
   // Extract repository metadata
   const metadata = await extractRepoMetadata(repoRoot);
 
+  // Detect external API integrations
+  const externalApis = await detectExternalApis(files, repoRoot);
+
   return {
     filesCount: files.length,
     modules,
     api,
     pages,
-    metadata
+    metadata,
+    externalApis
   };
+}
+
+async function detectExternalApis(files, repoRoot) {
+  const integrations = [];
+  const detectedServices = new Set();
+
+  // Common API patterns to detect
+  const apiPatterns = [
+    {
+      name: "OpenAI API",
+      patterns: [
+        /api\.openai\.com/,
+        /chat\/completions/,
+        /OPENAI.*API_KEY/,
+        /REPOLENS_AI_API_KEY/
+      ],
+      category: "AI/ML"
+    },
+    {
+      name: "Notion API",
+      patterns: [
+        /api\.notion\.com/,
+        /NOTION_TOKEN/,
+        /notion.*pages/
+      ],
+      category: "Publishing"
+    },
+    {
+      name: "npm Registry",
+      patterns: [
+        /registry\.npmjs\.org/,
+        /npm.*latest/
+      ],
+      category: "Package Management"
+    },
+    {
+      name: "GitHub API",
+      patterns: [
+        /api\.github\.com/,
+        /GITHUB_TOKEN/
+      ],
+      category: "Version Control"
+    }
+  ];
+
+  // Only scan JavaScript/TypeScript files for performance
+  const jsFiles = files.filter(f => 
+    f.endsWith('.js') || f.endsWith('.ts') || 
+    f.endsWith('.jsx') || f.endsWith('.tsx')
+  );
+
+  for (const file of jsFiles) {
+    const absoluteFile = path.join(repoRoot, file);
+    const content = await readFileSafe(absoluteFile);
+    
+    if (!content) continue;
+
+    for (const { name, patterns, category } of apiPatterns) {
+      if (detectedServices.has(name)) continue;
+
+      const matched = patterns.some(pattern => pattern.test(content));
+      
+      if (matched) {
+        integrations.push({
+          name,
+          category,
+          detectedIn: file
+        });
+        detectedServices.add(name);
+      }
+    }
+  }
+
+  return integrations;
 }

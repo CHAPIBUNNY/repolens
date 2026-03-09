@@ -115,51 +115,81 @@ export function renderApiSurface(cfg, scan) {
   const lines = [
     `# 🔌 API Surface`,
     ``,
-    `What is this? This page lists all the API endpoints (backend services) your application provides. Each endpoint handles specific HTTP requests like GET, POST, PUT, DELETE.`,
-    ``,
-    `Total endpoints: ${scan.api.length}`,
+    `What is this? This page shows both the API endpoints your application provides AND the external APIs it integrates with.`,
     ``,
     `---`,
     ``
   ];
 
-  if (!scan.api.length) {
-    lines.push(
-      `## No API Routes Detected`,
-      ``,
-      `Your project doesn't appear to have Next.js API routes yet. API routes provide backend functionality like:`,
-      ``,
-      `- Fetching data from databases`,
-      `- Processing form submissions`,
-      `- Authenticating users`,
-      `- Integrating with third-party services`,
-      ``,
-      `To add API routes, create files in \`pages/api/\` or \`app/*/route.ts\`.`,
-      ``
-    );
-    return lines.join("\n");
-  }
-
+  // Section 1: Internal API Endpoints (what we expose)
   lines.push(
-    `## Detected Endpoints`,
+    `## Internal API Endpoints`,
     ``,
-    `Each line shows: HTTP Method → API Path → Implementation File`,
+    `These are the backend services your application provides to handle requests.`,
+    ``,
+    `Total endpoints: ${scan.api.length}`,
     ``
   );
 
-  for (const route of scan.api) {
-    lines.push(`- ${route.methods.join(", ")} \`${route.path}\` • \`${route.file}\``);
+  if (!scan.api.length) {
+    lines.push(
+      `No API routes detected. Your project doesn't appear to have Next.js API routes yet.`,
+      ``
+    );
+  } else {
+    lines.push(
+      `Each line shows: HTTP Method → API Path → Implementation File`,
+      ``
+    );
+
+    for (const route of scan.api) {
+      lines.push(`- ${route.methods.join(", ")} \`${route.path}\` • \`${route.file}\``);
+    }
+    
+    lines.push(``);
+  }
+
+  // Section 2: External API Integrations (what we call)
+  lines.push(
+    `---`,
+    ``,
+    `## External API Integrations`,
+    ``,
+    `These are third-party services your application connects to.`,
+    ``
+  );
+
+  if (!scan.externalApis || scan.externalApis.length === 0) {
+    lines.push(
+      `No external API integrations detected.`,
+      ``
+    );
+  } else {
+    // Group by category
+    const byCategory = {};
+    for (const api of scan.externalApis) {
+      if (!byCategory[api.category]) {
+        byCategory[api.category] = [];
+      }
+      byCategory[api.category].push(api);
+    }
+
+    for (const [category, apis] of Object.entries(byCategory)) {
+      lines.push(`### ${category}`, ``);
+      for (const api of apis) {
+        lines.push(`- **${api.name}** — detected in \`${api.detectedIn}\``);
+      }
+      lines.push(``);
+    }
   }
 
   lines.push(
-    ``,
     `---`,
     ``,
-    `💡 Tip: HTTP methods indicate the type of operation:`,
-    `- GET: Retrieve data`,
-    `- POST: Create new data`,
-    `- PUT/PATCH: Update existing data`,
-    `- DELETE: Remove data`,
+    `💡 Tips:`,
+    `- **Internal endpoints** handle incoming requests from users/clients`,
+    `- **External integrations** connect your app to third-party services`,
+    `- HTTP methods: GET (retrieve), POST (create), PUT/PATCH (update), DELETE (remove)`,
     ``
   );
 
