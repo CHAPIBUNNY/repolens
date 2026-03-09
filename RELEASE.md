@@ -25,5 +25,28 @@ RepoLens uses semantic versioning:
 ## Example Patch Release
 
 ```bash
-cd tools/repolens
+# 1. Update version
+npm run release:patch  # or :minor, :major
+
+# 2. Run tests
 npm test
+
+# 3. Test installation
+npm run test:install
+
+# 4. Push release
+git push --follow-tags
+
+# 5. Verify GitHub Actions
+# Check: https://github.com/CHAPIBUNNY/repolens/actions
+```
+
+## Testing Upgrade Path
+
+To test that users can upgrade successfully:
+
+```bash
+# In a test project
+npx repolens@latest --version
+npx repolens@latest publish
+```

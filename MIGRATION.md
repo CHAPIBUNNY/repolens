@@ -2,7 +2,146 @@
 
 This guide helps you upgrade RepoLens across breaking changes and major versions.
 
-## 🔄 How Updates Work
+## � Version 0.4.0 Migration (Latest)
+
+### Critical: Update GitHub Actions Workflow
+
+**⚠️ If you see this error:**
+```
+Run cd tools/repolens
+cd: tools/repolens: No such file or directory
+Error: Process completed with exit code 1.
+```
+
+**Your workflow file has an outdated format.** Update `.github/workflows/repolens.yml`:
+
+**❌ Old format (v0.3.0 and earlier):**
+```yaml
+- name: Generate documentation
+  run: |
+    cd tools/repolens
+    npm install
+    npx repolens publish
+```
+
+**✅ New format (v0.4.0+):**
+```yaml
+- name: Setup Node.js
+  uses: actions/setup-node@v4
+  with:
+    node-version: 20
+
+- name: Generate and publish documentation
+  env:
+    NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+    NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
+    REPOLENS_AI_API_KEY: ${{ secrets.REPOLENS_AI_API_KEY }}
+    REPOLENS_AI_PROVIDER: openai
+  run: npx repolens@latest publish
+```
+
+### New Features in v0.4.0
+
+- ✨ **AI-Assisted Documentation** - Natural language explanations for non-technical audiences
+- ✨ **11 Document Types** - 6 deterministic + 5 AI-enhanced (optional)
+- ✨ **External API Detection** - Tracks OpenAI, Notion, npm, GitHub API integrations
+- ✨ **Business Domain Inference** - Maps code structure to business functions
+- ✨ **Data Flow Analysis** - Understands how information moves through the system
+- ✨ **Hybrid Mode** - Get deterministic baseline + AI enhancements
+
+### AI Features (Optional)
+
+Add to `.repolens.yml`:
+
+```yaml
+ai:
+  enabled: true
+  mode: hybrid  # deterministic + AI-enhanced
+  provider: openai
+  model: gpt-4-turbo-preview
+  temperature: 0.3
+
+features:
+  executive_summary: true   # Non-technical project overview
+  business_domains: true    # Domain mapping (auth, payments, etc.)
+  user_stories: true        # Inferred use cases
+  data_flows: true          # Information movement analysis
+  security_analysis: true   # Security posture assessment
+  change_impact: false      # Architecture diff analysis (coming soon)
+```
+
+Add GitHub secret:
+```bash
+# In your repository: Settings → Secrets → Actions
+REPOLENS_AI_API_KEY=sk-...  # Your OpenAI API key
+```
+
+**Cost:** ~$0.10-$0.40 per run with gpt-4-turbo-preview
+
+### Configuration Updates
+
+Update `outputs.pages` in `.repolens.yml` to include AI-enhanced documents:
+
+```yaml
+outputs:
+  pages:
+    # Core docs (always generated)
+    - system_overview
+    - module_catalog
+    - api_surface
+    - route_map
+    - system_map
+    - arch_diff
+    
+    # AI-enhanced docs (optional, requires ai.enabled: true)
+    - executive_summary
+    - business_domains
+    - user_stories
+    - data_flows
+    - security_analysis
+```
+
+### Backward Compatibility
+
+**No breaking changes!** v0.4.0 is 100% backward compatible:
+
+- ✅ Existing `.repolens.yml` configs work without modification
+- ✅ AI features are opt-in (deterministic mode is default)
+- ✅ All 6 original documents unchanged
+- ✅ No new required dependencies
+
+**Test deterministic mode (same as v0.3.0):**
+```bash
+npx repolens@latest publish
+# Output: 6 core documents (no AI needed)
+```
+
+**Test AI-enhanced mode:**
+```bash
+# After adding ai config to .repolens.yml
+npx repolens@latest publish
+# Output: 11 documents (6 core + 5 AI-enhanced)
+```
+
+### Troubleshooting
+
+**❌ Error: `AI generation failed`**
+
+**Normal behavior!** RepoLens falls back to deterministic documentation when AI fails. Check:
+1. `REPOLENS_AI_API_KEY` is set in GitHub Secrets
+2. API key has sufficient credits
+3. OpenAI status page (transient 500 errors handled automatically)
+
+**✅ Expected output:**
+```
+ℹ️ AI Features: Enabled (hybrid mode)
+❌ Executive Summary generation failed. Using deterministic version.
+✅ System Overview generated
+```
+
+---
+
+## �🔄 How Updates Work
 
 ### Automatic Update Notifications
 
