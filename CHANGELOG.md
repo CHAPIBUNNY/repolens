@@ -2,6 +2,45 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 0.4.1
+
+### ✨ New Features
+
+**Migration Command**:
+- Added `repolens migrate` command to automatically upgrade workflow files from legacy formats to v0.4.0+
+- Auto-detects legacy patterns: `cd tools/repolens`, missing `@latest` suffix, missing Node.js setup, missing environment variables
+- Shows preview diff of changes before applying
+- Creates backup files (*.backup) for safety
+- Supports `--dry-run` flag to preview changes without applying
+- Supports `--force` flag to skip interactive confirmation
+- Handles multiple workflow files in `.github/workflows/`
+- Comprehensive test coverage (7 test cases)
+
+**Migration Detection**:
+- Detects outdated `cd tools/repolens` directory changes
+- Detects `npx repolens` without `@latest` suffix
+- Detects missing `actions/setup-node@v4` setup
+- Detects missing environment variables (NOTION_TOKEN, REPOLENS_AI_API_KEY)
+- Automatically adds AI environment variables to existing env sections
+- Skips already-migrated workflows (no-op when up to date)
+
+**Documentation**:
+- Added comprehensive migration section to [MIGRATION.md](MIGRATION.md)
+- Updated [README.md](README.md) with migration instructions
+- Added migration examples to CLI help text
+- Updated [RELEASE.md](RELEASE.md) with correct workflow format
+
+### 🐛 Bug Fixes
+- Fixed outdated workflow format in RELEASE.md that caused `cd: tools/repolens: No such file or directory` errors
+
+### 📚 Documentation
+- Prominently documented workflow migration in MIGRATION.md
+- Added troubleshooting section for common migration issues
+- Clarified v0.3.0 → v0.4.0 upgrade path
+- Added step-by-step migration guide for existing users
+
+---
+
 ## 0.4.0
 
 ### 💥 Breaking Changes

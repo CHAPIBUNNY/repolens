@@ -44,6 +44,9 @@ npx repolens publish
 
 **Done!** Your docs are now live in Notion and/or `.repolens/` directory.
 
+**🔄 Upgrading from v0.3.0 or earlier?**
+Run `npx repolens migrate` to automatically update your workflow files. See [MIGRATION.md](MIGRATION.md) for details.
+
 ---
 
 ---
@@ -441,6 +444,35 @@ Validates:
 - ✅ Publishers configured correctly
 - ✅ Scan patterns defined
 - ✅ Mermaid CLI installation status
+
+### Migrate Workflows
+
+**🚨 Upgrading from v0.3.0 or earlier?** Automatically update your GitHub Actions workflows:
+
+```bash
+npx repolens migrate
+```
+
+Preview changes without applying:
+```bash
+npx repolens migrate --dry-run
+```
+
+What it fixes:
+- ❌ Removes outdated `cd tools/repolens` commands
+- ✅ Updates to `npx repolens@latest publish`
+- ✅ Adds Node.js setup step if missing
+- ✅ Adds environment variables (NOTION_TOKEN, REPOLENS_AI_API_KEY)
+- 💾 Creates backup files for safety
+
+**Common error it fixes:**
+```
+Run cd tools/repolens
+cd: tools/repolens: No such file or directory
+Error: Process completed with exit code 1.
+```
+
+See [MIGRATION.md](MIGRATION.md) for detailed upgrade guide.
 
 ### Get Help
 

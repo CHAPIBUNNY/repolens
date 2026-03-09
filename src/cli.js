@@ -19,6 +19,7 @@ import { renderArchitectureDiff, buildArchitectureDiffData } from "./renderers/r
 import { publishDocs } from "./publishers/index.js";
 import { upsertPrComment } from "./delivery/comment.js";
 import { runInit } from "./init.js";
+import { runMigrate } from "./migrate.js";
 import { info, error } from "./utils/logger.js";
 import { checkForUpdates } from "./utils/update-check.js";
 import { generateDocumentSet } from "./docs/generate-doc-set.js";
@@ -88,12 +89,15 @@ Usage:
 Commands:
   init        Scaffold RepoLens files in a target repository
   doctor      Validate a repository's RepoLens setup
+  migrate     Upgrade workflow files to v0.4.0 format
   publish     Scan, render, and publish RepoLens outputs
   version     Print the current RepoLens version
 
 Options:
   --config     Path to .repolens.yml (auto-discovered if not provided)
-  --target     Target repository path for init/doctor
+  --target     Target repository path for init/doctor/migrate
+  --dry-run    Preview migration changes without applying them
+  --force      Skip interactive confirmation for migration
   --verbose    Enable verbose logging
   --version    Print version
   --help       Show this help message
@@ -101,6 +105,8 @@ Options:
 Examples:
   repolens init --target /tmp/my-repo
   repolens doctor --target /tmp/my-repo
+  repolens migrate                              # Migrate workflows in current directory
+  repolens migrate --dry-run                    # Preview changes without applying
   repolens publish                              # Auto-discovers .repolens.yml
   repolens publish --config /path/.repolens.yml # Explicit config path
   repolens --version
@@ -150,6 +156,21 @@ async function main() {
       error("Validation failed:");
       error(err.message);
       process.exit(2);
+    }
+    return;
+  }
+
+  if (command === "migrate") {
+    const targetDir = getArg("--target") || process.cwd();
+    const dryRun = process.argv.includes("--dry-run");
+    const force = process.argv.includes("--force");
+    
+    try {
+      await runMigrate(targetDir, { dryRun, force });
+    } catch (err) {
+      error("Migration failed:");
+      error(err.message);
+      process.exit(1);
     }
     return;
   }
@@ -220,7 +241,7 @@ async function main() {
   }
 
   error(`Unknown command: ${command}`);
-  error("Available commands: init, doctor, publish, version, help");
+  error("Available commands: init, doctor, migrate, publish, version, help");
   process.exit(1);
 }
 

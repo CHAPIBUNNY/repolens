@@ -14,7 +14,7 @@
 
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
-**Version:** 0.4.0  
+**Version:** 0.4.1  
 **Status:** Production-ready, pre-v1.0 stability guarantees  
 **License:** MIT
 
