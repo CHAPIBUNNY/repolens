@@ -24,6 +24,7 @@ import { info, error } from "./utils/logger.js";
 import { checkForUpdates } from "./utils/update-check.js";
 import { generateDocumentSet } from "./docs/generate-doc-set.js";
 import { writeDocumentSet } from "./docs/write-doc-set.js";
+import { initTelemetry, captureError, setContext, closeTelemetry } from "./utils/telemetry.js";
 
 async function getPackageVersion() {
   const __filename = fileURLToPath(import.meta.url);
@@ -116,6 +117,15 @@ Examples:
 async function main() {
   const command = process.argv[2];
 
+  // Initialize telemetry (opt-in via REPOLENS_TELEMETRY_ENABLED=true)
+  initTelemetry();
+  setContext("cli", {
+    command: command || "publish",
+    args: process.argv.slice(2),
+    nodeVersion: process.version,
+    platform: process.platform,
+  });
+
   // Check for updates (non-blocking, runs in background)
   checkForUpdates().catch(() => {/* Silently fail */});
 
@@ -137,9 +147,12 @@ async function main() {
     try {
       await runInit(targetDir);
       info("✓ RepoLens initialized successfully");
+      await closeTelemetry();
     } catch (err) {
+      captureError(err, { command: "init", targetDir });
       error("Failed to initialize RepoLens:");
       error(err.message);
+      await closeTelemetry();
       process.exit(1);
     }
     return;
@@ -152,9 +165,12 @@ async function main() {
     try {
       await runDoctor(targetDir);
       info("✓ RepoLens validation passed");
+      await closeTelemetry();
     } catch (err) {
+      captureError(err, { command: "doctor", targetDir });
       error("Validation failed:");
       error(err.message);
+      await closeTelemetry();
       process.exit(2);
     }
     return;
@@ -167,9 +183,12 @@ async function main() {
     
     try {
       await runMigrate(targetDir, { dryRun, force });
+      await closeTelemetry();
     } catch (err) {
+      captureError(err, { command: "migrate", targetDir, dryRun, force });
       error("Migration failed:");
       error(err.message);
+      await closeTelemetry();
       process.exit(1);
     }
     return;
@@ -193,8 +212,10 @@ async function main() {
       info("Loading configuration...");
       cfg = await loadConfig(configPath);
     } catch (err) {
+      captureError(err, { command: "publish", step: "load-config", configPath });
       error("Failed to load configuration:");
       error(err.message);
+      await closeTelemetry();
       process.exit(2);
     }
 
@@ -203,8 +224,10 @@ async function main() {
       scan = await scanRepo(cfg);
       info(`Detected ${scan.modules?.length || 0} modules`);
     } catch (err) {
+      captureError(err, { command: "publish", step: "scan", patterns: cfg.scan?.patterns });
       error("Failed to scan repository:");
       error(err.message);
+      await closeTelemetry();
       process.exit(1);
     }
 
@@ -232,11 +255,14 @@ async function main() {
       await upsertPrComment(diffData);
       info("✓ Documentation published successfully");
     } catch (err) {
+      captureError(err, { command: "publish", step: "generate-or-publish", publishers: cfg.publishers });
       error("Failed to publish documentation:");
       error(err.message);
+      await closeTelemetry();
       process.exit(1);
     }
 
+    await closeTelemetry();
     return;
   }
 
@@ -245,7 +271,13 @@ async function main() {
   process.exit(1);
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
+  // Capture unexpected errors
+  captureError(err, { 
+    type: "uncaught",
+    command: process.argv[2] || "unknown"
+  });
+  
   console.error("\n❌ RepoLens encountered an unexpected error:\n");
   
   if (err.code === "ENOENT") {
@@ -267,5 +299,6 @@ main().catch((err) => {
     console.error("\nRun with --verbose for full error details.");
   }
   
+  await closeTelemetry();
   process.exit(1);
 });
