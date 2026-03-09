@@ -2,6 +2,15 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 0.4.2
+
+### 🐛 Bug Fixes
+- **Migration Tool**: Fixed duplicate `run:` keys issue when adding environment variables
+  - Updated pattern to capture and preserve existing run command
+  - Properly positions `env:` block before `run:` with correct indentation
+  - Fixes GitHub Actions validation error: "'run' is already defined"
+  - Added test case to prevent regression
+
 ## 0.4.1
 
 ### ✨ New Features
