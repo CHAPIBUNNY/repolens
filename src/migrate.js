@@ -43,11 +43,16 @@ function detectLegacyPatterns(content) {
 function migrateWorkflowContent(content) {
   let migrated = content;
 
-  // Remove cd tools/repolens commands
-  migrated = migrated.replace(/cd\s+tools\/repolens\s*\n?/gi, "");
-  
-  // Remove standalone npm ci/install that's part of old setup
-  migrated = migrated.replace(/npm\s+(?:ci|install)\s*\n/g, "");
+  // Remove cd tools/repolens commands and associated npm install in the same run block
+  // This handles the legacy pattern: run: | cd tools/repolens; npm install; npx repolens publish
+  if (/cd\s+tools\/repolens/i.test(migrated)) {
+    // Remove cd command
+    migrated = migrated.replace(/cd\s+tools\/repolens\s*\n?/gi, "");
+    
+    // Only remove npm install/ci if it appears in what looks like a multi-line run block
+    // after we've removed the cd command (indicates it was part of the legacy pattern)
+    migrated = migrated.replace(/(run:\s*\|[^\n]*\n(?:\s+[^\n]*\n)*?\s+)npm\s+(?:ci|install)\s*\n/g, "$1");
+  }
 
   // Update npx repolens to npx @chappibunny/repolens@latest
   migrated = migrated.replace(/npx\s+repolens\s+/g, "npx @chappibunny/repolens@latest ");

@@ -288,4 +288,52 @@ jobs:
     const runIndex = migrated.indexOf("run:", envIndex);
     expect(envIndex).toBeLessThan(runIndex);
   });
+
+  it("preserves legitimate npm install steps outside legacy pattern", async () => {
+    const workflowWithNpmInstall = `name: RepoLens Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Generate documentation
+        run: npx repolens publish
+`;
+
+    const workflowPath = path.join(tempDir, ".github", "workflows", "release.yml");
+    await fs.writeFile(workflowPath, workflowWithNpmInstall, "utf8");
+
+    await runMigrate(tempDir, { dryRun: false, force: true });
+
+    const migrated = await fs.readFile(workflowPath, "utf8");
+
+    // Should preserve legitimate npm ci/install steps
+    expect(migrated).toContain("npm ci");
+    expect(migrated).toContain("npm test");
+    
+    // Should still update npx repolens
+    expect(migrated).toContain("npx @chappibunny/repolens@latest publish");
+    
+    // Should not have broken YAML (each step has valid structure)
+    expect(migrated).toMatch(/- name: Install dependencies\s+run: npm ci/);
+    expect(migrated).toMatch(/- name: Run tests\s+run: npm test/);
+  });
 });
