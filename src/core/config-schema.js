@@ -15,7 +15,14 @@ const SUPPORTED_PAGE_KEYS = [
   "api_surface",
   "arch_diff",
   "route_map",
-  "system_map"
+  "system_map",
+  // New AI-enhanced document types
+  "executive_summary",
+  "business_domains",
+  "architecture_overview",
+  "data_flows",
+  "change_impact",
+  "developer_onboarding"
 ];
 
 class ValidationError extends Error {
@@ -162,6 +169,65 @@ export function validateConfig(config) {
       Object.entries(config.features).forEach(([key, value]) => {
         if (typeof value !== "boolean") {
           errors.push(`features.${key} must be a boolean`);
+        }
+      });
+    }
+  }
+
+  // Validate AI configuration (optional)
+  if (config.ai !== undefined) {
+    if (typeof config.ai !== "object" || Array.isArray(config.ai)) {
+      errors.push("ai must be an object");
+    } else {
+      if (config.ai.enabled !== undefined && typeof config.ai.enabled !== "boolean") {
+        errors.push("ai.enabled must be a boolean");
+      }
+      if (config.ai.mode !== undefined && !["hybrid", "full", "off"].includes(config.ai.mode)) {
+        errors.push("ai.mode must be one of: hybrid, full, off");
+      }
+      if (config.ai.temperature !== undefined && typeof config.ai.temperature !== "number") {
+        errors.push("ai.temperature must be a number");
+      }
+      if (config.ai.max_tokens !== undefined && typeof config.ai.max_tokens !== "number") {
+        errors.push("ai.max_tokens must be a number");
+      }
+    }
+  }
+
+  // Validate documentation configuration (optional)
+  if (config.documentation !== undefined) {
+    if (typeof config.documentation !== "object" || Array.isArray(config.documentation)) {
+      errors.push("documentation must be an object");
+    } else {
+      if (config.documentation.output_dir && typeof config.documentation.output_dir !== "string") {
+        errors.push("documentation.output_dir must be a string");
+      }
+      if (config.documentation.include_artifacts !== undefined && typeof config.documentation.include_artifacts !== "boolean") {
+        errors.push("documentation.include_artifacts must be a boolean");
+      }
+      if (config.documentation.sections !== undefined) {
+        if (!Array.isArray(config.documentation.sections)) {
+          errors.push("documentation.sections must be an array");
+        }
+      }
+    }
+  }
+
+  // Validate domains configuration (optional)
+  if (config.domains !== undefined) {
+    if (typeof config.domains !== "object" || Array.isArray(config.domains)) {
+      errors.push("domains must be an object");
+    } else {
+      Object.entries(config.domains).forEach(([domainKey, domain]) => {
+        if (typeof domain !== "object") {
+          errors.push(`domains.${domainKey} must be an object`);
+        } else {
+          if (!domain.match || !Array.isArray(domain.match)) {
+            errors.push(`domains.${domainKey}.match is required and must be an array`);
+          }
+          if (domain.description && typeof domain.description !== "string") {
+            errors.push(`domains.${domainKey}.description must be a string`);
+          }
         }
       });
     }

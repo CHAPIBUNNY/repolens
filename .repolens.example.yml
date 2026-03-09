@@ -1,0 +1,180 @@
+# Example .repolens.yml with AI Features
+
+configVersion: 1
+
+project:
+  name: "my-project"
+  docs_title_prefix: "RepoLens"
+
+publishers:
+  - markdown
+  - notion
+
+# Feature flags - control which documents are generated
+features:
+  executive_summary: true
+  business_domains: true
+  architecture_overview: true
+  data_flows: true
+  developer_onboarding: true
+  ai_enrichment: true
+
+# AI configuration (requires environment variables)
+ai:
+  enabled: true # Set to false to disable AI features entirely
+  mode: "hybrid" # hybrid (deterministic + AI) | full (AI-heavy) | off
+  audience_default: "mixed" # mixed | technical | non-technical
+  temperature: 0.2 # Lower = more deterministic, higher = more creative
+  max_tokens: 2500
+
+# Documentation output configuration
+documentation:
+  output_dir: ".repolens" # Where to write markdown files
+  include_artifacts: true # Write JSON artifacts for debugging
+  file_prefix: true # Add numbers to filenames (00-, 01-, etc.)
+  
+  # Specify which documents to generate (omit to generate all)
+  sections:
+    - executive_summary
+    - system_overview
+    - business_domains
+    - architecture_overview
+    - module_catalog
+    - route_map
+    - api_surface
+    - data_flows
+    - change_impact
+    - system_map
+    - developer_onboarding
+
+scan:
+  include:
+    - "app/**/*.{ts,tsx,js,jsx,md}"
+    - "src/app/**/*.{ts,tsx,js,jsx,md}"
+    - "components/**/*.{ts,tsx,js,jsx,md}"
+    - "src/components/**/*.{ts,tsx,js,jsx,md}"
+    - "lib/**/*.{ts,tsx,js,jsx,md}"
+    - "src/lib/**/*.{ts,tsx,js,jsx,md}"
+    - "hooks/**/*.{ts,tsx,js,jsx,md}"
+    - "src/hooks/**/*.{ts,tsx,js,jsx,md}"
+    - "store/**/*.{ts,tsx,js,jsx,md}"
+    - "src/store/**/*.{ts,tsx,js,jsx,md}"
+    - "pages/**/*.{ts,tsx,js,jsx,md}"
+    - "src/pages/**/*.{ts,tsx,js,jsx,md}"
+
+  ignore:
+    - "node_modules/**"
+    - ".next/**"
+    - "dist/**"
+    - "build/**"
+    - "coverage/**"
+    - "public/**"
+    - "**/*.test.*"
+    - "**/*.spec.*"
+    - "**/__tests__/**"
+    - "**/__mocks__/**"
+    - "**/generated/**"
+
+module_roots:
+  - "app"
+  - "src/app"
+  - "components"
+  - "src/components"
+  - "lib"
+  - "src/lib"
+  - "hooks"
+  - "src/hooks"
+  - "store"
+  - "src/store"
+  - "pages"
+  - "src/pages"
+
+# Business domain configuration - helps AI understand your codebase structure
+domains:
+  authentication:
+    match:
+      - "auth"
+      - "login"
+      - "signup"
+      - "session"
+    description: "User authentication and identity flows"
+
+  market_data:
+    match:
+      - "stock"
+      - "chart"
+      - "price"
+      - "market"
+      - "watchlist"
+    description: "Market data retrieval, analysis, and visualization"
+
+  content_research:
+    match:
+      - "article"
+      - "newsletter"
+      - "news"
+      - "research"
+    description: "Content publishing, research, and insight delivery"
+
+  portfolio:
+    match:
+      - "portfolio"
+      - "positions"
+      - "holdings"
+    description: "Portfolio tracking and management"
+
+# Notion configuration (optional)
+notion:
+  branches:
+    - "main"
+    - "master"
+    - "develop"
+  includeBranchInTitle: true
+
+# Legacy outputs configuration (for backwards compatibility)
+# New document structure is defined in documentation.sections above
+outputs:
+  pages:
+    - key: "executive_summary"
+      title: "Executive Summary"
+      description: "High-level overview for stakeholders"
+    
+    - key: "system_overview"
+      title: "System Overview"
+      description: "Technical architecture snapshot"
+    
+    - key: "business_domains"
+      title: "Business Domains"
+      description: "Codebase organized by business capability"
+    
+    - key: "architecture_overview"
+      title: "Architecture Overview"
+      description: "Detailed architectural analysis"
+    
+    - key: "module_catalog"
+      title: "Module Catalog"
+      description: "Complete inventory of code modules"
+    
+    - key: "route_map"
+      title: "Route Map"
+      description: "Application pages and API endpoints"
+    
+    - key: "api_surface"
+      title: "API Surface"
+      description: "Backend API documentation"
+    
+    - key: "data_flows"
+      title: "Data Flows"
+      description: "Information flows through the system"
+    
+    - key: "change_impact"
+      title: "Change Impact"
+      description: "Architecture diff analysis"
+    
+    - key: "system_map"
+      title: "System Map"
+      description: "Visual dependency diagram"
+    
+    - key: "developer_onboarding"
+      title: "Developer Onboarding"
+      description: "Quick start guide for new developers"

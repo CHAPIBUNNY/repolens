@@ -188,16 +188,22 @@ async function main() {
     const rawDiff = getGitDiff("origin/main");
     const diffData = buildArchitectureDiffData(rawDiff);
 
-    const renderedPages = {
-      system_overview: renderSystemOverview(cfg, scan),
-      module_catalog: renderModuleCatalog(cfg, scan),
-      api_surface: renderApiSurface(cfg, scan),
-      arch_diff: renderArchitectureDiff(rawDiff),
-      route_map: renderRouteMap(cfg, scan),
-      system_map: renderSystemMap(scan)
-    };
-
     try {
+      info("Generating documentation set...");
+      const docSet = await generateDocumentSet(scan, cfg, rawDiff);
+      
+      info("Writing documentation to disk...");
+      const writeResult = await writeDocumentSet(docSet, process.cwd());
+      info(`✓ Generated ${writeResult.documentCount} documents in ${writeResult.outputDir}`);
+      
+      // Build legacy renderedPages format for Notion publishing
+      const renderedPages = {};
+      for (const doc of docSet.documents) {
+        // Map new document keys to legacy keys for backwards compatibility
+        const legacyKey = doc.key;
+        renderedPages[legacyKey] = doc.content;
+      }
+      
       info("Publishing documentation...");
       await publishDocs(cfg, renderedPages);
       await upsertPrComment(diffData);
