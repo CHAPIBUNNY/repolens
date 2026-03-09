@@ -25,6 +25,15 @@
     "markdown",
     "developer-tools"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CHAPIBUNNY/repolens.git"
+  },
+  "homepage": "https://github.com/CHAPIBUNNY/repolens#readme",
+  "bugs": {
+    "url": "https://github.com/CHAPIBUNNY/repolens/issues"
+  },
+  "author": "Charl van Zyl",
   "scripts": {
     "test:notion": "node notion-test.js",
     "publish": "node src/cli.js publish --config ../../.repolens.yml",
