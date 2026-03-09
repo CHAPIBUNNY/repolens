@@ -8,9 +8,9 @@
                         🔍 Repository Intelligence CLI 📊
 ```
 
-Automated architecture documentation that actually understands your codebase
+AI-assisted documentation intelligence system that generates architecture docs for engineers AND readable system docs for stakeholders
 
-**Current Status**: v0.3.0 — Production Ready
+**Current Status**: v0.4.0 — Production Ready
 
 RepoLens automatically generates and maintains living architecture documentation by analyzing your repository structure, extracting meaningful insights from your package.json, and creating visual dependency graphs. Run it once, or let it auto-update on every push.
 
@@ -50,38 +50,63 @@ npx repolens publish
 
 ## 🎯 What RepoLens Does
 
-RepoLens scans your repository and generates comprehensive documentation in seconds:
+RepoLens transforms repositories into documented, understandable systems with **AI-assisted documentation intelligence**:
 
-### 📋 Documentation Pages
+### 🤖 Two Output Modes
 
-| Page | What It Shows | Use Case |
-|------|---------------|----------|
-| **System Overview** | Tech stack, architecture size, module count | High-level project understanding |
-| **Module Catalog** | Complete inventory of all modules | Navigate large codebases |
-| **API Surface** | REST endpoints, methods, routes | Backend API documentation |
-| **Route Map** | Frontend routes and pages | Frontend navigation structure |
-| **System Map** | Visual dependency graph (Mermaid) | Architecture visualization |
-| **Architecture Diff** | Changes between commits/branches | PR reviews, change tracking |
+**Deterministic Mode (Default)**
+- Fast, free, always reliable
+- Generates technical documentation from repository structure
+- Perfect for code inventories and reference docs
+
+**AI-Enhanced Mode (Optional)**
+- Adds natural language explanations and insights
+- Creates audience-specific documentation (technical + non-technical)
+- Understands business context and data flows
+- Provider-agnostic (OpenAI, Anthropic, Azure, local models)
+
+### 📋 Documentation Types
+
+**Non-Technical Documents** (readable by founders, PMs, ops):
+- **Executive Summary** — Project overview, capabilities, tech summary
+- **Business Domains** — What the system does by functional area
+- **Data Flows** — How information moves through the system
+
+**Mixed-Audience Documents** (useful for everyone):
+- **System Overview** — Tech stack, scale, module inventory
+- **Developer Onboarding** — How to get started contributing
+- **Change Impact** — Architecture diff with context
+
+**Technical Documents** (engineers only):
+- **Architecture Overview** — Layered technical analysis
+- **Module Catalog** — Complete code inventory with patterns
+- **API Surface** — REST endpoints, methods, routes
+- **Route Map** — Frontend routes and pages
+- **System Map** — Visual architecture diagrams
 
 ### 🔍 Smart Detection
 
 RepoLens automatically detects:
 - **Frameworks**: Next.js, React, Vue, Express, NestJS, and more
-- **Languages**: TypeScript, JavaScript
+- **Languages**: TypeScript, JavaScript  
 - **Build Tools**: Vite, Webpack, Turbo, esbuild
 - **Testing**: Vitest, Jest, Playwright, Cypress
-- **Module Relationships**: Dependency graphs with actual connections
+- **Business Domains**: Authentication, Market Data, Payments, Content, etc.
+- **Data Flows**: How information moves through your system
+- **Architectural Patterns**: Module relationships and dependencies
 
 ### ✨ Key Features
 
-✅ **Zero Configuration** - Sensible defaults for common frameworks  
-✅ **Auto-Discovery** - Finds `.repolens.yml` automatically in your repo  
+✅ **AI-Assisted Documentation** - Optional AI layer for natural language explanations  
+✅ **Multi-Audience Output** - Technical docs for engineers + readable docs for stakeholders  
+✅ **Zero Hallucination Policy** - AI receives only structured context, never raw code  
+✅ **Provider Agnostic** - Works with any OpenAI-compatible API  
+✅ **Deterministic Fallback** - Always generates docs even if AI unavailable  
+✅ **Business Domain Inference** - Automatically maps code to business functions  
+✅ **Data Flow Analysis** - Understands how information moves through your system  
 ✅ **Multiple Publishers** - Output to Notion, Markdown, or both  
 ✅ **Branch-Aware** - Prevent doc conflicts across branches  
-✅ **Update Notifications** - Automatic alerts when new versions are available  
-✅ **Visual Diagrams** - Mermaid dependency graphs with optional SVG rendering  
 ✅ **GitHub Actions** - Autonomous operation on every push  
-✅ **PR Comments** - Architecture diffs posted automatically  
 
 ---
 
@@ -178,24 +203,79 @@ publishers:
 ```
 Docs published to Notion for team visibility, plus local Markdown backups.
 
-### Step 3: Set Up Notion Integration (Optional)
+### Step 3: Enable AI Features (Optional)
+
+**AI-enhanced documentation adds natural language explanations for non-technical audiences.**
+
+**3.1: Choose an AI Provider**
+
+RepoLens works with any OpenAI-compatible API:
+- **OpenAI** (gpt-4-turbo-preview, gpt-3.5-turbo)
+- **Anthropic Claude** (via API gateway)
+- **Azure OpenAI** (enterprise deployments)
+- **Local Models** (Ollama, LM Studio, etc.)
+
+**3.2: Add Environment Variables**
+
+Create `.env` in your project root:
+```bash
+# Enable AI features
+REPOLENS_AI_ENABLED=true
+REPOLENS_AI_API_KEY=sk-xxxxxxxxxxxxx
+
+# Optional: Customize provider
+REPOLENS_AI_BASE_URL=https://api.openai.com/v1
+REPOLENS_AI_MODEL=gpt-4-turbo-preview
+REPOLENS_AI_TEMPERATURE=0.3
+REPOLENS_AI_MAX_TOKENS=2000
+```
+
+**3.3: Configure AI in .repolens.yml**
+
+```yaml
+ai:
+  enabled: true              # Enable AI features
+  mode: hybrid               # hybrid, full, or off
+  temperature: 0.3           # Lower = more focused (0.0-1.0)
+  max_tokens: 2000           # Token limit per request
+
+features:
+  executive_summary: true    # Non-technical overview
+  business_domains: true     # Functional area descriptions
+  architecture_overview: true # Layered technical analysis
+  data_flows: true           # System data flow explanations
+  developer_onboarding: true # Getting started guide
+  change_impact: true        # Architecture diff with context
+```
+
+**Cost Estimates** (with gpt-4-turbo-preview):
+- Small repo (<50 files): $0.10-$0.30 per run
+- Medium repo (50-200 files): $0.30-$0.80 per run
+- Large repo (200+ files): $0.80-$2.00 per run
+
+**For GitHub Actions**, add as repository secret:
+- Name: `AI_KEY`, Value: `sk-xxxxx` (your OpenAI API key)
+
+See [AI.md](AI.md) for complete AI documentation and provider setup.
+
+### Step 4: Set Up Notion Integration (Optional)
 
 If using the Notion publisher:
 
-**3.1: Create Notion Integration**
+**4.1: Create Notion Integration**
 1. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations)
 2. Click **"+ New Integration"**
 3. Name it **"RepoLens"**
 4. Select your workspace
 5. Copy the **Internal Integration Token** (starts with `secret_`)
 
-**3.2: Create Parent Page**
+**4.2: Create Parent Page**
 1. Create a new page in Notion (e.g., "📚 Architecture Docs")
 2. Click **"..."** menu → **"Add connections"** → Select **"RepoLens"**
 3. Copy the page URL: `https://notion.so/workspace/PAGE_ID?xxx`
 4. Extract the `PAGE_ID` (32-character hex string)
 
-**3.3: Add Environment Variables**
+**4.3: Add Environment Variables**
 
 **For Local Development:**
 Create `.env` in your project root:
@@ -213,7 +293,7 @@ Add as repository secrets:
    - Name: `NOTION_TOKEN`, Value: `secret_xxxxx`
    - Name: `NOTION_PARENT_PAGE_ID`, Value: `xxxxxx`
 
-### Step 4: Configure Branch Publishing (Recommended)
+### Step 5: Configure Branch Publishing (Recommended)
 
 Prevent documentation conflicts by limiting which branches publish to Notion:
 
@@ -231,7 +311,7 @@ notion:
 
 **Markdown publisher always runs on all branches** (local files don't conflict).
 
-### Step 5: Customize Scan Patterns (Optional)
+### Step 6: Customize Scan Patterns (Optional)
 
 Adjust what files RepoLens scans:
 
@@ -255,7 +335,7 @@ module_roots:
 
 **Performance Note:** RepoLens warns at 10k files and limits at 50k files.
 
-### Step 6: Generate Documentation
+### Step 7: Generate Documentation
 
 Run locally to test:
 
@@ -280,9 +360,9 @@ RepoLens v0.2.0
 [RepoLens] ✓ System Map published
 ```
 
-### Step 7: Verify Output
+### Step 8: Verify Output
 
-**Markdown Output:**
+**Markdown Output:****
 ```bash
 ls .repolens/
 # system_overview.md
@@ -295,13 +375,18 @@ ls .repolens/
 
 **Notion Output:**
 Open your Notion parent page and verify child pages were created:
+- 📊 RepoLens — Executive Summary (if AI enabled)
+- 📈 RepoLens — Business Domains (if AI enabled)
 - 📊 RepoLens — System Overview
-- 📁 RepoLens — Module Catalog
+- 📚 RepoLens — Developer Onboarding (if AI enabled)
+- 📊 RepoLens — Architecture Overview (if AI enabled)
+- 📊 RepoLens — Data Flows (if AI enabled)
+- 📌 RepoLens — Module Catalog
 - 🔌 RepoLens — API Surface
 - 🗺️ RepoLens — Route Map
-- 🏗️ RepoLens — System Map
+- 🏛️ RepoLens — System Map
 
-### Step 8: Enable GitHub Actions (Automatic Updates)
+### Step 9: Enable GitHub Actions (Automatic Updates)
 
 **Commit the workflow:**
 ```bash

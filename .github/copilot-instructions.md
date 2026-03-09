@@ -12,19 +12,21 @@
 
 ## Project Overview
 
-RepoLens is a repository intelligence CLI tool that automatically generates living architecture documentation. It analyzes codebases, extracts meaningful insights from package.json, creates visual dependency graphs, and publishes to Notion and/or Markdown. It operates autonomously via GitHub Actions and can be triggered locally.
+RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
-**Version:** 0.2.0  
+**Version:** 0.4.0  
 **Status:** Production-ready, pre-v1.0 stability guarantees  
 **License:** MIT
 
 ## Core Value Proposition
 
-RepoLens transforms static repositories into documented, understandable systems by:
+RepoLens transforms repositories into documented, understandable systems that serve multiple audiences:
 1. **Scanning** - Fast-glob file matching with performance guardrails
-2. **Analyzing** - Framework/tool detection from package.json and file patterns
-3. **Rendering** - Markdown documentation with Mermaid dependency graphs
-4. **Publishing** - Multi-output delivery (Notion + Markdown) with branch-aware safety
+2. **Analyzing** - Framework/tool detection + domain inference + flow analysis
+3. **Context Building** - Structured artifacts for AI synthesis (no raw code)
+4. **AI Synthesis** (Optional) - Natural language explanations for non-technical readers
+5. **Rendering** - 11 audience-aware documents (technical + non-technical)
+6. **Publishing** - Multi-output delivery (Notion + Markdown) with branch-aware safety
 
 ## Architecture
 
@@ -42,34 +44,75 @@ src/
     config-schema.js    # Schema versioning (configVersion: 1)
     diff.js             # Git diff operations
     scan.js             # Repository scanning logic + metadata extraction
+  analyzers/
+    domain-inference.js # Business domain mapping from paths
+    context-builder.js  # Structured AI context assembly
+    flow-inference.js   # Data flow detection via heuristics
+  ai/
+    provider.js         # Provider-agnostic AI text generation
+    prompts.js          # Strict prompt templates preventing hallucination
+    document-plan.js    # Canonical document structure definition
+    generate-sections.js # AI-powered section generation with fallbacks
+  docs/
+    generate-doc-set.js # Document generation orchestration
+    write-doc-set.js    # Write documentation set to disk
   delivery/
     comment.js          # PR comment management
   publishers/
     index.js            # Publisher orchestration + branch filtering
     markdown.js         # Markdown file generation
-    notion.js           # Notion API integration + URL length handling
+    notion.js           # Notion API integration
     publish.js          # Publishing pipeline + diagram URL validation
   renderers/
     render.js           # System overview, module catalog, API surface, route map
     renderDiff.js       # Architecture diff rendering
-    renderMap.js        # System map (Mermaid dependency graphs)
+    renderMap.js        # System map (Unicode dependency diagrams)
   utils/
     logger.js           # Logging utilities
     retry.js            # Retry logic for API calls
     branch.js           # Multi-platform branch detection
-    mermaid.js          # SVG rendering + GitHub URL generation
+    update-check.js     # Version update notifications
 tests/                  # Vitest test suite (32 tests passing)
 ```
 
 ### Key Commands
 
 - `repolens init` - Scaffold configuration and GitHub Actions workflow
-- `repolens doctor` - Validate repository setup (config, Mermaid CLI, etc.)
-- `repolens publish` - Scan repo, render docs, publish to outputs
+- `repolens doctor` - Validate repository setup (config, environment, etc.)
+- `repolens publish` - Scan repo, generate docs (with optional AI), publish to outputs
 - `repolens version` - Display version
 - `repolens help` - Show usage
 
 ## Feature Highlights
+
+### AI-Assisted Documentation Intelligence
+- **Philosophy**: Not a "flashy code intelligence toy" — a documentation intelligence system for engineers AND stakeholders
+- **Two Modes**: Deterministic (default, free, fast) or AI-Enhanced (optional, provider-agnostic)
+- **11 Document Types**: 3 non-technical, 4 mixed-audience, 4 technical
+- **Zero Hallucination**: AI receives only structured JSON context, never raw code
+- **Strict Prompts**: Word limits, required sections, concrete prose, no speculation
+- **Provider Agnostic**: OpenAI, Anthropic, Azure, local models (Ollama)
+- **Graceful Fallback**: Deterministic docs generated if AI fails or disabled
+
+### Business Domain Inference
+- **Purpose**: Map code structure to business functions
+- **Default Domains**: Authentication, Market Data, Content, Portfolio, Payments, API Layer, UI/Hooks/State, Utilities
+- **Pattern Matching**: Folder/file names to domain keywords (e.g., "auth" → Authentication)
+- **Customizable**: Define domains in `.repolens.yml` with match patterns and descriptions
+- **Output**: Groups modules by domain in business-friendly documentation
+
+### Data Flow Analysis
+- **Purpose**: Understand how information moves through the system
+- **Heuristics**: Pattern-based detection (market data, auth, content, API integration flows)
+- **Detects**: Flow steps, involved modules, dependencies, criticality
+- **Output**: Natural language flow descriptions in Data Flows document
+
+### Structured Context Building
+- **Problem**: Sending raw code to AI causes hallucination
+- **Solution**: Three-layer architecture: Scan → Structured Artifacts → AI Synthesis
+- **Artifacts**: JSON files with project stats, domains, modules, routes, tech stack, patterns
+- **Benefits**: AI can't invent code that doesn't exist, stays grounded in facts
+- **Storage**: `.repolens/artifacts/` for debugging and inspection
 
 ### Branch-Aware Publishing
 - **Problem**: Multiple branches publishing to same Notion pages causes conflicts
@@ -82,16 +125,11 @@ tests/                  # Vitest test suite (32 tests passing)
 - **Detects**: Frameworks (Next.js, React, Vue, Express), languages (TypeScript), build tools (Vite, Webpack), test frameworks (Vitest, Jest, Playwright)
 - **Output**: "Technical Profile" section with actual stack insights (not generic "MVP based on heuristics")
 
-### Visual Dependency Graphs
-- **Approach**: Pattern-based relationship inference (not static analysis)
-- **Infers**: Publishers→Renderers, Everything→Utils, CLI→Core, Tests→All (dotted)
-- **Rendering**: Optional mermaid-cli (interactive install prompt) or mermaid.ink fallback
-- **Storage**: GitHub-hosted SVGs in `.repolens/diagrams/` committed back via workflow
-
-### URL Length Safety
-- **Constraint**: Notion API limits image URLs to 2000 chars
-- **Problem**: Complex Mermaid diagrams encode to 3500+ char mermaid.ink URLs
-- **Solution**: Check URL length before embedding, fallback to code block with mermaid.live link
+### Unicode Architecture Diagrams
+- **Approach**: Simple box-drawing characters with emoji icons (🎯, ⚙️, 📋, 🔌, 🛠️, ✅, 📦)
+- **Benefits**: Always works, no external dependencies, no URL length limits
+- **Removed**: Mermaid CLI, SVG generation, mermaid.ink fallback complexity
+- **Reliability**: 100% success rate in Notion and Markdown
 
 ## Coding Conventions
 
