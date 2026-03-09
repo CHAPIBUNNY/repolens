@@ -21,6 +21,8 @@ import { upsertPrComment } from "./delivery/comment.js";
 import { runInit } from "./init.js";
 import { info, error } from "./utils/logger.js";
 import { checkForUpdates } from "./utils/update-check.js";
+import { generateDocumentSet } from "./docs/generate-doc-set.js";
+import { writeDocumentSet } from "./docs/write-doc-set.js";
 
 async function getPackageVersion() {
   const __filename = fileURLToPath(import.meta.url);
