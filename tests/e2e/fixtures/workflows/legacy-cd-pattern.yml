@@ -1,0 +1,20 @@
+name: Legacy RepoLens (cd tools/repolens)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Generate documentation
+        run: |
+          cd tools/repolens
+          npm install
+          npx repolens publish

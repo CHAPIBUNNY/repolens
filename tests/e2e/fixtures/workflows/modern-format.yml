@@ -1,0 +1,27 @@
+name: Already Migrated (Modern)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Generate and publish documentation
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
+          REPOLENS_AI_API_KEY: ${{ secrets.REPOLENS_AI_API_KEY }}
+          REPOLENS_AI_PROVIDER: openai
+        run: npx @chappibunny/repolens@latest publish
