@@ -46,7 +46,7 @@ jobs:
         env:
           NOTION_TOKEN: \${{ secrets.NOTION_TOKEN }}
           NOTION_PARENT_PAGE_ID: \${{ secrets.NOTION_PARENT_PAGE_ID }}
-        run: npx @chappibunny/repolens@latest publish
+        run: npx @rabitai/repolens@latest publish
 `;
 
 const DEFAULT_ENV_EXAMPLE = `# Notion Publishing
@@ -81,7 +81,7 @@ This repository is configured to use [RepoLens](https://github.com/CHAPIBUNNY/re
 
 \`\`\`bash
 # Test documentation generation locally
-npx @chappibunny/repolens publish
+npx @rabitai/repolens publish
 \`\`\`
 
 ### Notion Publishing
@@ -514,7 +514,7 @@ NOTION_VERSION=2022-06-28
     info("   Your credentials are stored in .env (gitignored)\n");
     info("Next steps:");
     info("  1. Review .repolens.yml to customize your documentation");
-    info("  2. Run 'npx @chappibunny/repolens publish' to generate your first docs (deterministic mode)");
+    info("  2. Run 'npx @rabitai/repolens publish' to generate your first docs (deterministic mode)");
     info("  3. (Optional) Enable AI features by adding to .env:");
     info("     REPOLENS_AI_ENABLED=true");
     info("     REPOLENS_AI_API_KEY=sk-...");
@@ -534,7 +534,7 @@ NOTION_VERSION=2022-06-28
     info("     REPOLENS_AI_ENABLED=true");
     info("     REPOLENS_AI_API_KEY=sk-...");
     info("     See: https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md");
-    info("  4. Run 'npx @chappibunny/repolens publish' to test locally");
+    info("  4. Run 'npx @rabitai/repolens publish' to test locally");
     info("  5. Commit the generated files");
   }
 }

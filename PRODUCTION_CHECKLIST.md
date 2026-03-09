@@ -18,7 +18,7 @@ Ensure RepoLens is properly configured and secured before deploying to productio
 
 ### ✅ Package Installation
 
-- [ ] Install RepoLens: `npx @chappibunny/repolens@latest --version`
+- [ ] Install RepoLens: `npx @rabitai/repolens@latest --version`
 - [ ] Run version check: Should display `0.4.3` or higher
 - [ ] Check for updates: Tool notifies if newer version available
 
@@ -29,7 +29,7 @@ Ensure RepoLens is properly configured and secured before deploying to productio
 ### ✅ Initialize Configuration
 
 ```bash
-npx @chappibunny/repolens@latest init
+npx @rabitai/repolens@latest init
 ```
 
 - [ ] `.repolens.yml` created in repository root
@@ -40,7 +40,7 @@ npx @chappibunny/repolens@latest init
 ### ✅ Validate Configuration Schema
 
 ```bash
-npx @chappibunny/repolens@latest doctor
+npx @rabitai/repolens@latest doctor
 ```
 
 **Expected Output:** ✅ All checks pass
@@ -75,7 +75,7 @@ scan:
 **Verify:**
 - [ ] Patterns match your project structure
 - [ ] Exclude patterns prevent scanning generated code
-- [ ] Test locally: `npx @chappibunny/repolens@latest publish --dry-run`
+- [ ] Test locally: `npx @rabitai/repolens@latest publish --dry-run`
 
 ---
 
@@ -152,7 +152,7 @@ Navigate to: **Repository Settings → Secrets and variables → Actions → New
 # Test locally with .env (DO NOT commit .env to git)
 cp .env.example .env
 # Add secrets to .env
-npx @chappibunny/repolens@latest publish
+npx @rabitai/repolens@latest publish
 ```
 
 **Verify:**
@@ -168,13 +168,13 @@ npx @chappibunny/repolens@latest publish
 ### ✅ Workflow Migration (if upgrading from v0.3.x)
 
 ```bash
-npx @chappibunny/repolens@latest migrate
+npx @rabitai/repolens@latest migrate
 ```
 
 **Verify changes:**
 - [ ] Preview with `--dry-run` flag first
 - [ ] Review diff: `git diff .github/workflows/`
-- [ ] Package updated to `@chappibunny/repolens@latest`
+- [ ] Package updated to `@rabitai/repolens@latest`
 - [ ] Node.js setup step added (`actions/setup-node@v4`)
 - [ ] Environment variables added to publish step
 - [ ] Backup files created (`.github/workflows/*.backup`)
@@ -290,10 +290,10 @@ ls -la .repolens/docs/
 
 ```bash
 # Dry run (no actual publishing)
-npx @chappibunny/repolens@latest publish --dry-run
+npx @rabitai/repolens@latest publish --dry-run
 
 # Full local run
-npx @chappibunny/repolens@latest publish
+npx @rabitai/repolens@latest publish
 
 # Check generated artifacts
 ls -R .repolens/
@@ -344,8 +344,8 @@ cat .repolens/docs/system-overview.md
 
 ### ✅ Monthly
 
-- [ ] Update RepoLens: `npx @chappibunny/repolens@latest version` (check for updates)
-- [ ] Run migration: `npx @chappibunny/repolens@latest migrate` (if new version)
+- [ ] Update RepoLens: `npx @rabitai/repolens@latest version` (check for updates)
+- [ ] Run migration: `npx @rabitai/repolens@latest migrate` (if new version)
 - [ ] Review Known Issues: Read `KNOWN_ISSUES.md` for new workarounds
 - [ ] Rotate API keys: Best practice for long-running integrations
 
@@ -389,8 +389,8 @@ cat .repolens/docs/system-overview.md
 
 #### "Config file not found"
 ```bash
-npx @chappibunny/repolens@latest doctor
-# If fails: npx @chappibunny/repolens@latest init
+npx @rabitai/repolens@latest doctor
+# If fails: npx @rabitai/repolens@latest init
 ```
 
 #### "NOTION_TOKEN not set"
@@ -399,7 +399,7 @@ npx @chappibunny/repolens@latest doctor
 - Test locally: `echo $NOTION_TOKEN` (should not be empty)
 
 #### "Invalid workflow file"
-- Run migration: `npx @chappibunny/repolens@latest migrate`
+- Run migration: `npx @rabitai/repolens@latest migrate`
 - Review KNOWN_ISSUES.md for recent fixes
 - Check YAML syntax: https://www.yamllint.com/
 
@@ -426,7 +426,7 @@ npx @chappibunny/repolens@latest doctor
 Before declaring "production ready":
 
 - [ ] All checklist items above completed
-- [ ] `npx @chappibunny/repolens@latest doctor` passes
+- [ ] `npx @rabitai/repolens@latest doctor` passes
 - [ ] Test PR successfully generated documentation
 - [ ] Team reviewed and approved generated docs
 - [ ] Notion workspace configured and accessible

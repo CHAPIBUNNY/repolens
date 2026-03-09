@@ -52,7 +52,7 @@ describe("Migration E2E Tests", () => {
       expect(migrated).not.toContain("npm install");
       
       // Should update to scoped package
-      expect(migrated).toContain("npx @chappibunny/repolens@latest");
+      expect(migrated).toContain("npx @rabitai/repolens@latest");
       
       // Should add Node.js setup
       expect(migrated).toContain("actions/setup-node@v4");
@@ -94,7 +94,7 @@ describe("Migration E2E Tests", () => {
       expect(migrated).toContain("npm pack");
       
       // Should still update npx repolens
-      expect(migrated).toContain("npx @chappibunny/repolens@latest");
+      expect(migrated).toContain("npx @rabitai/repolens@latest");
       
       // Should NOT have broken YAML structure
       expect(migrated).toMatch(/- name: Install dependencies\s+run: npm ci/);
@@ -158,7 +158,7 @@ describe("Migration E2E Tests", () => {
       expect(migrated).toContain("NOTION_TOKEN");
       
       // Should update package name
-      expect(migrated).toContain("@chappibunny/repolens@latest");
+      expect(migrated).toContain("@rabitai/repolens@latest");
       
       // Should have valid YAML structure
       expect(migrated).not.toContain("run:       - name:");
@@ -188,7 +188,7 @@ describe("Migration E2E Tests", () => {
       
       // Should update docs job
       const docsJobMatch = migrated.match(/docs:[\s\S]*?(?=\n\s{0,2}\w+:|$)/);
-      expect(docsJobMatch[0]).toContain("@chappibunny/repolens@latest");
+      expect(docsJobMatch[0]).toContain("@rabitai/repolens@latest");
     });
   });
 

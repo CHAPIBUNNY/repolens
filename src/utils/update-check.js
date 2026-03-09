@@ -112,9 +112,9 @@ function showUpdateMessage(current, latest) {
   warn("│                                                            │");
   warn("│  Run one of these commands to update:                     │");
   warn("│                                                            │");
-  warn("│  • npm install -g @chappibunny/repolens@latest (global)  │");
-  warn("│  • npm install @chappibunny/repolens@latest (local)      │");
-  warn("│  • npx @chappibunny/repolens@latest <command>  (latest)  │");
+  warn("│  • npm install -g @rabitai/repolens@latest (global)  │");
+  warn("│  • npm install @rabitai/repolens@latest (local)      │");
+  warn("│  • npx @rabitai/repolens@latest <command>  (latest)  │");
   warn("│                                                            │");
   warn("│  Release notes: https://github.com/CHAPIBUNNY/repolens    │");
   warn("└────────────────────────────────────────────────────────────┘");

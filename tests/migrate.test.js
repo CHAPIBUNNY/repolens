@@ -49,7 +49,7 @@ jobs:
     const migrated = await fs.readFile(workflowPath, "utf8");
 
     expect(migrated).not.toContain("cd tools/repolens");
-    expect(migrated).toContain("npx @chappibunny/repolens@latest publish");
+    expect(migrated).toContain("npx @rabitai/repolens@latest publish");
     expect(migrated).toContain("actions/setup-node@");
     
     // Check backup was created
@@ -84,7 +84,7 @@ jobs:
 
     const migrated = await fs.readFile(workflowPath, "utf8");
 
-    expect(migrated).toContain("npx @chappibunny/repolens@latest");
+    expect(migrated).toContain("npx @rabitai/repolens@latest");
     expect(migrated).toContain("NOTION_TOKEN");
     expect(migrated).toContain("REPOLENS_AI_API_KEY");
   });
@@ -205,8 +205,8 @@ jobs:
     const migrated2 = await fs.readFile(path.join(tempDir, ".github", "workflows", "repolens-staging.yml"), "utf8");
 
     expect(migrated1).not.toContain("cd tools/repolens");
-    expect(migrated1).toContain("npx @chappibunny/repolens@latest");
-    expect(migrated2).toContain("npx @chappibunny/repolens@latest");
+    expect(migrated1).toContain("npx @rabitai/repolens@latest");
+    expect(migrated2).toContain("npx @rabitai/repolens@latest");
   });
 
   it("adds AI environment variables to existing env section", async () => {
@@ -330,7 +330,7 @@ jobs:
     expect(migrated).toContain("npm test");
     
     // Should still update npx repolens
-    expect(migrated).toContain("npx @chappibunny/repolens@latest publish");
+    expect(migrated).toContain("npx @rabitai/repolens@latest publish");
     
     // Should not have broken YAML (each step has valid structure)
     expect(migrated).toMatch(/- name: Install dependencies\s+run: npm ci/);

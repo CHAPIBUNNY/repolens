@@ -2,9 +2,18 @@
 
 This document outlines the planned development path for RepoLens.
 
-## Current Status: v0.2.x — Early Access
+## Current Status: v0.6.0 — Team Features & Observability (PRODUCTION BETA)
 
-Core functionality is complete and stable. Focus is on schema stability, testing, and adoption.
+**🎉 Now available on npm:** `npm install @rabitai/repolens`
+
+Core functionality complete, stable, and battle-tested. Published as production beta with:
+- ✅ 90/90 tests passing
+- ✅ 0 vulnerabilities
+- ✅ Security hardened
+- ✅ Team features (Discord, Dashboard)
+- ✅ Available on npm registry
+
+v1.0 will add plugin system and lock API stability.
 
 ---
 
@@ -42,7 +51,7 @@ Core functionality is complete and stable. Focus is on schema stability, testing
 - ✅ Migration guides for any breaking changes
 
 **Additional Features:**
-- **npm Registry Publishing** - Available via `npm install -g @chappibunny/repolens`
+- **npm Registry Publishing** - Available via `npm install -g @rabitai/repolens`
 - **VS Code Extension** - In-editor architecture visualization
 - **GitHub App** - Automated setup and status checks
 - **Plugin Ecosystem** - Third-party renderer and publisher support

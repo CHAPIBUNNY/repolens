@@ -24,4 +24,4 @@ jobs:
           NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
           REPOLENS_AI_API_KEY: ${{ secrets.REPOLENS_AI_API_KEY }}
           REPOLENS_AI_PROVIDER: openai
-        run: npx @chappibunny/repolens@latest publish
+        run: npx @rabitai/repolens@latest publish

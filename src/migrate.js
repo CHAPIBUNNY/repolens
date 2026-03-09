@@ -55,8 +55,8 @@ function migrateWorkflowContent(content) {
     migrated = migrated.replace(/(run:\s*\|[^\n]*\n(?:\s+[^\n]*\n)*?\s+)npm\s+(?:ci|install)\s*\n/g, "$1");
   }
 
-  // Update npx repolens to npx @chappibunny/repolens@latest
-  migrated = migrated.replace(/npx\s+repolens\s+/g, "npx @chappibunny/repolens@latest ");
+  // Update npx repolens to npx @rabitai/repolens@latest
+  migrated = migrated.replace(/npx\s+repolens\s+/g, "npx @rabitai/repolens@latest ");
 
   // Add Node.js setup if missing (insert after checkout step)
   if (!migrated.includes("actions/setup-node@")) {
@@ -233,7 +233,7 @@ export async function runMigrate(targetDir = process.cwd(), options = {}) {
       if (!dryRun) {
         console.log("\n📝 Next steps:");
         console.log("   1. Review the changes: git diff .github/workflows/");
-        console.log("   2. Test locally: npx @chappibunny/repolens@latest publish");
+        console.log("   2. Test locally: npx @rabitai/repolens@latest publish");
         console.log("   3. Commit: git add .github/workflows/ && git commit -m 'chore: migrate RepoLens workflow to v0.4.0'");
         console.log("   4. Push: git push");
         console.log("\n💡 Tip: Backups saved as *.backup - delete them once verified");

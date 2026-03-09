@@ -21,7 +21,7 @@ Error: Process completed with exit code 1.
   run: |
     cd tools/repolens
     npm install
-    npx @chappibunny/repolens publish
+    npx @rabitai/repolens publish
 ```
 
 **✅ New format (v0.4.0+):**
@@ -37,7 +37,7 @@ Error: Process completed with exit code 1.
     NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
     REPOLENS_AI_API_KEY: ${{ secrets.REPOLENS_AI_API_KEY }}
     REPOLENS_AI_PROVIDER: openai
-  run: npx @chappibunny/repolens@latest publish
+  run: npx @rabitai/repolens@latest publish
 ```
 
 ### New Features in v0.4.0
@@ -112,14 +112,14 @@ outputs:
 
 **Test deterministic mode (same as v0.3.0):**
 ```bash
-npx @chappibunny/repolens@latest publish
+npx @rabitai/repolens@latest publish
 # Output: 6 core documents (no AI needed)
 ```
 
 **Test AI-enhanced mode:**
 ```bash
 # After adding ai config to .repolens.yml
-npx @chappibunny/repolens@latest publish
+npx @rabitai/repolens@latest publish
 # Output: 11 documents (6 core + 5 AI-enhanced)
 ```
 
@@ -155,9 +155,9 @@ RepoLens checks for updates automatically and shows a notification if you're run
 │                                                            │
 │  Run one of these commands to update:                     │
 │                                                            │
-│  • npm install -g @chappibunny/repolens@latest (global)  │
-│  • npm install @chappibunny/repolens@latest (local)      │
-│  • npx @chappibunny/repolens@latest <command>  (latest)  │
+│  • npm install -g @rabitai/repolens@latest (global)  │
+│  • npm install @rabitai/repolens@latest (local)      │
+│  • npx @rabitai/repolens@latest <command>  (latest)  │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -173,11 +173,11 @@ The `doctor` command always checks your RepoLens version and shows if updates ar
 
 ### Method 1: GitHub Actions (Recommended)
 
-Your workflow automatically uses the latest version with `npx @chappibunny/repolens@latest`:
+Your workflow automatically uses the latest version with `npx @rabitai/repolens@latest`:
 
 ```yaml
 - name: Generate and publish documentation
-  run: npx @chappibunny/repolens@latest publish
+  run: npx @rabitai/repolens@latest publish
 ```
 
 **No action needed** - you're always on the latest version! ✅
@@ -203,13 +203,13 @@ If you installed locally in your project:
 
 ```bash
 # Check current version
-npx @chappibunny/repolens --version
+npx @rabitai/repolens --version
 
 # Update to latest
-npm install -g @chappibunny/repolens@latest
+npm install -g @rabitai/repolens@latest
 
 # Verify update
-npx @chappibunny/repolens --version
+npx @rabitai/repolens --version
 ```
 
 ## 🚀 Version 0.3.0 Migration (Current)
@@ -244,13 +244,13 @@ Old workflow (still works):
   run: npm ci
 
 - name: Publish documentation  
-  run: npx @chappibunny/repolens publish
+  run: npx @rabitai/repolens publish
 ```
 
 New workflow (recommended):
 ```yaml
 - name: Generate and publish documentation
-  run: npx @chappibunny/repolens@latest publish
+  run: npx @rabitai/repolens@latest publish
 ```
 
 ## 📋 Version History
@@ -314,13 +314,13 @@ repolens doctor
 **Solutions:**
 ```bash
 # Option 1: Use npx (no installation needed)
-npx @chappibunny/repolens@latest publish
+npx @rabitai/repolens@latest publish
 
 # Option 2: Install globally
-npm install -g @chappibunny/repolens@latest
+npm install -g @rabitai/repolens@latest
 
 # Option 3: Install locally
-npm install @chappibunny/repolens@latest
+npm install @rabitai/repolens@latest
 ```
 
 ---
@@ -339,7 +339,7 @@ npm uninstall -g repolens
 npm uninstall repolens
 
 # Reinstall latest
-npm install -g @chappibunny/repolens@latest
+npm install -g @rabitai/repolens@latest
 ```
 
 ---
@@ -350,7 +350,7 @@ npm install -g @chappibunny/repolens@latest
 
 **Solution:** Update workflow to use:
 ```yaml
-run: npx @chappibunny/repolens@latest publish
+run: npx @rabitai/repolens@latest publish
 ```
 
 ## 📚 Additional Resources
