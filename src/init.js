@@ -18,52 +18,35 @@ const DETECTABLE_ROOTS = [
   "src/pages"
 ];
 
-const DEFAULT_GITHUB_WORKFLOW = `name: RepoLens
+const DEFAULT_GITHUB_WORKFLOW = `name: RepoLens Documentation
 
 on:
   push:
     branches:
       - main
   pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
 
 permissions:
   contents: read
-  pull-requests: write
-  issues: write
 
 jobs:
-  publish-docs:
+  publish:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
+      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install RepoLens dependencies
-        run: |
-          cd tools/repolens
-          npm ci
-
-      - name: Run RepoLens and publish to Notion
+      
+      - name: Generate and publish documentation
         env:
           NOTION_TOKEN: \${{ secrets.NOTION_TOKEN }}
           NOTION_PARENT_PAGE_ID: \${{ secrets.NOTION_PARENT_PAGE_ID }}
-          NOTION_VERSION: 2022-06-28
-          GITHUB_TOKEN: \${{ github.token }}
-        run: |
-          cd tools/repolens
-          node src/cli.js --config ../../.repolens.yml
+        run: npx repolens@latest publish
 `;
 
 const DEFAULT_ENV_EXAMPLE = `NOTION_TOKEN=
@@ -71,67 +54,69 @@ NOTION_PARENT_PAGE_ID=
 NOTION_VERSION=2022-06-28
 `;
 
-const DEFAULT_REPOLENS_README = `# RepoLens Setup
+const DEFAULT_REPOLENS_README = `# RepoLens Documentation
 
-This repository has been initialized for RepoLens.
+This repository is configured to use [RepoLens](https://github.com/CHAPIBUNNY/repolens) for automatic architecture documentation.
 
-## What RepoLens created
+## 📋 What RepoLens Created
 
-- \`.repolens.yml\` — RepoLens configuration
+- \`.repolens.yml\` — Configuration file
 - \`.github/workflows/repolens.yml\` — GitHub Actions workflow
-- \`.env.example\` — local environment template
-- \`README.repolens.md\` — this onboarding guide
+- \`.env.example\` — Environment variables template
+- \`README.repolens.md\` — This guide
 
-## Required GitHub Secrets
+## 🚀 Quick Start
 
-Add these repository secrets in GitHub:
-
-- \`NOTION_TOKEN\`
-- \`NOTION_PARENT_PAGE_ID\`
-
-## Local Usage
-
-Run RepoLens locally from the RepoLens tool directory:
+### Local Testing
 
 \`\`\`bash
-cd tools/repolens
-node src/cli.js --config ../../.repolens.yml
+# Test documentation generation locally
+npx repolens publish
 \`\`\`
 
-Run with verbose logging:
+### Notion Publishing
 
-\`\`\`bash
-cd tools/repolens
-node src/cli.js --config ../../.repolens.yml --verbose
-\`\`\`
+If you configured Notion credentials during setup, documentation will publish automatically. Otherwise:
 
-## CI Usage
+1. Copy \`.env.example\` to \`.env\`
+2. Add your credentials:
+   - \`NOTION_TOKEN\` — Get from https://www.notion.so/my-integrations
+   - \`NOTION_PARENT_PAGE_ID\` — The page where docs will be published
 
-RepoLens runs automatically through:
+### GitHub Actions
 
-\`.github/workflows/repolens.yml\`
+For automated publishing on every push:
 
-It updates:
-- Notion documentation pages
-- PR architecture summary comments
+1. Go to repository Settings → Secrets → Actions
+2. Add secrets:
+   - \`NOTION_TOKEN\`
+   - \`NOTION_PARENT_PAGE_ID\`
+3. Push to main branch
 
-## Typical RepoLens Outputs
+## 📊 Generated Documentation
 
-RepoLens can generate and maintain:
+RepoLens generates:
 
-- System Overview
-- Module Catalog
-- API Surface
-- Architecture Diff
-- Route Map
-- System Map
+- **System Overview** — High-level project snapshot
+- **Module Catalog** — Detected code modules
+- **API Surface** — REST API endpoints
+- **Route Map** — Application routes
+- **System Map** — Architecture diagram (Unicode ASCII art)
 
-## Next Steps
+## ⚙️ Configuration
 
-1. Review \`.repolens.yml\`
-2. Add GitHub secrets
-3. Commit the generated files
-4. Run RepoLens locally
+Edit \`.repolens.yml\` to customize:
+
+- Scan patterns and ignore rules
+- Module detection roots
+- Documentation page titles
+- Publishing targets
+
+## 📚 Learn More
+
+- [RepoLens GitHub](https://github.com/CHAPIBUNNY/repolens)
+- [Configuration Docs](https://github.com/CHAPIBUNNY/repolens#configuration)
+- [Troubleshooting](https://github.com/CHAPIBUNNY/repolens#troubleshooting)
 `;
 
 async function fileExists(filePath) {
@@ -292,8 +277,23 @@ function detectProjectName(repoRoot) {
 }
 
 async function promptNotionCredentials() {
-  // Skip prompts in CI environments or non-interactive terminals
-  if (!process.stdin.isTTY || process.env.CI) {
+  // Skip prompts in CI environments or test mode
+  const isCI = process.env.CI || 
+               process.env.GITHUB_ACTIONS || 
+               process.env.GITLAB_CI || 
+               process.env.CIRCLECI ||
+               process.env.JENKINS_HOME ||
+               process.env.CODEBUILD_BUILD_ID;
+  
+  const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST;
+  
+  if (isCI) {
+    info("⏭️  Skipping interactive prompts (CI environment detected)");
+    return null;
+  }
+  
+  if (isTest) {
+    // Skip silently in test mode
     return null;
   }
 

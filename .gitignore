@@ -1,10 +1,13 @@
 node_modules/
-.repolens/*.md
-.repolens/.temp-*
-!.repolens/diagrams/
+.repolens/
 *.tgz
 .env
 .DS_Store
 coverage/
 dist/
 .npm
+
+# Test artifacts
+test-*.sh
+notion-test.js
+INTERACTIVE-TEST-GUIDE.md
