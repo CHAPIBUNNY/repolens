@@ -209,15 +209,8 @@ function markdownToNotionBlocks(markdown) {
                 }
               }
             ],
-            language: language === "mermaid" ? "plain text" : language,
-            caption: language === "mermaid" ? [
-              {
-                type: "text",
-                text: {
-                  content: "Mermaid diagram - paste into mermaid.live to visualize"
-                }
-              }
-            ] : []
+            language: language,
+            caption: []
           }
         });
       }

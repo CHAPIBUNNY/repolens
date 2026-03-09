@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "./core/config.js";
 import { info } from "./utils/logger.js";
-import { isMermaidCliInstalled } from "./utils/mermaid.js";
+import { forceCheckForUpdates } from "./utils/update-check.js";
 
 const DETECTABLE_ROOTS = [
   "app",
@@ -73,6 +73,12 @@ export async function runDoctor(targetDir = process.cwd()) {
   let hasFailures = false;
 
   info(`Running doctor for ${repoRoot}`);
+  info("");
+  
+  // Check for RepoLens version updates
+  info("Version Check:");
+  info("");
+  await forceCheckForUpdates();
   info("");
 
   if (await fileExists(repolensConfigPath)) {
@@ -153,19 +159,6 @@ export async function runDoctor(targetDir = process.cwd()) {
     ok(`Detected repo roots: ${detectedRoots.join(", ")}`);
   } else {
     warn("No known repo roots detected (app/src/components/lib/hooks/store/pages)");
-  }
-
-  info("");
-  info("Optional Features:");
-  info("");
-
-  // Check for optional Mermaid CLI
-  if (await isMermaidCliInstalled()) {
-    ok("Mermaid CLI installed - diagrams will render as local SVG");
-  } else {
-    warn("Mermaid CLI not installed - diagrams will use fallback service (mermaid.ink)");
-    info("   To enable local SVG rendering:");
-    info("   → npm install -g @mermaid-js/mermaid-cli");
   }
 
   info("");

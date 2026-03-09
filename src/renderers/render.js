@@ -43,7 +43,7 @@ export function renderSystemOverview(cfg, scan) {
   return [
     `# ${cfg.project.name} — System Overview`,
     ``,
-    `> **What is this?** This page provides a high-level snapshot of your codebase structure, showing what technologies you're using and how your code is organized.`,
+    `**What is this?** This page provides a high-level snapshot of your codebase structure, showing what technologies you're using and how your code is organized.`,
     ``,
     `📊 **Last Updated**: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
     ``,
@@ -81,7 +81,7 @@ export function renderModuleCatalog(cfg, scan) {
   const lines = [
     `# 📁 Module Catalog`,
     ``,
-    `> **What is this?** This is a complete inventory of all code modules (folders) in your project, showing how your codebase is organized.`,
+    `**What is this?** This is a complete inventory of all code modules (folders) in your project, showing how your codebase is organized.`,
     ``,
     `**Total modules found**: ${scan.modules.length}`,
     ``,
@@ -115,7 +115,7 @@ export function renderApiSurface(cfg, scan) {
   const lines = [
     `# 🔌 API Surface`,
     ``,
-    `> **What is this?** This page lists all the API endpoints (backend services) your application provides. Each endpoint handles specific HTTP requests like GET, POST, PUT, DELETE.`,
+    `**What is this?** This page lists all the API endpoints (backend services) your application provides. Each endpoint handles specific HTTP requests like GET, POST, PUT, DELETE.`,
     ``,
     `**Total endpoints**: ${scan.api.length}`,
     ``,
@@ -170,7 +170,7 @@ export function renderRouteMap(cfg, scan) {
   const lines = [
     `# 🗺️ Route Map`,
     ``,
-    `> **What is this?** This page shows all the pages (URLs) users can visit in your application, plus the backend API endpoints that power them.`,
+    `**What is this?** This page shows all the pages (URLs) users can visit in your application, plus the backend API endpoints that power them.`,
     ``,
     `---`,
     ``

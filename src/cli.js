@@ -20,6 +20,7 @@ import { publishDocs } from "./publishers/index.js";
 import { upsertPrComment } from "./delivery/comment.js";
 import { runInit } from "./init.js";
 import { info, error } from "./utils/logger.js";
+import { checkForUpdates } from "./utils/update-check.js";
 
 async function getPackageVersion() {
   const __filename = fileURLToPath(import.meta.url);
@@ -106,6 +107,9 @@ Examples:
 
 async function main() {
   const command = process.argv[2];
+
+  // Check for updates (non-blocking, runs in background)
+  checkForUpdates().catch(() => {/* Silently fail */});
 
   if (command === "--help" || command === "-h" || command === "help") {
     printHelp();

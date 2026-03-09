@@ -8,9 +8,9 @@
                         🔍 Repository Intelligence CLI 📊
 ```
 
-> Automated architecture documentation that actually understands your codebase
+Automated architecture documentation that actually understands your codebase
 
-**Current Status**: v0.2.0 — Production Ready
+**Current Status**: v0.3.0 — Production Ready
 
 RepoLens automatically generates and maintains living architecture documentation by analyzing your repository structure, extracting meaningful insights from your package.json, and creating visual dependency graphs. Run it once, or let it auto-update on every push.
 
@@ -78,6 +78,7 @@ RepoLens automatically detects:
 ✅ **Auto-Discovery** - Finds `.repolens.yml` automatically in your repo  
 ✅ **Multiple Publishers** - Output to Notion, Markdown, or both  
 ✅ **Branch-Aware** - Prevent doc conflicts across branches  
+✅ **Update Notifications** - Automatic alerts when new versions are available  
 ✅ **Visual Diagrams** - Mermaid dependency graphs with optional SVG rendering  
 ✅ **GitHub Actions** - Autonomous operation on every push  
 ✅ **PR Comments** - Architecture diffs posted automatically  

@@ -266,7 +266,7 @@ function buildRepoLensConfig(projectName, detectedRoots) {
   lines.push(``);
   lines.push(`    - key: "system_map"`);
   lines.push(`      title: "System Map"`);
-  lines.push(`      description: "Generated Mermaid system map of detected modules."`);
+  lines.push(`      description: "Unicode architecture diagram of detected modules."`);
   lines.push(``);
 
   return lines.join("\n");
