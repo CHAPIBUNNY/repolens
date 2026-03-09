@@ -2,6 +2,7 @@ import fg from "fast-glob";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { info, warn } from "../utils/logger.js";
+import { trackScan } from "../utils/telemetry.js";
 
 const norm = (p) => p.replace(/\\/g, "/");
 
@@ -227,7 +228,7 @@ export async function scanRepo(cfg) {
   // Detect external API integrations
   const externalApis = await detectExternalApis(files, repoRoot);
 
-  return {
+  const scanResult = {
     filesCount: files.length,
     modules,
     api,
@@ -235,6 +236,11 @@ export async function scanRepo(cfg) {
     metadata,
     externalApis
   };
+  
+  // Track scan metrics
+  trackScan(scanResult);
+  
+  return scanResult;
 }
 
 async function detectExternalApis(files, repoRoot) {

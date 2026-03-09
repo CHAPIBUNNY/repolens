@@ -33,7 +33,7 @@ export function initTelemetry() {
     const version = packageJson.version || "unknown";
 
     Sentry.init({
-      dsn: "https://your-dsn@sentry.io/your-project-id", // TODO: Replace with actual DSN
+      dsn: "https://082083dbf5899ed7e65dfd9b8dc72f90@o4511014913703936.ingest.de.sentry.io/4511014919209040", // TODO: Replace with actual DSN
       
       // Release tracking
       release: `repolens@${version}`,
@@ -151,4 +151,208 @@ export async function closeTelemetry() {
  */
 export function isTelemetryEnabled() {
   return enabled;
+}
+
+// ============================================================
+// Usage Tracking & Observability
+// ============================================================
+
+const performanceTimers = new Map();
+
+/**
+ * Start a performance timer for an operation
+ * @param {string} operation - Operation name (e.g., "scan", "render", "publish")
+ * @param {object} metadata - Additional context about the operation
+ */
+export function startTimer(operation, metadata = {}) {
+  if (!enabled) return;
+  
+  const key = `${operation}_${Date.now()}`;
+  performanceTimers.set(key, {
+    operation,
+    startTime: Date.now(),
+    metadata,
+  });
+  
+  return key; // Return key so caller can stop this specific timer
+}
+
+/**
+ * Stop a performance timer and record the metric
+ * @param {string} timerKey - Key returned from startTimer()
+ */
+export function stopTimer(timerKey) {
+  if (!enabled || !timerKey) return;
+  
+  const timer = performanceTimers.get(timerKey);
+  if (!timer) return;
+  
+  const duration = Date.now() - timer.startTime;
+  performanceTimers.delete(timerKey);
+  
+  // Send performance metric
+  try {
+    Sentry.metrics.distribution(
+      `operation.duration`,
+      duration,
+      {
+        unit: 'millisecond',
+        tags: {
+          operation: timer.operation,
+          ...timer.metadata,
+        },
+      }
+    );
+  } catch (e) {
+    // Silently fail
+  }
+  
+  return duration;
+}
+
+/**
+ * Track a usage event (command execution)
+ * @param {string} command - Command name (init, doctor, migrate, publish)
+ * @param {string} status - "success" or "failure"
+ * @param {object} metrics - Metrics about the operation
+ */
+export function trackUsage(command, status, metrics = {}) {
+  if (!enabled) return;
+  
+  try {
+    // Anonymize repository info
+    const sanitizedMetrics = {
+      // Command info
+      command,
+      status,
+      
+      // Repository metrics (sanitized)
+      fileCount: metrics.fileCount || 0,
+      moduleCount: metrics.moduleCount || 0,
+      
+      // AI usage
+      aiEnabled: Boolean(metrics.aiEnabled),
+      aiProvider: metrics.aiProvider || null,
+      
+      // Publishers used
+      publishers: metrics.publishers || [],
+      
+      // Performance
+      duration: metrics.duration || null,
+      
+      // Environment (no sensitive data)
+      nodeVersion: process.version,
+      platform: process.platform,
+      
+      // Timestamp
+      timestamp: new Date().toISOString(),
+    };
+    
+    // Send as custom Sentry event
+    Sentry.captureMessage(`Command: ${command}`, {
+      level: status === "success" ? "info" : "warning",
+      tags: {
+        command,
+        status,
+        aiEnabled: String(sanitizedMetrics.aiEnabled),
+      },
+      extra: sanitizedMetrics,
+    });
+    
+    // Also track as metric for aggregation
+    Sentry.metrics.increment('command.executed', 1, {
+      tags: {
+        command,
+        status,
+        ai_enabled: String(sanitizedMetrics.aiEnabled),
+        platform: process.platform,
+      },
+    });
+    
+  } catch (e) {
+    // Silently fail
+  }
+}
+
+/**
+ * Track scan metrics
+ * @param {object} scanResult - Result from scanRepo()
+ */
+export function trackScan(scanResult) {
+  if (!enabled) return;
+  
+  try {
+    const metrics = {
+      filesCount: scanResult.filesCount || 0,
+      modulesCount: scanResult.modules?.length || 0,
+      apiEndpointsCount: scanResult.api?.length || 0,
+      pagesCount: scanResult.pages?.length || 0,
+    };
+    
+    // Record metrics
+    Sentry.metrics.gauge('scan.files', metrics.filesCount);
+    Sentry.metrics.gauge('scan.modules', metrics.modulesCount);
+    Sentry.metrics.gauge('scan.api_endpoints', metrics.apiEndpointsCount);
+    Sentry.metrics.gauge('scan.pages', metrics.pagesCount);
+    
+  } catch (e) {
+    // Silently fail
+  }
+}
+
+/**
+ * Track document generation
+ * @param {number} documentCount - Number of documents generated
+ * @param {boolean} aiEnabled - Whether AI was used
+ */
+export function trackDocumentGeneration(documentCount, aiEnabled) {
+  if (!enabled) return;
+  
+  try {
+    Sentry.metrics.gauge('docs.generated', documentCount, {
+      tags: {
+        ai_enabled: String(aiEnabled),
+      },
+    });
+  } catch (e) {
+    // Silently fail
+  }
+}
+
+/**
+ * Track publishing
+ * @param {string[]} publishers - List of publishers used (e.g., ["notion", "markdown"])
+ * @param {string} status - "success" or "failure"
+ */
+export function trackPublishing(publishers, status) {
+  if (!enabled) return;
+  
+  try {
+    publishers.forEach(publisher => {
+      Sentry.metrics.increment('publish.attempt', 1, {
+        tags: {
+          publisher,
+          status,
+        },
+      });
+    });
+  } catch (e) {
+    // Silently fail
+  }
+}
+
+/**
+ * Track migration
+ * @param {number} migratedCount - Number of workflows migrated
+ * @param {number} skippedCount - Number of workflows skipped
+ */
+export function trackMigration(migratedCount, skippedCount) {
+  if (!enabled) return;
+  
+  try {
+    Sentry.metrics.gauge('migration.workflows_migrated', migratedCount);
+    Sentry.metrics.gauge('migration.workflows_skipped', skippedCount);
+  } catch (e) {
+    // Silently fail
+  }
 }

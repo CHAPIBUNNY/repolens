@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { info, warn, error as logError } from "./utils/logger.js";
+import { trackMigration } from "./utils/telemetry.js";
 
 /**
  * Detect legacy workflow patterns that need migration
@@ -242,6 +243,12 @@ export async function runMigrate(targetDir = process.cwd(), options = {}) {
     } else {
       console.log("\n✨ All workflows are up to date!");
     }
+    
+    // Track migration metrics
+    trackMigration(migratedCount, skippedCount);
+    
+    // Return results for telemetry tracking
+    return { migratedCount, skippedCount };
 
   } catch (err) {
     logError(`Migration failed: ${err.message}`);

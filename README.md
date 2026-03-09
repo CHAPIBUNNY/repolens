@@ -549,13 +549,14 @@ When you open a pull request, RepoLens posts:
 
 ## 🔒 Privacy & Telemetry
 
-RepoLens includes **opt-in** error tracking to help improve reliability and diagnose issues faster.
+RepoLens includes **opt-in** error tracking and usage telemetry to help improve reliability, understand adoption patterns, and prioritize features.
 
 **Privacy First:**
 - ✅ **Disabled by default** - telemetry is opt-in
 - ✅ **No code collection** - your source code never leaves your machine
 - ✅ **No secrets** - API keys and tokens are never sent
-- ✅ **Anonymous** - no personal information collected
+- ✅ **Anonymous** - no personal information or repository names
+- ✅ **Transparent** - see exactly what data is collected
 
 **To enable telemetry**, add to `.env`:
 ```bash
@@ -563,11 +564,25 @@ REPOLENS_TELEMETRY_ENABLED=true
 ```
 
 **What's collected (when enabled):**
+
+*Error Tracking (Phase 1):*
 - Error messages and stack traces (for debugging)
 - Command that failed (e.g., `publish`, `migrate`)
 - Basic system info (Node version, platform)
 
-For full details, see [TELEMETRY.md](TELEMETRY.md).
+*Usage Metrics (Phase 2):*
+- Command execution times (scan, render, publish)
+- Repository size (file count, module count)
+- Feature usage (AI enabled, publishers used)
+- Success/failure rates
+
+**Why enable it?**
+- 🐛 **Faster bug fixes** - issues you encounter are fixed proactively
+- 📊 **Better features** - development focused on real-world usage
+- ⚡ **Performance** - optimizations based on actual bottlenecks
+- 🎯 **Prioritization** - roadmap guided by community needs
+
+For full details and example data, see [TELEMETRY.md](TELEMETRY.md).
 
 ---
 

@@ -24,7 +24,15 @@ import { info, error } from "./utils/logger.js";
 import { checkForUpdates } from "./utils/update-check.js";
 import { generateDocumentSet } from "./docs/generate-doc-set.js";
 import { writeDocumentSet } from "./docs/write-doc-set.js";
-import { initTelemetry, captureError, setContext, closeTelemetry } from "./utils/telemetry.js";
+import { 
+  initTelemetry, 
+  captureError, 
+  setContext, 
+  closeTelemetry,
+  trackUsage,
+  startTimer,
+  stopTimer
+} from "./utils/telemetry.js";
 
 async function getPackageVersion() {
   const __filename = fileURLToPath(import.meta.url);
@@ -144,12 +152,19 @@ async function main() {
     await printBanner();
     const targetDir = getArg("--target") || process.cwd();
     info(`Initializing RepoLens in: ${targetDir}`);
+    
+    const timer = startTimer("init");
     try {
       await runInit(targetDir);
+      const duration = stopTimer(timer);
       info("✓ RepoLens initialized successfully");
+      
+      trackUsage("init", "success", { duration });
       await closeTelemetry();
     } catch (err) {
+      stopTimer(timer);
       captureError(err, { command: "init", targetDir });
+      trackUsage("init", "failure");
       error("Failed to initialize RepoLens:");
       error(err.message);
       await closeTelemetry();
@@ -162,12 +177,19 @@ async function main() {
     await printBanner();
     const targetDir = getArg("--target") || process.cwd();
     info(`Validating RepoLens setup in: ${targetDir}`);
+    
+    const timer = startTimer("doctor");
     try {
       await runDoctor(targetDir);
+      const duration = stopTimer(timer);
       info("✓ RepoLens validation passed");
+      
+      trackUsage("doctor", "success", { duration });
       await closeTelemetry();
     } catch (err) {
+      stopTimer(timer);
       captureError(err, { command: "doctor", targetDir });
+      trackUsage("doctor", "failure");
       error("Validation failed:");
       error(err.message);
       await closeTelemetry();
@@ -181,11 +203,22 @@ async function main() {
     const dryRun = process.argv.includes("--dry-run");
     const force = process.argv.includes("--force");
     
+    const timer = startTimer("migrate");
     try {
-      await runMigrate(targetDir, { dryRun, force });
+      const result = await runMigrate(targetDir, { dryRun, force });
+      const duration = stopTimer(timer);
+      
+      trackUsage("migrate", "success", {
+        duration,
+        migratedCount: result?.migratedCount || 0,
+        skippedCount: result?.skippedCount || 0,
+        dryRun,
+      });
       await closeTelemetry();
     } catch (err) {
+      stopTimer(timer);
       captureError(err, { command: "migrate", targetDir, dryRun, force });
+      trackUsage("migrate", "failure", { dryRun });
       error("Migration failed:");
       error(err.message);
       await closeTelemetry();
@@ -197,12 +230,15 @@ async function main() {
   if (command === "publish" || !command || command.startsWith("--")) {
     await printBanner();
     
+    const commandTimer = startTimer("publish");
+    
     // Auto-discover config if not provided
     let configPath;
     try {
       configPath = getArg("--config") || await findConfig();
       info(`Using config: ${configPath}`);
     } catch (err) {
+      stopTimer(commandTimer);
       error(err.message);
       process.exit(2);
     }
@@ -212,7 +248,9 @@ async function main() {
       info("Loading configuration...");
       cfg = await loadConfig(configPath);
     } catch (err) {
+      stopTimer(commandTimer);
       captureError(err, { command: "publish", step: "load-config", configPath });
+      trackUsage("publish", "failure", { step: "config-load" });
       error("Failed to load configuration:");
       error(err.message);
       await closeTelemetry();
@@ -221,10 +259,14 @@ async function main() {
 
     try {
       info("Scanning repository...");
+      const scanTimer = startTimer("scan");
       scan = await scanRepo(cfg);
+      stopTimer(scanTimer);
       info(`Detected ${scan.modules?.length || 0} modules`);
     } catch (err) {
+      stopTimer(commandTimer);
       captureError(err, { command: "publish", step: "scan", patterns: cfg.scan?.patterns });
+      trackUsage("publish", "failure", { step: "scan" });
       error("Failed to scan repository:");
       error(err.message);
       await closeTelemetry();
@@ -236,7 +278,9 @@ async function main() {
 
     try {
       info("Generating documentation set...");
+      const renderTimer = startTimer("render");
       const docSet = await generateDocumentSet(scan, cfg, rawDiff);
+      stopTimer(renderTimer);
       
       info("Writing documentation to disk...");
       const writeResult = await writeDocumentSet(docSet, process.cwd());
@@ -251,11 +295,33 @@ async function main() {
       }
       
       info("Publishing documentation...");
+      const publishTimer = startTimer("publish_docs");
       await publishDocs(cfg, renderedPages);
+      stopTimer(publishTimer);
+      
       await upsertPrComment(diffData);
       info("✓ Documentation published successfully");
+      
+      const totalDuration = stopTimer(commandTimer);
+      
+      // Track successful publish with comprehensive metrics
+      const publishers = [];
+      if (cfg.publishers?.notion?.enabled !== false) publishers.push("notion");
+      if (cfg.publishers?.markdown?.enabled !== false) publishers.push("markdown");
+      
+      trackUsage("publish", "success", {
+        duration: totalDuration,
+        fileCount: scan.filesCount || 0,
+        moduleCount: scan.modules?.length || 0,
+        aiEnabled: Boolean(process.env.REPOLENS_AI_API_KEY || process.env.OPENAI_API_KEY),
+        aiProvider: process.env.AI_PROVIDER || "openai",
+        publishers,
+        documentCount: writeResult.documentCount,
+      });
     } catch (err) {
+      stopTimer(commandTimer);
       captureError(err, { command: "publish", step: "generate-or-publish", publishers: cfg.publishers });
+      trackUsage("publish", "failure", { step: "generate-or-publish" });
       error("Failed to publish documentation:");
       error(err.message);
       await closeTelemetry();
