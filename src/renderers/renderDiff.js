@@ -74,12 +74,12 @@ export function renderArchitectureDiff(diff) {
     "",
     "## Summary",
     "",
-    `Added files: **${data.added.length}**`,
-    `Removed files: **${data.removed.length}**`,
-    `Modified files: **${data.modified.length}**`,
-    `Added routes: **${data.addedRoutes.length}**`,
-    `Removed routes: **${data.removedRoutes.length}**`,
-    `Impacted modules: **${data.impactedModules.length}**`,
+    `Added files: ${data.added.length}`,
+    `Removed files: ${data.removed.length}`,
+    `Modified files: ${data.modified.length}`,
+    `Added routes: ${data.addedRoutes.length}`,
+    `Removed routes: ${data.removedRoutes.length}`,
+    `Impacted modules: ${data.impactedModules.length}`,
     ""
   ];
 

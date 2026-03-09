@@ -3,36 +3,36 @@ export function renderSystemOverview(cfg, scan) {
   
   // Generate meaningful notes based on detected metadata
   if (scan.metadata?.frameworks?.length) {
-    notes.push(`**Tech Stack**: ${scan.metadata.frameworks.join(", ")}`);
+    notes.push(`Tech Stack: ${scan.metadata.frameworks.join(", ")}`);
   }
   
   if (scan.metadata?.languages?.size) {
-    notes.push(`**Languages**: ${[...scan.metadata.languages].join(", ")}`);
+    notes.push(`Languages: ${[...scan.metadata.languages].join(", ")}`);
   }
   
   if (scan.metadata?.buildTools?.length) {
-    notes.push(`**Build Tools**: ${scan.metadata.buildTools.join(", ")}`);
+    notes.push(`Build Tools: ${scan.metadata.buildTools.join(", ")}`);
   }
   
   if (scan.metadata?.testFrameworks?.length) {
-    notes.push(`**Testing**: ${scan.metadata.testFrameworks.join(", ")}`);
+    notes.push(`Testing: ${scan.metadata.testFrameworks.join(", ")}`);
   }
   
   // Add architectural insights
   if (scan.modules.length > 50) {
-    notes.push(`**Architecture**: Large modular codebase with ${scan.modules.length} identified modules`);
+    notes.push(`Architecture: Large modular codebase with ${scan.modules.length} identified modules`);
   } else if (scan.modules.length > 20) {
-    notes.push(`**Architecture**: Medium-sized modular structure with ${scan.modules.length} modules`);
+    notes.push(`Architecture: Medium-sized modular structure with ${scan.modules.length} modules`);
   } else if (scan.modules.length > 0) {
-    notes.push(`**Architecture**: Compact modular design with ${scan.modules.length} modules`);
+    notes.push(`Architecture: Compact modular design with ${scan.modules.length} modules`);
   }
   
   if (scan.api?.length > 0) {
-    notes.push(`**API Coverage**: ${scan.api.length} API endpoints detected`);
+    notes.push(`API Coverage: ${scan.api.length} API endpoints detected`);
   }
   
   if (scan.pages?.length > 0) {
-    notes.push(`**UI Pages**: ${scan.pages.length} application pages detected`);
+    notes.push(`UI Pages: ${scan.pages.length} application pages detected`);
   }
   
   // If no meaningful data, show default message
@@ -43,9 +43,9 @@ export function renderSystemOverview(cfg, scan) {
   return [
     `# ${cfg.project.name} — System Overview`,
     ``,
-    `**What is this?** This page provides a high-level snapshot of your codebase structure, showing what technologies you're using and how your code is organized.`,
+    `What is this? This page provides a high-level snapshot of your codebase structure, showing what technologies you're using and how your code is organized.`,
     ``,
-    `📊 **Last Updated**: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
+    `📊 Last Updated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
     ``,
     `---`,
     ``,
@@ -53,16 +53,16 @@ export function renderSystemOverview(cfg, scan) {
     ``,
     `Here's what we found in your repository:`,
     ``,
-    `- **${scan.filesCount} files** scanned across your codebase`,
-    `- **${scan.modules.length} modules** (major code sections) detected`,
-    `- **${scan.pages?.length || 0} pages** in your application`,
-    `- **${scan.api.length} API endpoints** for backend functionality`,
+    `- ${scan.filesCount} files scanned across your codebase`,
+    `- ${scan.modules.length} modules (major code sections) detected`,
+    `- ${scan.pages?.length || 0} pages in your application`,
+    `- ${scan.api.length} API endpoints for backend functionality`,
     ``,
     `## 📦 Largest Modules`,
     ``,
     `These are your biggest code modules (folders with the most files):`,
     ``,
-    ...(scan.modules.slice(0, 10).map((m) => `- **\`${m.key}\`** contains ${m.fileCount} files`)),
+    ...(scan.modules.slice(0, 10).map((m) => `- \`${m.key}\` contains ${m.fileCount} files`)),
     ``,
     `## 🔧 Technology Stack`,
     ``,
@@ -72,7 +72,7 @@ export function renderSystemOverview(cfg, scan) {
     ``,
     `---`,
     ``,
-    `💡 **Tip**: This documentation auto-updates on every push to your main branch!`,
+    `💡 Tip: This documentation auto-updates on every push to your main branch!`,
     ``
   ].join("\n");
 }
@@ -81,9 +81,9 @@ export function renderModuleCatalog(cfg, scan) {
   const lines = [
     `# 📁 Module Catalog`,
     ``,
-    `**What is this?** This is a complete inventory of all code modules (folders) in your project, showing how your codebase is organized.`,
+    `What is this? This is a complete inventory of all code modules (folders) in your project, showing how your codebase is organized.`,
     ``,
-    `**Total modules found**: ${scan.modules.length}`,
+    `Total modules found: ${scan.modules.length}`,
     ``,
     `---`,
     ``,
@@ -99,14 +99,14 @@ export function renderModuleCatalog(cfg, scan) {
   }
 
   for (const module of scan.modules.slice(0, 100)) {
-    lines.push(`- **\`${module.key}\`** — ${module.fileCount} files`);
+    lines.push(`- \`${module.key}\` — ${module.fileCount} files`);
   }
 
   if (scan.modules.length > 100) {
     lines.push(``, `_(Showing top 100 of ${scan.modules.length} modules)_`);
   }
 
-  lines.push(``, `---`, ``, `💡 **Tip**: Click any module name to see its location in your codebase.`, ``);
+  lines.push(``, `---`, ``, `💡 Tip: Click any module name to see its location in your codebase.`, ``);
 
   return lines.join("\n");
 }
@@ -115,9 +115,9 @@ export function renderApiSurface(cfg, scan) {
   const lines = [
     `# 🔌 API Surface`,
     ``,
-    `**What is this?** This page lists all the API endpoints (backend services) your application provides. Each endpoint handles specific HTTP requests like GET, POST, PUT, DELETE.`,
+    `What is this? This page lists all the API endpoints (backend services) your application provides. Each endpoint handles specific HTTP requests like GET, POST, PUT, DELETE.`,
     ``,
-    `**Total endpoints**: ${scan.api.length}`,
+    `Total endpoints: ${scan.api.length}`,
     ``,
     `---`,
     ``
@@ -143,23 +143,23 @@ export function renderApiSurface(cfg, scan) {
   lines.push(
     `## Detected Endpoints`,
     ``,
-    `Each line shows: **HTTP Method** → API Path → Implementation File`,
+    `Each line shows: HTTP Method → API Path → Implementation File`,
     ``
   );
 
   for (const route of scan.api) {
-    lines.push(`- **${route.methods.join(", ")}** \`${route.path}\` • \`${route.file}\``);
+    lines.push(`- ${route.methods.join(", ")} \`${route.path}\` • \`${route.file}\``);
   }
 
   lines.push(
     ``,
     `---`,
     ``,
-    `💡 **Tip**: HTTP methods indicate the type of operation:`,
-    `- **GET**: Retrieve data`,
-    `- **POST**: Create new data`,
-    `- **PUT/PATCH**: Update existing data`,
-    `- **DELETE**: Remove data`,
+    `💡 Tip: HTTP methods indicate the type of operation:`,
+    `- GET: Retrieve data`,
+    `- POST: Create new data`,
+    `- PUT/PATCH: Update existing data`,
+    `- DELETE: Remove data`,
     ``
   );
 
@@ -170,7 +170,7 @@ export function renderRouteMap(cfg, scan) {
   const lines = [
     `# 🗺️ Route Map`,
     ``,
-    `**What is this?** This page shows all the pages (URLs) users can visit in your application, plus the backend API endpoints that power them.`,
+    `What is this? This page shows all the pages (URLs) users can visit in your application, plus the backend API endpoints that power them.`,
     ``,
     `---`,
     ``
@@ -185,7 +185,7 @@ export function renderRouteMap(cfg, scan) {
     );
 
     for (const page of scan.pages.slice(0, 200)) {
-      lines.push(`- **\`${page.path}\`** • \`${page.file}\``);
+      lines.push(`- \`${page.path}\` • \`${page.file}\``);
     }
 
     lines.push(``);
@@ -200,7 +200,7 @@ export function renderRouteMap(cfg, scan) {
     );
 
     for (const route of scan.api.slice(0, 200)) {
-      lines.push(`- **${route.methods.join(", ")}** \`${route.path}\` • \`${route.file}\``);
+      lines.push(`- ${route.methods.join(", ")} \`${route.path}\` • \`${route.file}\``);
     }
 
     lines.push(``);
@@ -218,7 +218,7 @@ export function renderRouteMap(cfg, scan) {
   lines.push(
     `---`,
     ``,
-    `💡 **Tip**: URL paths starting with \`/api/\` are backend endpoints, others are user-facing pages.`,
+    `💡 Tip: URL paths starting with \`/api/\` are backend endpoints, others are user-facing pages.`,
     ``
   );
 

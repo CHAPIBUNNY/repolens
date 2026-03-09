@@ -194,7 +194,7 @@ export function renderSystemMap(scan) {
     return [
       "# 🏗️ System Map",
       "",
-      "> **What is this?** This page shows how different parts of your codebase connect and depend on each other.",
+      "> What is this? This page shows how different parts of your codebase connect and depend on each other.",
       "",
       "No modules detected. Configure `module_roots` in `.repolens.yml` to visualize your architecture.",
       ""
@@ -208,9 +208,9 @@ export function renderSystemMap(scan) {
   const lines = [
     "# 🏗️ System Map",
     "",
-    "> **What is this?** This visual diagram shows how different parts of your codebase connect to each other. Arrows indicate dependencies (which modules use which).",
+    "> What is this? This visual diagram shows how different parts of your codebase connect to each other. Arrows indicate dependencies (which modules use which).",
     "",
-    `**Showing**: ${nodes.length} modules and ${relationships.length} relationships`,
+    `Showing: ${nodes.length} modules and ${relationships.length} relationships`,
     "",
     "---",
     "",
