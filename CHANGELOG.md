@@ -2,6 +2,58 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 0.5.0 (Phase 3: Security Audit)
+
+### 🔒 Security Hardening
+
+**Security Utilities** (1,296 lines of new code):
+- **Secrets Detection** (`src/utils/secrets.js`):
+  * Detects 15+ secret patterns (OpenAI, GitHub, AWS, Notion, etc.)
+  * Entropy-based heuristic detection for unknown patterns
+  * Automatic sanitization in all logger and telemetry output
+  * Functions: `detectSecrets()`, `sanitizeSecrets()`, `isLikelySecret()`
+  
+- **Config Validation** (`src/utils/validate.js`):
+  * Validates configuration against injection attacks
+  * Detects: directory traversal, shell injection, command substitution
+  * Scans config tree for accidentally included secrets
+  * Circular reference handling with depth limit
+  * Path validation preventing `..` and absolute paths
+  
+- **Rate Limiting** (`src/utils/rate-limit.js`):
+  * Token bucket algorithm (3 req/sec for Notion and AI APIs)
+  * Exponential backoff with jitter (3 retries)
+  * Wrapper functions: `executeNotionRequest()`, `executeAIRequest()`
+  * Batch request processing
+
+**Runtime Integration**:
+- Config loader validates all inputs before loading
+- Logger sanitizes all console output automatically
+- Telemetry sanitizes error messages before sending to Sentry
+- All Notion API calls rate-limited to 3 req/sec
+- All AI API calls rate-limited to 3 req/sec
+
+**GitHub Actions Hardening**:
+- Actions pinned to commit SHAs (supply chain protection)
+- Minimal permissions (`contents: read` or `contents: write` only)
+- Security job with npm audit and secrets scanning
+- Fail-early strategy on security issues
+
+**Comprehensive Testing**:
+- 43 new security tests (fuzzing, injection, boundary conditions)
+- Total: 90 tests passing (47 main + 43 security)
+- Attack vectors tested: SQL injection, command injection, path traversal, YAML bomb, NoSQL, LDAP, XML injection
+
+**Documentation**:
+- New `SECURITY.md` with threat model and security features
+- Updated `README.md` with security section
+- Updated `PRODUCTION_CHECKLIST.md` with security validation
+- Security badge in README
+
+### 📊 Testing
+- All 90 tests passing
+- 0 vulnerabilities in dependencies (519 packages audited)
+
 ## 0.4.3
 
 ### 🐛 Bug Fixes
