@@ -28,7 +28,7 @@ describe("cli", () => {
 
   it("prints help", async () => {
     const { stdout } = await runNode(["--help"]);
-    expect(stdout).toContain("RepoLens — Repo intelligence CLI");
+    expect(stdout).toContain("RepoLens — Repository Intelligence CLI by RABITAI");
     expect(stdout).toContain("init");
     expect(stdout).toContain("doctor");
     expect(stdout).toContain("publish");

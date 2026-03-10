@@ -8,7 +8,7 @@
  */
 
 const CURRENT_SCHEMA_VERSION = 1;
-const SUPPORTED_PUBLISHERS = ["notion", "markdown"];
+const SUPPORTED_PUBLISHERS = ["notion", "markdown", "confluence"];
 const SUPPORTED_PAGE_KEYS = [
   "system_overview",
   "module_catalog",

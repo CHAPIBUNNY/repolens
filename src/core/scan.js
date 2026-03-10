@@ -18,6 +18,25 @@ function isNextRoute(file) {
   );
 }
 
+function isExpressRoute(content) {
+  // Detect Express.js route patterns
+  const expressPatterns = [
+    /(?:app|router)\.(get|post|put|patch|delete|all)\s*\(\s*['"`]([^'"`]+)['"`]/gi,
+    /(?:app|router)\.route\s*\(\s*['"`]([^'"`]+)['"`]/gi
+  ];
+  return expressPatterns.some(pattern => pattern.test(content));
+}
+
+function isReactRouterFile(content) {
+  // Detect React Router patterns
+  return content.includes("<Route") || content.includes("createBrowserRouter") || content.includes("createRoutesFromElements");
+}
+
+function isVueRouterFile(content) {
+  // Detect Vue Router patterns  
+  return (content.includes("createRouter") || content.includes("VueRouter")) && content.includes("routes");
+}
+
 function isNextPage(file) {
   const f = norm(file);
 
@@ -163,6 +182,113 @@ async function extractRepoMetadata(repoRoot) {
   return metadata;
 }
 
+function extractExpressRoutes(content) {
+  const routes = [];
+  const seenRoutes = new Set();
+
+  // Match app.METHOD(path) or router.METHOD(path)
+  const methodPattern = /(?:app|router)\.(get|post|put|patch|delete|all)\s*\(\s*['"`]([^'"`]+)['"`]/gi;
+  let match;
+
+  while ((match = methodPattern.exec(content)) !== null) {
+    const [, method, path] = match;
+    const routeKey = `${method.toUpperCase()}:${path}`;
+    
+    if (!seenRoutes.has(routeKey)) {
+      seenRoutes.add(routeKey);
+      
+     const existing = routes.find(r => r.path === path);
+      if (existing) {
+        if (!existing.methods.includes(method.toUpperCase())) {
+          existing.methods.push(method.toUpperCase());
+}
+      } else {
+        routes.push({
+          path,
+          methods: [method.toUpperCase()]
+        });
+      }
+    }
+  }
+
+  // Match app.route(path).METHOD()
+  const routePattern = /(?:app|router)\.route\s*\(\s*['"`]([^'"`]+)['"`]\s*\)([.\s\w()]*)/gi;
+  while ((match = routePattern.exec(content)) !== null) {
+    const [, path, chain] = match;
+    const methods = [];
+    
+    if (chain.includes(".get(")) methods.push("GET");
+    if (chain.includes(".post(")) methods.push("POST");
+    if (chain.includes(".put(")) methods.push("PUT");
+    if (chain.includes(".patch(")) methods.push("PATCH");
+    if (chain.includes(".delete(")) methods.push("DELETE");
+    
+    if (methods.length > 0) {
+      const existing = routes.find(r => r.path === path);
+      if (existing) {
+        methods.forEach(m => {
+          if (!existing.methods.includes(m)) existing.methods.push(m);
+        });
+      } else {
+        routes.push({ path, methods });
+      }
+    }
+  }
+
+  return routes;
+}
+
+function extractReactRoutes(content, file) {
+  const routes = [];
+  
+  // Match <Route path="..." />
+  const routePattern = /<Route\s+[^>]*path\s*=\s*['"`]([^'"`]+)['"`][^>]*\/?>/gi;
+  let match;
+
+  while ((match = routePattern.exec(content)) !== null) {
+    const [, path] = match;
+    routes.push({
+      file,
+      path,
+      framework: "React Router"
+    });
+  }
+
+  // Match path: "..." in route objects  
+  const objectPattern = /path\s*:\s*['"`]([^'"`]+)['"`]/gi;
+  while ((match = objectPattern.exec(content)) !== null) {
+    const [, path] = match;
+    if (!routes.some(r => r.path === path)) {
+      routes.push({
+        file,
+        path,
+        framework: "React Router"
+      });
+    }
+  }
+
+  return routes;
+}
+
+function extractVueRoutes(content, file) {
+  const routes = [];
+  
+  // Match path: '...' or path: "..." in Vue router definitions
+  const pathPattern = /path\s*:\s*['"`]([^'"`]+)['"`]/gi;
+  let match;
+
+  while ((match = pathPattern.exec(content)) !== null) {
+    const [, path] = match;
+    routes.push({
+      file,
+      path,
+      framework: "Vue Router"
+    });
+  }
+
+  return routes;
+}
+
 export async function scanRepo(cfg) {
   const repoRoot = cfg.__repoRoot;
 
@@ -198,6 +324,7 @@ export async function scanRepo(cfg) {
   const apiFiles = files.filter(isNextRoute);
   const api = [];
 
+  // Extract Next.js API routes
   for (const file of apiFiles) {
     const absoluteFile = path.join(repoRoot, file);
     const content = await readFileSafe(absoluteFile);
@@ -212,15 +339,63 @@ export async function scanRepo(cfg) {
     api.push({
       file,
       path: routePathFromFile(file),
-      methods: methods.length ? methods : ["UNKNOWN"]
+      methods: methods.length ? methods : ["UNKNOWN"],
+      framework: "Next.js"
     });
+  }
+
+  // Extract Express.js routes
+  for (const file of files) {
+    if (file.endsWith(".ts") || file.endsWith(".js")) {
+      const absoluteFile = path.join(repoRoot, file);
+      const content = await readFileSafe(absoluteFile);
+      
+      if (isExpressRoute(content)) {
+        const expressRoutes = extractExpressRoutes(content);
+        for (const route of expressRoutes) {
+          api.push({
+            file,
+            path: route.path,
+            methods: route.methods,
+            framework: "Express"
+          });
+        }
+      }
+    }
   }
 
   const pageFiles = files.filter(isNextPage);
   const pages = pageFiles.map((file) => ({
     file,
-    path: routePathFromFile(file)
+    path: routePathFromFile(file),
+    framework: "Next.js"
   }));
+
+  // Extract React Router routes
+  for (const file of files) {
+    if (file.endsWith(".tsx") || file.endsWith(".jsx")) {
+      const absoluteFile = path.join(repoRoot, file);
+      const content = await readFileSafe(absoluteFile);
+      
+      if (isReactRouterFile(content)) {
+        const reactRoutes = extractReactRoutes(content, file);
+        pages.push(...reactRoutes);
+      }
+    }
+  }
+
+  // Extract Vue Router routes
+  for (const file of files) {
+    if (file.endsWith(".ts") || file.endsWith(".js") || file.endsWith(".vue")) {
+      const absoluteFile = path.join(repoRoot, file);
+      const content = await readFileSafe(absoluteFile);
+      
+      if (isVueRouterFile(content)) {
+        const vueRoutes = extractVueRoutes(content, file);
+        pages.push(...vueRoutes);
+      }
+    }
+  }
 
   // Extract repository metadata
   const metadata = await extractRepoMetadata(repoRoot);

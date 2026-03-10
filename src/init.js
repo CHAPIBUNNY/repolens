@@ -46,6 +46,11 @@ jobs:
         env:
           NOTION_TOKEN: \${{ secrets.NOTION_TOKEN }}
           NOTION_PARENT_PAGE_ID: \${{ secrets.NOTION_PARENT_PAGE_ID }}
+          CONFLUENCE_URL: \${{ secrets.CONFLUENCE_URL }}
+          CONFLUENCE_EMAIL: \${{ secrets.CONFLUENCE_EMAIL }}
+          CONFLUENCE_API_TOKEN: \${{ secrets.CONFLUENCE_API_TOKEN }}
+          CONFLUENCE_SPACE_KEY: \${{ secrets.CONFLUENCE_SPACE_KEY }}
+          CONFLUENCE_PARENT_PAGE_ID: \${{ secrets.CONFLUENCE_PARENT_PAGE_ID }}
         run: npx @rabitai/repolens@latest publish
 `;
 
@@ -53,6 +58,13 @@ const DEFAULT_ENV_EXAMPLE = `# Notion Publishing
 NOTION_TOKEN=
 NOTION_PARENT_PAGE_ID=
 NOTION_VERSION=2022-06-28
+
+# Confluence Publishing
+CONFLUENCE_URL=https://your-company.atlassian.net/wiki
+CONFLUENCE_EMAIL=your@email.com
+CONFLUENCE_API_TOKEN=
+CONFLUENCE_SPACE_KEY=DOCS
+CONFLUENCE_PARENT_PAGE_ID=
 
 # AI-Assisted Documentation (Optional)
 # Enable AI features for natural language explanations
@@ -66,7 +78,7 @@ NOTION_VERSION=2022-06-28
 
 const DEFAULT_REPOLENS_README = `# RepoLens Documentation
 
-This repository is configured to use [RepoLens](https://github.com/CHAPIBUNNY/repolens) for automatic architecture documentation.
+This repository is configured to use [RepoLens](https://github.com/CHAPIBUNNY/repolens) (@rabitai/repolens) for automatic architecture documentation.
 
 ## 📋 What RepoLens Created
 
@@ -93,14 +105,37 @@ If you configured Notion credentials during setup, documentation will publish au
    - \`NOTION_TOKEN\` — Get from https://www.notion.so/my-integrations
    - \`NOTION_PARENT_PAGE_ID\` — The page where docs will be published
 
+### Confluence Publishing
+
+To publish documentation to Atlassian Confluence:
+
+1. Copy \`.env.example\` to \`.env\`
+2. Generate an API token: https://id.atlassian.com/manage-profile/security/api-tokens
+3. Add your credentials:
+   - \`CONFLUENCE_URL\` — Your Confluence base URL (e.g., https://your-company.atlassian.net/wiki)
+   - \`CONFLUENCE_EMAIL\` — Your Atlassian account email
+   - \`CONFLUENCE_API_TOKEN\` — API token from step 2
+   - \`CONFLUENCE_SPACE_KEY\` — Space key (e.g., DOCS, ENG)
+   - \`CONFLUENCE_PARENT_PAGE_ID\` — (Optional) Parent page ID for nested docs
+
 ### GitHub Actions
 
 For automated publishing on every push:
 
 1. Go to repository Settings → Secrets → Actions
-2. Add secrets:
+2. Add secrets for your chosen publisher(s):
+   
+   **For Notion:**
    - \`NOTION_TOKEN\`
    - \`NOTION_PARENT_PAGE_ID\`
+   
+   **For Confluence:**
+   - \`CONFLUENCE_URL\`
+   - \`CONFLUENCE_EMAIL\`
+   - \`CONFLUENCE_API_TOKEN\`
+   - \`CONFLUENCE_SPACE_KEY\`
+   - \`CONFLUENCE_PARENT_PAGE_ID\` (optional)
+
 3. Push to main branch
 
 ## 📊 Generated Documentation
@@ -243,8 +278,9 @@ function buildRepoLensConfig(projectName, detectedRoots) {
     `  docs_title_prefix: "RepoLens"`,
     ``,
     `publishers:`,
-    `  - markdown  # Always generate local Markdown files`,
-    `  - notion    # Auto-detected: publishes if NOTION_TOKEN is set`,
+    `  - markdown    # Always generate local Markdown files`,
+    `  - notion      # Auto-detected: publishes if NOTION_TOKEN is set`,
+    `  - confluence  # Auto-detected: publishes if CONFLUENCE_URL is set`,
     ``,
     `# Optional: Configure Notion publishing behavior`,
     `# notion:`,
@@ -252,6 +288,12 @@ function buildRepoLensConfig(projectName, detectedRoots) {
     `#     - main        # Only publish from main branch`,
     `#     - staging     # Or add specific branches`,
     `#   includeBranchInTitle: false  # Clean titles without [branch-name]`,
+    ``,
+    `# Optional: Configure Confluence publishing behavior`,
+    `# confluence:`,
+    `#   branches:`,
+    `#     - main        # Only publish from main branch`,
+    `#     - develop     # Or add specific branches`,
     ``,
     `# Optional: GitHub integration for SVG diagram hosting`,
     `# github:`,

@@ -43,6 +43,16 @@ export function renderSystemOverview(cfg, scan) {
   return [
     `# ${cfg.project.name} — System Overview`,
     ``,
+    `\`\`\``,
+    `██████╗ ███████╗██████╗  ██████╗ ██╗     ███████╗███╗   ██╗███████╗`,
+    `██╔══██╗██╔════╝██╔══██╗██╔═══██╗██║     ██╔════╝████╗  ██║██╔════╝`,
+    `██████╔╝█████╗  ██████╔╝██║   ██║██║     █████╗  ██╔██╗ ██║███████╗`,
+    `██╔══██╗██╔══╝  ██╔═══╝ ██║   ██║██║     ██╔══╝  ██║╚██╗██║╚════██║`,
+    `██║  ██║███████╗██║     ╚██████╔╝███████╗███████╗██║ ╚████║███████║`,
+    `╚═╝  ╚═╝╚══════╝╚═╝      ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═══╝╚══════╝`,
+    `          🔍 Repository Intelligence by RABITAI 🐰`,
+    `\`\`\``,
+    ``,
     `What is this? This page provides a high-level snapshot of your codebase structure, showing what technologies you're using and how your code is organized.`,
     ``,
     `📊 Last Updated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
@@ -238,9 +248,29 @@ export function renderRouteMap(cfg, scan) {
 
   if (!scan.pages?.length && !scan.api?.length) {
     lines.push(
-      `## No Routes Detected`,
+      `## 🔍 Route Detection Status`,
       ``,
-      `RepoLens looks for Next.js pages and API routes. If you're using a different framework, routes might not be auto-detected yet.`,
+      `No routes were auto-detected in this scan. RABITAI currently supports:`,
+      ``,
+      `✅ **Fully Supported:**`,
+      `- Next.js pages (\`pages/\` and \`app/\` directories)`,
+      `- Next.js API routes (\`pages/api/\` and App Router)`,
+      `- Express.js routes (\`app.get\`, \`router.post\`, etc.)`,
+      `- React Router (\`<Route>\` components)`,
+      `- Vue Router (\`routes\` array definitions)`,
+      ``,
+      `⏳ **Coming Soon:**`,
+      `- Fastify routes`,
+      `- NestJS controllers`,
+      `- GraphQL endpoints`,
+      `- tRPC procedures`,
+      ``,
+      `💡 **Your project may:**`,
+      `- Use a different routing framework (let us know!)`,
+      `- Have routes outside the scanned directories`,
+      `- Use dynamic routing patterns we haven't detected yet`,
+      ``,
+      `📬 **Request Support:** Open an issue at [github.com/CHAPIBUNNY/repolens](https://github.com/CHAPIBUNNY/repolens/issues) to request your framework!`,
       ``
     );
   }

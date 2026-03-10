@@ -47,8 +47,17 @@ async function getPackageVersion() {
 
 async function printBanner() {
   const version = await getPackageVersion();
-  console.log(`\nRepoLens v${version}`);
-  console.log("─".repeat(40));
+  console.log(`
+██████╗ ███████╗██████╗  ██████╗ ██╗     ███████╗███╗   ██╗███████╗
+██╔══██╗██╔════╝██╔══██╗██╔═══██╗██║     ██╔════╝████╗  ██║██╔════╝
+██████╔╝█████╗  ██████╔╝██║   ██║██║     █████╗  ██╔██╗ ██║███████╗
+██╔══██╗██╔══╝  ██╔═══╝ ██║   ██║██║     ██╔══╝  ██║╚██╗██║╚════██║
+██║  ██║███████╗██║     ╚██████╔╝███████╗███████╗██║ ╚████║███████║
+╚═╝  ╚═╝╚══════╝╚═╝      ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═══╝╚══════╝
+          🔍 Repository Intelligence by RABITAI 🐰
+          v${version}
+`);
+  console.log("─".repeat(70));
 }
 
 function getArg(name) {
@@ -90,16 +99,16 @@ async function findConfig(startDir = process.cwd()) {
 
 function printHelp() {
   console.log(`
-RepoLens — Repo intelligence CLI
+RepoLens — Repository Intelligence CLI by RABITAI 🐰
 
 Usage:
   repolens <command> [options]
 
 Commands:
-  init        Scaffold RepoLens files in a target repository
-  doctor      Validate a repository's RepoLens setup
+  init        Scaffold RepoLens files in your repository
+  doctor      Validate your RepoLens setup
   migrate     Upgrade workflow files to v0.4.0 format
-  publish     Scan, render, and publish RepoLens outputs
+  publish     Scan, render, and publish documentation
   version     Print the current RepoLens version
 
 Options:

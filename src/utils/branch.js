@@ -81,6 +81,38 @@ export function shouldPublishToNotion(config, currentBranch = getCurrentBranch()
 }
 
 /**
+ * Check if current branch should publish to Confluence
+ * Based on config.confluence.branches setting
+ */
+export function shouldPublishToConfluence(config, currentBranch = getCurrentBranch()) {
+  // If no confluence config, allow all branches (backward compatible)
+  if (!config.confluence) {
+    return true;
+  }
+
+  // If branches not specified, allow all
+  if (!config.confluence.branches || config.confluence.branches.length === 0) {
+    return true;
+  }
+
+  // Check if current branch matches any allowed pattern
+  return config.confluence.branches.some(pattern => {
+    // Exact match
+    if (pattern === currentBranch) {
+      return true;
+    }
+
+    // Wildcard pattern (simple glob)
+    if (pattern.includes("*")) {
+      const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
+      return regex.test(currentBranch);
+    }
+
+    return false;
+  });
+}
+
+/**
  * Get branch-qualified page title
  */
 export function getBranchQualifiedTitle(baseTitle, branch = getCurrentBranch(), includeBranch = true) {

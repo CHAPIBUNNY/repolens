@@ -36,11 +36,22 @@ npm install @rabitai/repolens
 npx @rabitai/repolens init
 ```
 
-**Step 3: Configure Notion** (optional, skip if using Markdown only)
+**Step 3: Configure Publishing** (optional, skip if using Markdown only)
+
+For Notion:
 ```bash
 # Edit .env and add:
 NOTION_TOKEN=secret_xxx
 NOTION_PARENT_PAGE_ID=xxx
+```
+
+For Confluence:
+```bash
+# Edit .env and add:
+CONFLUENCE_URL=https://your-company.atlassian.net/wiki
+CONFLUENCE_EMAIL=your@email.com
+CONFLUENCE_API_TOKEN=your-token
+CONFLUENCE_SPACE_KEY=DOCS
 ```
 
 **Step 4: Publish**
@@ -48,7 +59,7 @@ NOTION_PARENT_PAGE_ID=xxx
 npx @rabitai/repolens publish
 ```
 
-**Done!** Your docs are now live in Notion and/or `.repolens/` directory.
+**Done!** Your docs are now live in Notion, Confluence, and/or `.repolens/` directory.
 
 **🔄 Upgrading from v0.3.0 or earlier?**
 Run `npx @rabitai/repolens migrate` to automatically update your workflow files. See [MIGRATION.md](MIGRATION.md) for details.
@@ -113,7 +124,7 @@ RepoLens automatically detects:
 ✅ **Deterministic Fallback** - Always generates docs even if AI unavailable  
 ✅ **Business Domain Inference** - Automatically maps code to business functions  
 ✅ **Data Flow Analysis** - Understands how information moves through your system  
-✅ **Multiple Publishers** - Output to Notion, Markdown, or both  
+✅ **Multiple Publishers** - Output to Notion, Confluence, Markdown, or all three  
 ✅ **Branch-Aware** - Prevent doc conflicts across branches  
 ✅ **GitHub Actions** - Autonomous operation on every push  
 ✅ **Team Notifications** - Discord integration with rich embeds (NEW in v0.6.0)  
@@ -152,10 +163,17 @@ RepoLens now generates a beautiful HTML dashboard with real-time metrics and tre
    - Source: **GitHub Actions**
    - Save
 
-3. **Add secrets** (if using Notion or Discord):
+3. **Add secrets** (if using publishers or notifications):
    ```
    NOTION_TOKEN
    NOTION_PARENT_PAGE_ID
+   CONFLUENCE_URL
+   CONFLUENCE_EMAIL
+   CONFLUENCE_API_TOKEN
+   CONFLUENCE_SPACE_KEY
+   CONFLUENCE_PARENT_PAGE_ID  # Optional
+   DISCORD_WEBHOOK_URL  # Optional
+   ```
    DISCORD_WEBHOOK_URL
    ```
 
@@ -281,14 +299,27 @@ Open `.repolens.yml` and verify the `publishers` section:
 
 ```yaml
 publishers:
-  - markdown  # Always works, no setup needed
-  - notion    # Requires NOTION_TOKEN and NOTION_PARENT_PAGE_ID
+  - markdown    # Always works, no setup needed
+  - notion      # Requires NOTION_TOKEN and NOTION_PARENT_PAGE_ID
+  - confluence  # Requires CONFLUENCE_URL, CONFLUENCE_EMAIL, CONFLUENCE_API_TOKEN, CONFLUENCE_SPACE_KEY
 ```
 
 **Markdown Only** (simplest):
 ```yaml
 publishers:
   - markdown
+```
+
+**Notion Only**:
+```yaml
+publishers:
+  - notion
+```
+
+**Confluence Only**:
+```yaml
+publishers:
+  - confluence
 ```
 Documentation lands in `.repolens/` directory. Commit these files or ignore them.
 
@@ -299,6 +330,23 @@ publishers:
   - markdown
 ```
 Docs published to Notion for team visibility, plus local Markdown backups.
+
+**Confluence + Markdown**:
+```yaml
+publishers:
+  - confluence
+  - markdown
+```
+Docs published to Confluence for enterprise teams, plus local Markdown backups.
+
+**All Three**:
+```yaml
+publishers:
+  - notion
+  - confluence
+  - markdown
+```
+Maximum visibility: Notion for async collaboration, Confluence for enterprise docs, Markdown for local backups.
 
 ### Step 3: Enable AI Features (Optional)
 
@@ -390,15 +438,82 @@ Add as repository secrets:
    - Name: `NOTION_TOKEN`, Value: `secret_xxxxx`
    - Name: `NOTION_PARENT_PAGE_ID`, Value: `xxxxxx`
 
+### Step 4a: Set Up Confluence Integration (Optional)
+
+If using the Confluence publisher:
+
+**4a.1: Generate Confluence API Token**
+1. Go to [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+2. Click **"Create API token"**
+3. Name it **"RepoLens"**
+4. Copy the generated token (save it securely - you won't see it again!)
+
+**4a.2: Find Your Space Key**
+1. Navigate to your Confluence space
+2. Go to **Space Settings** → **Space details**
+3. Note the **Space Key** (e.g., `DOCS`, `ENG`, `TECH`)
+
+**4a.3: Get Parent Page ID (Optional)**
+1. Navigate to the page where you want RepoLens docs nested
+2. Click **"..."** menu → **"Page information"**
+3. Copy the page ID from the URL: `pageId=123456789`
+4. If skipped, docs will be created at space root level
+
+**4a.4: Add Environment Variables**
+
+**For Local Development:**
+Create `.env` in your project root:
+```bash
+CONFLUENCE_URL=https://your-company.atlassian.net/wiki
+CONFLUENCE_EMAIL=your@email.com
+CONFLUENCE_API_TOKEN=your-api-token-here
+CONFLUENCE_SPACE_KEY=DOCS
+CONFLUENCE_PARENT_PAGE_ID=123456789  # Optional
+```
+
+**For Confluence Server/Data Center** (self-hosted):
+```bash
+CONFLUENCE_URL=https://confluence.yourcompany.com
+CONFLUENCE_EMAIL=your-username  # Use username instead of email
+CONFLUENCE_API_TOKEN=your-personal-access-token
+CONFLUENCE_SPACE_KEY=DOCS
+CONFLUENCE_PARENT_PAGE_ID=123456789  # Optional
+```
+
+**For GitHub Actions:**
+Add as repository secrets:
+1. Go to your repo → **Settings** → **Secrets and variables** → **Actions**
+2. Click **"New repository secret"**
+3. Add:
+   - Name: `CONFLUENCE_URL`, Value: `https://your-company.atlassian.net/wiki`
+   - Name: `CONFLUENCE_EMAIL`, Value: `your@email.com`
+   - Name: `CONFLUENCE_API_TOKEN`, Value: `your-token`
+   - Name: `CONFLUENCE_SPACE_KEY`, Value: `DOCS`
+   - Name: `CONFLUENCE_PARENT_PAGE_ID`, Value: `123456789` (optional)
+
+**Confluence + Notion + Markdown** (all three!):
+```yaml
+publishers:
+  - markdown
+  - notion
+  - confluence
+```
+
+Docs published to both Notion and Confluence for maximum visibility!
+
 ### Step 5: Configure Branch Publishing (Recommended)
 
-Prevent documentation conflicts by limiting which branches publish to Notion:
+Prevent documentation conflicts by limiting which branches publish to Notion/Confluence:
 
 ```yaml
 notion:
   branches:
     - main              # Only main branch publishes
   includeBranchInTitle: false  # Clean titles (no [branch-name] suffix)
+
+confluence:
+  branches:
+    - main              # Only main branch publishes to Confluence
 ```
 
 **Options:**
@@ -442,8 +557,8 @@ npx @rabitai/repolens publish
 
 **Expected output:**
 ```
-RepoLens v0.2.0
-────────────────────────────────────────
+RABITAI 🐰
+────────────────────────────────────────────────────
 [RepoLens] Using config: /path/to/.repolens.yml
 [RepoLens] Loading configuration...
 [RepoLens] Scanning repository...
@@ -1141,6 +1256,6 @@ MIT
 
 <div align="center">
 
-**Made with 🔍 for developers who care about architecture**
+**Made with RABITAI for developers who care about architecture**
 
 </div>

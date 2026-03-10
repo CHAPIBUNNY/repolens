@@ -1,6 +1,7 @@
 import { publishToNotion } from "./publish.js";
 import { publishToMarkdown } from "./markdown.js";
-import { shouldPublishToNotion, getCurrentBranch } from "../utils/branch.js";
+import { publishToConfluence, hasConfluenceSecrets } from "./confluence.js";
+import { shouldPublishToNotion, shouldPublishToConfluence, getCurrentBranch } from "../utils/branch.js";
 import { info, warn } from "../utils/logger.js";
 import { trackPublishing } from "../utils/telemetry.js";
 import { collectMetrics } from "../utils/metrics.js";
@@ -46,6 +47,27 @@ export async function publishDocs(cfg, renderedPages, scanResult) {
       const allowedBranches = cfg.notion?.branches?.join(", ") || "none configured";
       warn(`Skipping Notion publish: branch "${currentBranch}" not in allowed list (${allowedBranches})`);
       info("To publish from this branch, add it to notion.branches in .repolens.yml");
+    }
+  }
+
+  // Confluence publishing (opt-in if secrets configured)
+  if (publishers.includes("confluence") || hasConfluenceSecrets()) {
+    if (!hasConfluenceSecrets()) {
+      info("Skipping Confluence publish: Required environment variables not configured");
+      info("To enable Confluence publishing, set CONFLUENCE_URL, CONFLUENCE_EMAIL, CONFLUENCE_API_TOKEN, and CONFLUENCE_SPACE_KEY");
+    } else if (shouldPublishToConfluence(cfg, currentBranch)) {
+      info(`Publishing to Confluence from branch: ${currentBranch}`);
+      try {
+        await publishToConfluence(cfg, renderedPages);
+        publishedTo.push("confluence");
+      } catch (err) {
+        publishStatus = "failure";
+        throw err;
+      }
+    } else {
+      const allowedBranches = cfg.confluence?.branches?.join(", ") || "none configured";
+      warn(`Skipping Confluence publish: branch "${currentBranch}" not in allowed list (${allowedBranches})`);
+      info("To publish from this branch, add it to confluence.branches in .repolens.yml");
     }
   }
 
