@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 0.6.4  
+**Version:** 0.7.0  
 **Status:** Production-ready, pre-v1.0 stability guarantees  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -41,8 +41,9 @@ bin/
 src/
   cli.js                  # Main CLI orchestration + banner
   doctor.js               # Repository validation
-  init.js                 # Scaffolding for new repos
+  init.js                 # Scaffolding for new repos (+ interactive wizard)
   migrate.js              # Workflow migration (legacy → current format)
+  watch.js                # Watch mode for local development
   core/
     config.js             # Configuration loading and validation
     config-schema.js      # Schema versioning (configVersion: 1)
@@ -76,6 +77,7 @@ src/
     renderMap.js          # System map (Unicode dependency diagrams)
   utils/
     logger.js             # Logging utilities
+    errors.js             # Enhanced error messages with actionable guidance
     retry.js              # Retry logic for API calls (exponential backoff)
     branch.js             # Multi-platform branch detection
     update-check.js       # Version update notifications
@@ -83,7 +85,7 @@ src/
     metrics.js            # Documentation coverage & health scoring
     rate-limit.js         # Token bucket rate limiter for APIs
     secrets.js            # Secret detection & sanitization
-    telemetry.js          # Opt-in error tracking (Sentry)
+    telemetry.js          # Opt-in error tracking + performance timers
 tests/                    # Vitest test suite (90 tests across 11 files)
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
@@ -102,8 +104,10 @@ tests/                    # Vitest test suite (90 tests across 11 files)
 ### Key Commands
 
 - `repolens init` - Scaffold configuration and GitHub Actions workflow
+- `repolens init --interactive` - Step-by-step configuration wizard
 - `repolens doctor` - Validate repository setup (config, environment, etc.)
 - `repolens publish` - Scan repo, generate docs (with optional AI), publish to outputs
+- `repolens watch` - Watch for file changes and regenerate docs (Markdown only)
 - `repolens migrate` - Migrate legacy workflows to current format
 - `repolens feedback` - Send feedback to the RepoLens team
 - `repolens version` - Display version

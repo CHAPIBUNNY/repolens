@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="Avatar.png" alt="RepoLens" width="120" />
-</p>
-
 ```
     ██████╗ ███████╗██████╗  ██████╗ ██╗     ███████╗███╗   ██╗███████╗
     ██╔══██╗██╔════╝██╔══██╗██╔═══██╗██║     ██╔════╝████╗  ██║██╔════╝
@@ -9,7 +5,7 @@
     ██╔══██╗██╔══╝  ██╔═══╝ ██║   ██║██║     ██╔══╝  ██║╚██╗██║╚════██║
     ██║  ██║███████╗██║     ╚██████╔╝███████╗███████╗██║ ╚████║███████║
     ╚═╝  ╚═╝╚══════╝╚═╝      ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═══╝╚══════╝
-                        🔍 Repository Intelligence CLI 📊
+                        Repository Intelligence CLI
 ```
 
 [![Tests](https://img.shields.io/badge/tests-90%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
@@ -20,7 +16,7 @@
 
 AI-assisted documentation intelligence system that generates architecture docs for engineers AND readable system docs for stakeholders
 
-**Current Status**: v0.6.4 — User Feedback & Team Features
+**Current Status**: v0.7.0 — Polish & Reliability
 
 RepoLens automatically generates and maintains living architecture documentation by analyzing your repository structure, extracting meaningful insights from your package.json, and creating visual dependency graphs. Run it once, or let it auto-update on every push.
 
@@ -132,7 +128,11 @@ RepoLens automatically detects:
 ✅ **Branch-Aware** - Prevent doc conflicts across branches  
 ✅ **GitHub Actions** - Autonomous operation on every push  
 ✅ **Team Notifications** - Discord integration with rich embeds (NEW in v0.6.0)  
-✅ **Health Score Tracking** - Monitor documentation quality over time (NEW in v0.6.0)  
+✅ **Health Score Tracking** - Monitor documentation quality over time  
+✅ **Watch Mode** - Auto-regenerate docs on file changes (NEW in v0.7.0)  
+✅ **Interactive Setup** - Step-by-step configuration wizard (NEW in v0.7.0)  
+✅ **Performance Metrics** - Timing breakdown for scan/render/publish (NEW in v0.7.0)  
+✅ **Actionable Errors** - Enhanced error messages with fix guidance (NEW in v0.7.0)  
 
 ---
 
@@ -224,7 +224,7 @@ npm link
 Install from a specific version:
 
 ```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v0.6.4/chappibunny-repolens-0.6.4.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v0.7.0/chappibunny-repolens-0.7.0.tgz
 ```
 </details>
 
@@ -1077,7 +1077,7 @@ Simulates the full user installation experience:
 npm pack
 
 # Install globally from tarball
-npm install -g chappibunny-repolens-0.6.4.tgz
+npm install -g chappibunny-repolens-0.7.0.tgz
 
 # Verify
 repolens --version
@@ -1091,9 +1091,10 @@ repolens/
 │   └── repolens.js          # CLI executable wrapper
 ├── src/
 │   ├── cli.js               # Command orchestration + banner
-│   ├── init.js              # Scaffolding command
+│   ├── init.js              # Scaffolding command (+ interactive wizard)
 │   ├── doctor.js            # Validation command
 │   ├── migrate.js           # Workflow migration (legacy → current)
+│   ├── watch.js             # Watch mode for local development
 │   ├── core/
 │   │   ├── config.js        # Config loading + validation
 │   │   ├── config-schema.js # Schema version tracking
@@ -1133,7 +1134,8 @@ repolens/
 │       ├── metrics.js       # Documentation coverage & health scoring
 │       ├── rate-limit.js    # Token bucket rate limiter for APIs
 │       ├── secrets.js       # Secret detection & sanitization
-│       ├── telemetry.js     # Opt-in error tracking (Sentry)
+│       ├── telemetry.js     # Opt-in error tracking + performance timers
+│       ├── errors.js        # Enhanced error messages with guidance
 │       └── update-check.js  # Version update notifications
 ├── tests/                   # Vitest test suite (90 tests across 11 files)
 ├── .repolens.yml            # Dogfooding config
@@ -1152,13 +1154,13 @@ RepoLens uses automated GitHub Actions releases.
 ### Creating a Release
 
 ```bash
-# Patch version (0.6.4 → 0.6.5) - Bug fixes
+# Patch version (0.7.0 → 0.7.1) - Bug fixes
 npm run release:patch
 
-# Minor version (0.6.4 → 0.7.0) - New features
+# Minor version (0.7.0 → 0.8.0) - New features
 npm run release:minor
 
-# Major version (0.6.4 → 1.0.0) - Breaking changes
+# Major version (0.7.0 → 1.0.0) - Breaking changes
 npm run release:major
 
 # Push the tag to trigger workflow
@@ -1190,11 +1192,11 @@ RepoLens is currently in early access. v1.0 will open for community contribution
 
 ## 🗺️ Roadmap to v1.0
 
-**Current Status:** v0.6.4 — User Feedback & Team Features
+**Current Status:** v0.7.0 — Polish & Reliability
 
 ### Completed ✅
 
-- [x] CLI commands: `init`, `doctor`, `publish`, `migrate`, `feedback`, `version`, `help`
+- [x] CLI commands: `init`, `doctor`, `publish`, `migrate`, `watch`, `feedback`, `version`, `help`
 - [x] Config schema v1 with validation
 - [x] Auto-discovery of `.repolens.yml`
 - [x] Publishers: Notion + Confluence + Markdown
@@ -1214,14 +1216,17 @@ RepoLens is currently in early access. v1.0 will open for community contribution
 - [x] npm registry publication (`@chappibunny/repolens`)
 - [x] Automated npm releases via GitHub Actions
 - [x] Workflow migration command (`repolens migrate`)
+- [x] Interactive configuration wizard (`repolens init --interactive`)
+- [x] Watch mode for local development (`repolens watch`)
+- [x] Enhanced error messages with actionable guidance
+- [x] Performance monitoring (scan/render/publish timing)
+- [x] Improved documentation coverage scoring
 
 ### Planned for v1.0 🎯
 
 - [ ] Plugin system for custom renderers
 - [ ] GraphQL schema detection
 - [ ] TypeScript type graph analysis
-- [ ] Interactive configuration wizard
-- [ ] Watch mode for local development
 - [ ] Additional publishers (GitHub Wiki, Obsidian)
 
 See [ROADMAP.md](./ROADMAP.md) for detailed planning.

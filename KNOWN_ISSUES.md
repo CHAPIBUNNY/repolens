@@ -3,7 +3,7 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** July 2025  
-**Version:** 0.6.4
+**Version:** 0.7.0
 
 ---
 

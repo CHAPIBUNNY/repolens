@@ -20,7 +20,9 @@ import { publishDocs } from "./publishers/index.js";
 import { upsertPrComment } from "./delivery/comment.js";
 import { runInit } from "./init.js";
 import { runMigrate } from "./migrate.js";
+import { runWatch } from "./watch.js";
 import { info, error } from "./utils/logger.js";
+import { formatError } from "./utils/errors.js";
 import { checkForUpdates } from "./utils/update-check.js";
 import { generateDocumentSet } from "./docs/generate-doc-set.js";
 import { writeDocumentSet } from "./docs/write-doc-set.js";
@@ -32,9 +34,33 @@ import {
   trackUsage,
   startTimer,
   stopTimer,
-  sendFeedback
+  sendFeedback,
+  getTimings
 } from "./utils/telemetry.js";
 import { createInterface } from "node:readline";
+
+function formatDuration(ms) {
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function printPerformanceSummary() {
+  const timings = getTimings();
+  if (timings.length === 0) return;
+
+  console.log("\n" + "─".repeat(40));
+  console.log("  Phase          Duration");
+  console.log("  " + "─".repeat(30));
+  let total = 0;
+  for (const { operation, duration } of timings) {
+    const label = operation.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    console.log(`  ${label.padEnd(16)} ${formatDuration(duration)}`);
+    total += duration;
+  }
+  console.log("  " + "─".repeat(30));
+  console.log(`  ${"Total".padEnd(16)} ${formatDuration(total)}`);
+  console.log("─".repeat(40));
+}
 
 async function getPackageVersion() {
   const __filename = fileURLToPath(import.meta.url);
@@ -93,8 +119,7 @@ async function findConfig(startDir = process.cwd()) {
     return rootConfigPath;
   } catch {
     throw new Error(
-      "RepoLens config not found (.repolens.yml)\n" +
-      "Run 'repolens init' to create one, or use --config to specify a path."
+      formatError("CONFIG_NOT_FOUND")
     );
   }
 }
@@ -111,25 +136,30 @@ Commands:
   doctor      Validate your RepoLens setup
   migrate     Upgrade workflow files to v0.4.0 format
   publish     Scan, render, and publish documentation
+  watch       Watch for file changes and regenerate docs
   feedback    Send feedback to the RepoLens team
   version     Print the current RepoLens version
 
 Options:
-  --config     Path to .repolens.yml (auto-discovered if not provided)
-  --target     Target repository path for init/doctor/migrate
-  --dry-run    Preview migration changes without applying them
-  --force      Skip interactive confirmation for migration
-  --verbose    Enable verbose logging
-  --version    Print version
-  --help       Show this help message
+  --config        Path to .repolens.yml (auto-discovered if not provided)
+  --target        Target repository path for init/doctor/migrate
+  --interactive   Run init with step-by-step configuration wizard
+  --dry-run       Preview migration changes without applying them
+  --force         Skip interactive confirmation for migration
+  --verbose       Enable verbose logging
+  --version       Print version
+  --help          Show this help message
 
 Examples:
+  repolens init                                 # Quick setup with auto-detection
+  repolens init --interactive                   # Step-by-step wizard
   repolens init --target /tmp/my-repo
   repolens doctor --target /tmp/my-repo
   repolens migrate                              # Migrate workflows in current directory
   repolens migrate --dry-run                    # Preview changes without applying
   repolens publish                              # Auto-discovers .repolens.yml
   repolens publish --config /path/.repolens.yml # Explicit config path
+  repolens watch                                # Watch mode (Markdown only)
   repolens --version
 `);
 }
@@ -163,11 +193,12 @@ async function main() {
   if (command === "init") {
     await printBanner();
     const targetDir = getArg("--target") || process.cwd();
+    const interactive = process.argv.includes("--interactive");
     info(`Initializing RepoLens in: ${targetDir}`);
     
     const timer = startTimer("init");
     try {
-      await runInit(targetDir);
+      await runInit(targetDir, { interactive });
       const duration = stopTimer(timer);
       info("✓ RepoLens initialized successfully");
       
@@ -239,6 +270,20 @@ async function main() {
     return;
   }
 
+  if (command === "watch") {
+    await printBanner();
+    let configPath;
+    try {
+      configPath = getArg("--config") || await findConfig();
+      info(`Using config: ${configPath}`);
+    } catch (err) {
+      error(err.message);
+      process.exit(2);
+    }
+    await runWatch(configPath);
+    return;
+  }
+
   if (command === "publish" || !command || command.startsWith("--")) {
     await printBanner();
     
@@ -263,8 +308,7 @@ async function main() {
       stopTimer(commandTimer);
       captureError(err, { command: "publish", step: "load-config", configPath });
       trackUsage("publish", "failure", { step: "config-load" });
-      error("Failed to load configuration:");
-      error(err.message);
+      error(formatError("CONFIG_VALIDATION_FAILED", err));
       await closeTelemetry();
       process.exit(2);
     }
@@ -279,8 +323,9 @@ async function main() {
       stopTimer(commandTimer);
       captureError(err, { command: "publish", step: "scan", patterns: cfg.scan?.patterns });
       trackUsage("publish", "failure", { step: "scan" });
-      error("Failed to scan repository:");
-      error(err.message);
+      const code = err.message?.includes("No files") ? "SCAN_NO_FILES" 
+                 : err.message?.includes("limit") ? "SCAN_TOO_MANY_FILES" : null;
+      error(code ? formatError(code, err) : `Failed to scan repository:\n  ${err.message}`);
       await closeTelemetry();
       process.exit(1);
     }
@@ -315,6 +360,8 @@ async function main() {
       info("✓ Documentation published successfully");
       
       const totalDuration = stopTimer(commandTimer);
+      
+      printPerformanceSummary();
       
       // Track successful publish with comprehensive metrics
       const publishers = [];
@@ -388,7 +435,7 @@ async function main() {
   }
 
   error(`Unknown command: ${command}`);
-  error("Available commands: init, doctor, migrate, publish, feedback, version, help");
+  error("Available commands: init, doctor, migrate, publish, watch, feedback, version, help");
   process.exit(1);
 }
 
@@ -402,11 +449,9 @@ main().catch(async (err) => {
   console.error("\n❌ RepoLens encountered an unexpected error:\n");
   
   if (err.code === "ENOENT") {
-    error(`File not found: ${err.path}`);
-    error("Check that all required files exist and paths are correct.");
+    error(formatError("FILE_NOT_FOUND", err.path));
   } else if (err.code === "EACCES") {
-    error(`Permission denied: ${err.path}`);
-    error("Check file permissions and try again.");
+    error(formatError("FILE_PERMISSION_DENIED", err.path));
   } else if (err.message) {
     error(err.message);
   } else {

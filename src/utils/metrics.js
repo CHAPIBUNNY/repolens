@@ -1,11 +1,27 @@
 /**
- * Metrics Collection for RepoLens Dashboard
- * Calculates coverage, health scores, staleness, and quality issues
+ * Metrics Collection for RepoLens
+ * Calculates coverage, health scores, staleness, section completeness, and quality issues
  */
 
 import fs from "node:fs/promises";
 import path from "node:path";
 import { info, warn } from "./logger.js";
+
+/** All possible document keys that RepoLens can generate */
+const ALL_DOCUMENT_KEYS = [
+  "system_overview",
+  "module_catalog",
+  "api_surface",
+  "route_map",
+  "system_map",
+  "arch_diff",
+  "executive_summary",
+  "business_domains",
+  "architecture_overview",
+  "data_flows",
+  "change_impact",
+  "developer_onboarding",
+];
 
 /**
  * Calculate documentation coverage
@@ -59,22 +75,19 @@ export function calculateCoverage(scanResult, docs) {
 
 /**
  * Calculate health score (0-100)
+ * Weights: coverage 35%, freshness 25%, quality 25%, section completeness 15%
  * @param {object} metrics - All metrics data
  * @returns {number} - Health score
  */
 export function calculateHealthScore(metrics) {
-  const { coverage, freshness, quality } = metrics;
+  const { coverage, freshness, quality, sectionCompleteness } = metrics;
 
-  // Coverage weight: 40%
-  const coverageScore = coverage.overall * 0.4;
+  const coverageScore = coverage.overall * 0.35;
+  const freshnessScore = freshness.score * 0.25;
+  const qualityScore = quality.score * 0.25;
+  const completenessScore = (sectionCompleteness?.percentage || 0) * 0.15;
 
-  // Freshness weight: 30%
-  const freshnessScore = freshness.score * 0.3;
-
-  // Quality weight: 30%
-  const qualityScore = quality.score * 0.3;
-
-  const healthScore = coverageScore + freshnessScore + qualityScore;
+  const healthScore = coverageScore + freshnessScore + qualityScore + completenessScore;
 
   return Math.round(Math.min(100, Math.max(0, healthScore)));
 }
@@ -326,6 +339,27 @@ function calculateTrends(history) {
 }
 
 /**
+ * Calculate section completeness — how many of the possible document types were generated.
+ * @param {object} docs - Rendered pages map (key → content)
+ * @returns {object} - Section completeness metrics
+ */
+export function calculateSectionCompleteness(docs) {
+  const generated = Object.keys(docs || {}).filter(
+    (k) => docs[k] && docs[k].trim().length > 0
+  );
+  const total = ALL_DOCUMENT_KEYS.length;
+  const present = generated.filter((k) => ALL_DOCUMENT_KEYS.includes(k)).length;
+  const missing = ALL_DOCUMENT_KEYS.filter((k) => !generated.includes(k));
+
+  return {
+    generated: present,
+    total,
+    percentage: total > 0 ? Math.round((present / total) * 100) : 0,
+    missing,
+  };
+}
+
+/**
  * Collect all metrics
  * @param {object} scanResult - Repository scan result
  * @param {object} docs - Generated documentation
@@ -339,11 +373,13 @@ export async function collectMetrics(scanResult, docs, docsPath, historyPath) {
   const coverage = calculateCoverage(scanResult, docs);
   const freshness = await detectStaleness(docsPath);
   const quality = analyzeQuality(scanResult, docs);
+  const sectionCompleteness = calculateSectionCompleteness(docs);
 
   const metrics = {
     coverage,
     freshness,
     quality,
+    sectionCompleteness,
     timestamp: new Date().toISOString(),
   };
 
@@ -354,8 +390,25 @@ export async function collectMetrics(scanResult, docs, docsPath, historyPath) {
   metrics.history = history;
   metrics.trends = trends;
 
+  // Save latest metrics snapshot for external tooling
+  try {
+    const snapshotPath = path.join(docsPath, "metrics.json");
+    await fs.mkdir(docsPath, { recursive: true });
+    await fs.writeFile(snapshotPath, JSON.stringify({
+      healthScore: metrics.healthScore,
+      coverage: metrics.coverage,
+      sectionCompleteness: metrics.sectionCompleteness,
+      quality: { score: metrics.quality.score, summary: metrics.quality.summary },
+      freshness: { score: metrics.freshness.score, isStale: metrics.freshness.isStale, daysSinceUpdate: metrics.freshness.daysSinceUpdate },
+      timestamp: metrics.timestamp,
+    }, null, 2));
+  } catch (err) {
+    warn(`Failed to save metrics snapshot: ${err.message}`);
+  }
+
   info(`✓ Health Score: ${metrics.healthScore}/100`);
   info(`✓ Coverage: ${metrics.coverage.overall.toFixed(1)}%`);
+  info(`✓ Sections: ${sectionCompleteness.generated}/${sectionCompleteness.total} document types generated`);
 
   return metrics;
 }

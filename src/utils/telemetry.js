@@ -175,15 +175,15 @@ export function isTelemetryEnabled() {
 // ============================================================
 
 const performanceTimers = new Map();
+const completedTimings = [];
 
 /**
- * Start a performance timer for an operation
+ * Start a performance timer for an operation.
+ * Timers always work locally (even without telemetry) so we can print a summary.
  * @param {string} operation - Operation name (e.g., "scan", "render", "publish")
  * @param {object} metadata - Additional context about the operation
  */
 export function startTimer(operation, metadata = {}) {
-  if (!enabled) return;
-  
   const key = `${operation}_${Date.now()}`;
   performanceTimers.set(key, {
     operation,
@@ -191,15 +191,16 @@ export function startTimer(operation, metadata = {}) {
     metadata,
   });
   
-  return key; // Return key so caller can stop this specific timer
+  return key;
 }
 
 /**
  * Stop a performance timer and record the metric
  * @param {string} timerKey - Key returned from startTimer()
+ * @returns {number|undefined} Duration in milliseconds
  */
 export function stopTimer(timerKey) {
-  if (!enabled || !timerKey) return;
+  if (!timerKey) return;
   
   const timer = performanceTimers.get(timerKey);
   if (!timer) return;
@@ -207,24 +208,44 @@ export function stopTimer(timerKey) {
   const duration = Date.now() - timer.startTime;
   performanceTimers.delete(timerKey);
   
-  // Send performance metric
-  try {
-    Sentry.metrics.distribution(
-      `operation.duration`,
-      duration,
-      {
-        unit: 'millisecond',
-        tags: {
-          operation: timer.operation,
-          ...timer.metadata,
-        },
-      }
-    );
-  } catch (e) {
-    // Silently fail
+  // Store locally for summary
+  completedTimings.push({ operation: timer.operation, duration });
+  
+  // Send to Sentry if enabled
+  if (enabled) {
+    try {
+      Sentry.metrics.distribution(
+        `operation.duration`,
+        duration,
+        {
+          unit: 'millisecond',
+          tags: {
+            operation: timer.operation,
+            ...timer.metadata,
+          },
+        }
+      );
+    } catch (e) {
+      // Silently fail
+    }
   }
   
   return duration;
+}
+
+/**
+ * Get all completed timings for summary display.
+ * @returns {Array<{operation: string, duration: number}>}
+ */
+export function getTimings() {
+  return [...completedTimings];
+}
+
+/**
+ * Clear stored timings (useful between runs).
+ */
+export function clearTimings() {
+  completedTimings.length = 0;
 }
 
 /**

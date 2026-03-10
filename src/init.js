@@ -3,6 +3,39 @@ import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { info, warn } from "./utils/logger.js";
 
+const PUBLISHER_CHOICES = ["markdown", "notion", "confluence"];
+const AI_PROVIDERS = ["openai", "anthropic", "azure", "ollama"];
+const SCAN_PRESETS = {
+  nextjs: {
+    include: [
+      "src/**/*.{ts,tsx,js,jsx}",
+      "app/**/*.{ts,tsx,js,jsx}",
+      "pages/**/*.{ts,tsx,js,jsx}",
+      "lib/**/*.{ts,tsx,js,jsx}",
+      "components/**/*.{ts,tsx,js,jsx}",
+    ],
+    roots: ["src", "app", "pages", "lib", "components"],
+  },
+  express: {
+    include: [
+      "src/**/*.{ts,js}",
+      "routes/**/*.{ts,js}",
+      "controllers/**/*.{ts,js}",
+      "models/**/*.{ts,js}",
+      "middleware/**/*.{ts,js}",
+    ],
+    roots: ["src", "routes", "controllers", "models"],
+  },
+  generic: {
+    include: [
+      "src/**/*.{ts,tsx,js,jsx,md}",
+      "app/**/*.{ts,tsx,js,jsx,md}",
+      "lib/**/*.{ts,tsx,js,jsx,md}",
+    ],
+    roots: ["src", "app", "lib"],
+  },
+};
+
 const DETECTABLE_ROOTS = [
   "app",
   "src/app",
@@ -465,14 +498,183 @@ async function ensureEnvInGitignore(repoRoot) {
   }
 }
 
-export async function runInit(targetDir = process.cwd()) {
+/**
+ * Run a fully interactive configuration wizard.
+ * Returns a structured config that replaces the auto-detected defaults.
+ */
+async function runInteractiveWizard(repoRoot) {
+  const isCI = process.env.CI || process.env.GITHUB_ACTIONS || process.env.GITLAB_CI ||
+               process.env.CIRCLECI || process.env.JENKINS_HOME || process.env.CODEBUILD_BUILD_ID;
+  const isTest = process.env.NODE_ENV === "test" || process.env.VITEST;
+  if (isCI || isTest) return null;
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const ask = (q) => rl.question(q);
+
+  try {
+    info("\n🧙 Interactive Configuration Wizard\n");
+
+    // 1. Project name
+    const defaultName = path.basename(repoRoot) || "my-project";
+    const projectName = (await ask(`Project name (${defaultName}): `)).trim() || defaultName;
+
+    // 2. Publishers
+    info("\nSelect publishers (comma-separated numbers):");
+    PUBLISHER_CHOICES.forEach((p, i) => info(`  ${i + 1}. ${p}`));
+    const pubInput = (await ask(`Publishers [1,2,3] (default: 1): `)).trim() || "1";
+    const publishers = pubInput
+      .split(",")
+      .map((n) => parseInt(n.trim(), 10))
+      .filter((n) => n >= 1 && n <= PUBLISHER_CHOICES.length)
+      .map((n) => PUBLISHER_CHOICES[n - 1]);
+    if (publishers.length === 0) publishers.push("markdown");
+
+    // 3. AI
+    const enableAi = (await ask("\nEnable AI-enhanced documentation? (y/N): ")).trim().toLowerCase() === "y";
+    let aiProvider = null;
+    if (enableAi) {
+      info("Select AI provider:");
+      AI_PROVIDERS.forEach((p, i) => info(`  ${i + 1}. ${p}`));
+      const aiInput = (await ask(`Provider [1] (default: 1 openai): `)).trim() || "1";
+      const idx = parseInt(aiInput, 10);
+      aiProvider = AI_PROVIDERS[(idx >= 1 && idx <= AI_PROVIDERS.length) ? idx - 1 : 0];
+    }
+
+    // 4. Scan preset
+    info("\nScan preset:");
+    const presetKeys = Object.keys(SCAN_PRESETS);
+    presetKeys.forEach((p, i) => info(`  ${i + 1}. ${p}`));
+    const presetInput = (await ask(`Preset [3] (default: 3 generic): `)).trim() || "3";
+    const presetIdx = parseInt(presetInput, 10);
+    const presetKey = presetKeys[(presetIdx >= 1 && presetIdx <= presetKeys.length) ? presetIdx - 1 : 2];
+    const preset = SCAN_PRESETS[presetKey];
+
+    // 5. Branch filtering
+    const branchInput = (await ask("\nBranches allowed to publish to Notion/Confluence (comma-separated, default: main): ")).trim() || "main";
+    const branches = branchInput.split(",").map((b) => b.trim()).filter(Boolean);
+
+    // 6. Discord
+    const enableDiscord = (await ask("\nEnable Discord notifications? (y/N): ")).trim().toLowerCase() === "y";
+
+    info("\n✓ Wizard complete. Generating config...\n");
+    return { projectName, publishers, enableAi, aiProvider, preset, branches, enableDiscord };
+  } finally {
+    rl.close();
+  }
+}
+
+/**
+ * Build a .repolens.yml from wizard answers.
+ */
+function buildWizardConfig(answers) {
+  const lines = [
+    `configVersion: 1`,
+    ``,
+    `project:`,
+    `  name: "${answers.projectName}"`,
+    `  docs_title_prefix: "RepoLens"`,
+    ``,
+    `publishers:`,
+  ];
+  for (const p of answers.publishers) {
+    lines.push(`  - ${p}`);
+  }
+
+  if (answers.publishers.includes("notion") && answers.branches.length) {
+    lines.push(``);
+    lines.push(`notion:`);
+    lines.push(`  branches:`);
+    for (const b of answers.branches) lines.push(`    - ${b}`);
+    lines.push(`  includeBranchInTitle: false`);
+  }
+  if (answers.publishers.includes("confluence") && answers.branches.length) {
+    lines.push(``);
+    lines.push(`confluence:`);
+    lines.push(`  branches:`);
+    for (const b of answers.branches) lines.push(`    - ${b}`);
+  }
+
+  if (answers.enableDiscord) {
+    lines.push(``);
+    lines.push(`discord:`);
+    lines.push(`  enabled: true`);
+    lines.push(`  notifyOn: significant`);
+    lines.push(`  significantThreshold: 10`);
+  }
+
+  if (answers.enableAi) {
+    lines.push(``);
+    lines.push(`ai:`);
+    lines.push(`  enabled: true`);
+    lines.push(`  mode: hybrid`);
+    lines.push(`  temperature: 0.3`);
+    lines.push(``);
+    lines.push(`features:`);
+    lines.push(`  executive_summary: true`);
+    lines.push(`  business_domains: true`);
+    lines.push(`  architecture_overview: true`);
+    lines.push(`  data_flows: true`);
+    lines.push(`  developer_onboarding: true`);
+    lines.push(`  change_impact: true`);
+  }
+
+  lines.push(``);
+  lines.push(`scan:`);
+  lines.push(`  include:`);
+  for (const p of answers.preset.include) lines.push(`    - "${p}"`);
+  lines.push(``);
+  lines.push(`  ignore:`);
+  for (const p of buildIgnorePatterns()) lines.push(`    - "${p}"`);
+
+  lines.push(``);
+  lines.push(`module_roots:`);
+  for (const r of answers.preset.roots) lines.push(`  - "${r}"`);
+
+  lines.push(``);
+  lines.push(`outputs:`);
+  lines.push(`  pages:`);
+  lines.push(`    - key: "system_overview"`);
+  lines.push(`      title: "System Overview"`);
+  lines.push(`      description: "High-level snapshot of the repo and what RepoLens detected."`);
+  lines.push(``);
+  lines.push(`    - key: "module_catalog"`);
+  lines.push(`      title: "Module Catalog"`);
+  lines.push(`      description: "Auto-detected modules with file counts."`);
+  lines.push(``);
+  lines.push(`    - key: "api_surface"`);
+  lines.push(`      title: "API Surface"`);
+  lines.push(`      description: "Auto-detected API routes/endpoints."`);
+  lines.push(``);
+  lines.push(`    - key: "arch_diff"`);
+  lines.push(`      title: "Architecture Diff"`);
+  lines.push(`      description: "Reserved for PR/merge change summaries."`);
+  lines.push(``);
+  lines.push(`    - key: "route_map"`);
+  lines.push(`      title: "Route Map"`);
+  lines.push(`      description: "Detected app routes and API routes."`);
+  lines.push(``);
+  lines.push(`    - key: "system_map"`);
+  lines.push(`      title: "System Map"`);
+  lines.push(`      description: "Unicode architecture diagram of detected modules."`);
+  lines.push(``);
+
+  return lines.join("\n");
+}
+
+export async function runInit(targetDir = process.cwd(), options = {}) {
   const repoRoot = path.resolve(targetDir);
 
   // Ensure target directory exists
   await fs.mkdir(repoRoot, { recursive: true });
 
-  // Prompt for Notion credentials interactively
-  const notionCredentials = await promptNotionCredentials();
+  // Interactive wizard if --interactive flag is set
+  let wizardAnswers = null;
+  if (options.interactive) {
+    wizardAnswers = await runInteractiveWizard(repoRoot);
+  }
+
+  // Prompt for Notion credentials interactively (only in non-wizard mode)
+  const notionCredentials = wizardAnswers ? null : await promptNotionCredentials();
 
   const repolensConfigPath = path.join(repoRoot, ".repolens.yml");
   const workflowDir = path.join(repoRoot, ".github", "workflows");
@@ -489,9 +691,11 @@ export async function runInit(targetDir = process.cwd()) {
   const envExists = await fileExists(envPath);
   const readmeExists = await fileExists(readmePath);
 
-  const projectName = detectProjectName(repoRoot);
-  const detectedRoots = await detectRepoStructure(repoRoot);
-  const configContent = buildRepoLensConfig(projectName, detectedRoots);
+  const projectName = wizardAnswers?.projectName || detectProjectName(repoRoot);
+  const detectedRoots = wizardAnswers ? [] : await detectRepoStructure(repoRoot);
+  const configContent = wizardAnswers
+    ? buildWizardConfig(wizardAnswers)
+    : buildRepoLensConfig(projectName, detectedRoots);
 
   info(`Detected project name: ${projectName}`);
 

@@ -2,6 +2,15 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 0.7.0
+
+### ✨ New Features
+- **Interactive Init Wizard**: `repolens init --interactive` — step-by-step configuration wizard with scan presets (Next.js, Express, generic), publisher selection, AI provider setup, and branch filtering
+- **Watch Mode**: `repolens watch` — watches source directories for changes and regenerates Markdown docs with 500ms debounce (no API calls)
+- **Enhanced Error Messages**: Centralized error catalog with actionable guidance — every error now shows what went wrong, why, and how to fix it
+- **Performance Monitoring**: Scan, render, and publish timing summary printed after every `publish` run
+- **Coverage Scoring Improvements**: New section completeness metric (12 document types tracked), updated health score weights, and `metrics.json` snapshots saved to `.repolens/`
+
 ## 0.6.4
 
 ### 🔧 Maintenance

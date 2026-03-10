@@ -121,7 +121,7 @@ Here are real examples of what we track (sanitized):
 {
   "error": "ENOENT: no such file or directory",
   "command": "publish",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "platform": "darwin",
   "nodeVersion": "v20.11.0"
 }

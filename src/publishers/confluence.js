@@ -4,6 +4,7 @@ import path from "node:path";
 import { log, info, warn } from "../utils/logger.js";
 import { fetchWithRetry } from "../utils/retry.js";
 import { getCurrentBranch, getBranchQualifiedTitle } from "../utils/branch.js";
+import { createRepoLensError } from "../utils/errors.js";
 
 /**
  * Confluence Publisher for RepoLens
@@ -25,11 +26,7 @@ function confluenceHeaders() {
   const token = process.env.CONFLUENCE_API_TOKEN;
 
   if (!email || !token) {
-    throw new Error(
-      "Missing CONFLUENCE_EMAIL or CONFLUENCE_API_TOKEN. " +
-      "Set these environment variables or GitHub Actions secrets. " +
-      "Get your API token from: https://id.atlassian.com/manage-profile/security/api-tokens"
-    );
+    throw createRepoLensError("CONFLUENCE_SECRETS_MISSING");
   }
 
   // Basic Auth for Atlassian Cloud: base64(email:api_token)

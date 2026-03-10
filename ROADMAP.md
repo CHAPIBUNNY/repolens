@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 0.6.4  
+**Current Version:** 0.7.0  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** July 2025
 
 ---
 
-## What's Shipped (v0.1.0 → v0.6.4)
+## What's Shipped (v0.1.0 → v0.7.0)
 
 Everything below is live, tested, and available on npm.
 
@@ -55,17 +55,12 @@ Everything below is live, tested, and available on npm.
 - ✅ Cross-platform CI fix for optional dependency resolution
 - ✅ User feedback via `repolens feedback` command
 
----
-
-## v0.7.0 — Polish & Reliability
-
-**Target**: Next release
-
-- [ ] Interactive configuration wizard (`repolens init --interactive`)
-- [ ] Watch mode for local development (`repolens watch`)
-- [ ] Enhanced error messages with actionable guidance
-- [ ] Performance monitoring (scan/render/publish timing metrics)
-- [ ] Documentation coverage scoring improvements
+### Polish & Reliability (v0.7.0)
+- ✅ Interactive configuration wizard (`repolens init --interactive`)
+- ✅ Watch mode for local development (`repolens watch`)
+- ✅ Enhanced error messages with actionable guidance (centralized error catalog)
+- ✅ Performance monitoring (scan/render/publish timing summary)
+- ✅ Documentation coverage scoring improvements (section completeness, metrics.json snapshots)
 
 ---
 

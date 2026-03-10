@@ -4,13 +4,14 @@ import path from "node:path";
 import { log } from "../utils/logger.js";
 import { fetchWithRetry } from "../utils/retry.js";
 import { executeNotionRequest } from "../utils/rate-limit.js";
+import { createRepoLensError } from "../utils/errors.js";
 
 function notionHeaders() {
   const token = process.env.NOTION_TOKEN;
   const version = process.env.NOTION_VERSION || "2022-06-28";
 
   if (!token) {
-    throw new Error("Missing NOTION_TOKEN in tools/repolens/.env or GitHub Actions secrets");
+    throw createRepoLensError("NOTION_TOKEN_MISSING");
   }
 
   return {

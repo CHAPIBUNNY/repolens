@@ -2,7 +2,7 @@
 
 This guide helps you upgrade RepoLens across breaking changes and major versions.
 
-**Current Version:** 0.6.4  
+**Current Version:** 0.7.0  
 **Last Updated:** July 2025
 
 ---
@@ -183,7 +183,7 @@ RepoLens checks for updates automatically:
 ┌────────────────────────────────────────────────────────────┐
 │                   📦 Update Available                      │
 ├────────────────────────────────────────────────────────────┤
-│  Current: 0.5.0    → Latest: 0.6.4                        │
+│  Current: 0.5.0    → Latest: 0.7.0                        │
 │                                                            │
 │  Run one of these commands to update:                     │
 │                                                            │
