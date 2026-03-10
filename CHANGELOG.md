@@ -2,84 +2,60 @@
 
 All notable changes to RepoLens will be documented in this file.
 
-## 0.6.0 (Phase 4: Team Features & Observability Dashboard)
+## 0.6.2
+
+### 🐛 Bug Fixes
+- **CI/CD**: Fixed release workflow failing with `Cannot find module @rollup/rollup-linux-x64-gnu`
+  - Root cause: macOS-generated `package-lock.json` doesn't resolve Linux platform-specific optional dependencies
+  - Fix: Changed all CI install steps to `rm -rf node_modules package-lock.json && npm install`
+  - Applied to both `publish-docs.yml` and `release.yml` workflows
+
+### 🔧 Maintenance
+- Updated version references across codebase
+- Updated test assertions for version 0.6.2
+
+## 0.6.1
+
+### 🐛 Bug Fixes
+- **Confluence Publisher**: Fixed `version` showing as `[object Object]1`
+  - Root cause: `existingPage.version` was the full version object, not just the number
+  - Fix: Normalize version to use cached structure with extracted version number
+- **Confluence Publisher**: Fixed code block formatting in storage format
+  - Implemented 3-step extract→convert→restore pipeline
+  - Properly handles fenced code blocks in Markdown→Confluence conversion
+
+### 📦 Package
+- Renamed npm package from `@rabitai/repolens` to `@chappibunny/repolens`
+- Updated all references across codebase, workflows, and documentation
+- Published to npm registry under new scope
+
+## 0.6.0 (Team Features & Observability)
 
 ### ✨ New Features
 
-**Discord Integration** (`src/integrations/discord.js` - 268 lines):
+**Discord Integration** (`src/integrations/discord.js`):
 - Rich embed notifications with coverage, health score, and change metrics
 - Threshold-based notifications (default: >10% change)
 - Branch filtering with glob pattern support
 - Secure webhook configuration via `DISCORD_WEBHOOK_URL` environment variable
-- Functions: `sendDiscordNotification()`, `buildDocUpdateNotification()`, `buildErrorNotification()`, `shouldNotify()`
 - Color-coded embeds: success (green), warning (yellow), error (red), info (blue)
 
-**Metrics Collection System** (`src/utils/metrics.js` - 412 lines):
-- **Coverage Calculation**: Weighted average (modules 50%, APIs 30%, pages 20%)
-- **Health Score Algorithm**: 0-100 rating (40% coverage + 30% freshness + 30% quality)
-- **Staleness Detection**: Flags documentation >90 days old
-- **Quality Analysis**: Identifies undocumented modules/APIs/pages with severity levels
-- **Historical Tracking**: Persists metrics to `.repolens/metrics-history.json`
-- **Trend Indicators**: Up/down/stable trend detection (>1% threshold)
-- Functions: `calculateCoverage()`, `calculateHealthScore()`, `detectStaleness()`, `analyzeQuality()`, `trackMetrics()`, `calculateTrends()`, `collectMetrics()`
-
-**Interactive Dashboard** (`src/renderers/renderDashboard.js` - 1,020 lines):
-- Beautiful HTML dashboard with inline CSS (zero dependencies)
-- **Health Score Card**: Color-coded 0-100 score (excellent/good/fair/poor)
-- **Coverage Breakdown**: Module/API/page coverage with progress bars
-- **Freshness Tracking**: Stale file detection with last updated timestamps
-- **Quality Issues List**: Severity badges (high/medium/low) with actionable items
-- **Trend Charts**: SVG visualization of coverage and health score over time
-- **Quick Links**: Direct links to Notion, GitHub, and Markdown documentation
-- Responsive design with animations and smooth transitions
-- Generated at `.repolens/dashboard/index.html`
-
-**GitHub Pages Deployment** (`.github/workflows/deploy-dashboard.yml` - 73 lines):
-- Automated deployment to `https://OWNER.github.io/REPO/`
-- Deploys on every push to main branch
-- Uses local code during development (`npm link`)
-- Graceful fallback for missing dashboard files
-- Security-conscious environment variable handling
+**Metrics Collection System** (`src/utils/metrics.js`):
+- Coverage calculation: weighted average (modules 50%, APIs 30%, pages 20%)
+- Health score algorithm: 0-100 rating (40% coverage + 30% freshness + 30% quality)
+- Staleness detection: flags documentation >90 days old
+- Quality analysis: identifies undocumented modules/APIs/pages with severity levels
+- Historical tracking: persists metrics to `.repolens/metrics-history.json`
+- Trend indicators: up/down/stable trend detection (>1% threshold)
 
 **Configuration Extensions** (`src/core/config-schema.js`):
-- **Discord Configuration**:
-  * `discord.notifyOn`: "always", "significant", or "never"
-  * `discord.significantThreshold`: 0-100 (default: 10%)
-  * `discord.branches`: Array with glob pattern support
-  * `discord.enabled`: Boolean
-- **Dashboard Configuration**:
-  * `dashboard.enabled`: Boolean (default: true)
-  * `dashboard.githubPages`: Boolean
-  * `dashboard.staleThreshold`: Number (default: 90 days)
+- Discord configuration: `discord.notifyOn`, `discord.significantThreshold`, `discord.branches`, `discord.enabled`
 
 **Publishing Integration** (`src/publishers/index.js`):
 - Automatic metrics collection after publishing
-- Dashboard generation integrated into publish flow
 - Discord notifications sent after successful publish (if configured)
 - Branch-aware notification filtering
-- Graceful error handling (doesn't fail publish if dashboard/notifications fail)
-
-### 🔧 Configuration
-
-**Environment Variables** (`.env.example`):
-- Added `DISCORD_WEBHOOK_URL` for team notifications
-- Security warnings and setup instructions
-- GitHub Actions secret configuration guidance
-
-**GitHub Actions** (`.github/workflows/publish-docs.yml`):
-- Added `DISCORD_WEBHOOK_URL` to workflow environment
-
-### 📊 Testing
-- All 90 tests passing (47 main + 43 security)
-- No regressions from Phase 4 integration
-- Metrics algorithms validated
-- Dashboard generation tested
-
-### 🐛 Bug Fixes
-- **GitHub Pages Workflow**: Fixed deployment to use local code during development
-  * Changed from `npx @chappibunny/repolens@latest` to `npm link && npx repolens`
-  * Added file existence checks before copying dashboard
-  * Created graceful fallback with "Coming Soon" placeholder for missing files
+- Graceful error handling (doesn't fail publish if notifications fail)
 
 ## 0.5.0 (Phase 3: Security Audit)
 

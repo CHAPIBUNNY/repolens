@@ -2,8 +2,8 @@
 
 Ensure RepoLens is properly configured and secured before deploying to production. This checklist helps teams validate their setup and avoid common pitfalls.
 
-**Version:** 0.4.3  
-**Last Updated:** March 9, 2026
+**Version:** 0.6.2  
+**Last Updated:** July 2025
 
 ---
 
@@ -19,7 +19,7 @@ Ensure RepoLens is properly configured and secured before deploying to productio
 ### ✅ Package Installation
 
 - [ ] Install RepoLens: `npx @chappibunny/repolens@latest --version`
-- [ ] Run version check: Should display `0.4.3` or higher
+- [ ] Run version check: Should display `0.6.2` or higher
 - [ ] Check for updates: Tool notifies if newer version available
 
 ---
@@ -48,7 +48,7 @@ npx @chappibunny/repolens@latest doctor
 **Doctor validates:**
 - [ ] `.repolens.yml` exists and is valid YAML
 - [ ] `configVersion: 1` present
-- [ ] At least one publisher configured (notion or markdown)
+- [ ] At least one publisher configured (notion, markdown, or confluence)
 - [ ] Required scan patterns specified
 - [ ] `.git` directory present
 
@@ -127,6 +127,23 @@ Navigate to: **Repository Settings → Secrets and variables → Actions → New
 - [ ] **NOTION_WORKSPACE_ID** (or **REPOLENS_NOTION_WORKSPACE_ID**)
   - Get from: Notion page URL → Database ID
   - Format: 32-character hex string (e.g., `abc12345def67890...`)
+
+#### Optional: Confluence Publishing
+
+- [ ] **CONFLUENCE_URL**
+  - Your Atlassian Cloud URL (e.g., `https://your-company.atlassian.net/wiki`)
+
+- [ ] **CONFLUENCE_EMAIL**
+  - Your Atlassian account email
+
+- [ ] **CONFLUENCE_API_TOKEN**
+  - Create at: https://id.atlassian.com/manage-profile/security/api-tokens
+
+- [ ] **CONFLUENCE_SPACE_KEY**
+  - Your target Confluence space key (e.g., `DOCS`)
+
+- [ ] **CONFLUENCE_PARENT_PAGE_ID**
+  - Page ID where documentation should be nested
 
 #### Optional: AI-Enhanced Documentation
 
@@ -246,7 +263,7 @@ Navigate to: **Actions tab** → Select workflow run
 - [ ] Workflow completes successfully (green checkmark)
 - [ ] Scan step finds expected file count
 - [ ] Render step generates documents without errors
-- [ ] Publish step updates Notion/Markdown successfully
+- [ ] Publish step updates Notion/Confluence/Markdown successfully
 - [ ] Time: <2 min for deterministic, <5 min with AI
 
 ### ✅ Error Tracking (if telemetry enabled)
@@ -436,7 +453,7 @@ Before declaring "production ready":
 
 **Approved by:** _______________  
 **Date:** _______________  
-**RepoLens Version:** 0.4.3
+**RepoLens Version:** 0.6.2
 
 ---
 

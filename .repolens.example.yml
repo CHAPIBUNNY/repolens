@@ -9,6 +9,7 @@ project:
 publishers:
   - markdown
   - notion
+  # - confluence  # Uncomment to publish to Atlassian Confluence
 
 # Feature flags - control which documents are generated
 features:
@@ -130,6 +131,13 @@ notion:
     - "master"
     - "develop"
   includeBranchInTitle: true
+
+# Confluence configuration (optional)
+# Requires environment variables: CONFLUENCE_URL, CONFLUENCE_EMAIL,
+# CONFLUENCE_API_TOKEN, CONFLUENCE_SPACE_KEY, CONFLUENCE_PARENT_PAGE_ID
+confluence:
+  branches:
+    - "main"
 
 # Legacy outputs configuration (for backwards compatibility)
 # New document structure is defined in documentation.sections above

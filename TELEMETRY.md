@@ -21,7 +21,7 @@ RepoLens includes **opt-in** error tracking and usage telemetry to help improve 
 
 **Feature usage:**
 - Commands run (init, doctor, migrate, publish)
-- Publishers used (Notion, Markdown)
+- Publishers used (Notion, Markdown, Confluence)
 - AI usage (enabled/disabled, provider)
 - Success/failure rates
 
@@ -121,7 +121,7 @@ Here are real examples of what we track (sanitized):
 {
   "error": "ENOENT: no such file or directory",
   "command": "publish",
-  "version": "0.4.3",
+  "version": "0.6.2",
   "platform": "darwin",
   "nodeVersion": "v20.11.0"
 }
@@ -158,9 +158,9 @@ Here are real examples of what we track (sanitized):
 
 - Review our [Privacy Policy](https://github.com/CHAPIBUNNY/repolens#privacy)
 - Open an [issue](https://github.com/CHAPIBUNNY/repolens/issues) with questions
-- Email: trades@chappibunnytrades.com
+- Email: trades@rabitaitrades.com
 
 ---
 
-**Last updated:** March 9, 2026  
+**Last updated:** July 2025  
 **Applies to:** RepoLens v0.4.3+

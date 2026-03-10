@@ -16,8 +16,9 @@ RepoLens follows semantic versioning. Security updates are provided for:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.4.x   | :white_check_mark: |
-| < 0.4   | :x:                |
+| 0.6.x   | :white_check_mark: |
+| 0.5.x   | :white_check_mark: |
+| < 0.5   | :x:                |
 
 **Note**: Once RepoLens reaches v1.0, we will support the latest major version and one previous major version.
 
@@ -28,7 +29,7 @@ We take security seriously. If you discover a security vulnerability in RepoLens
 ### Reporting Process
 
 1. **Do NOT open a public GitHub issue** for security vulnerabilities
-2. **Email** security reports to: [your-email@example.com]
+2. **Email** security reports to: trades@rabitaitrades.com
 3. **Include**:
    - Description of the vulnerability
    - Steps to reproduce
@@ -323,9 +324,8 @@ RepoLens follows industry best practices:
 
 ## Contact
 
-- **Security Issues**: [your-email@example.com]
+- **Security Issues**: trades@rabitaitrades.com
 - **General Questions**: [GitHub Issues](https://github.com/CHAPIBUNNY/repolens/issues)
-- **Twitter**: [@your-twitter-handle]
 
 ## Acknowledgments
 
@@ -335,5 +335,5 @@ We appreciate responsible disclosure and will acknowledge security researchers:
 
 ---
 
-**Last Updated**: March 9, 2026  
+**Last Updated**: July 2025  
 **Security Team**: RepoLens Maintainers

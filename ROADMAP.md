@@ -1,88 +1,114 @@
 # RepoLens Roadmap
 
-This document outlines the planned development path for RepoLens.
+This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-## Current Status: v0.6.0 — Team Features & Observability (PRODUCTION BETA)
-
-**🎉 Now available on npm:** `npm install @chappibunny/repolens`
-
-Core functionality complete, stable, and battle-tested. Published as production beta with:
-- ✅ 90/90 tests passing
-- ✅ 0 vulnerabilities
-- ✅ Security hardened
-- ✅ Team features (Discord, Dashboard)
-- ✅ Available on npm registry
-
-v1.0 will add plugin system and lock API stability.
+**Current Version:** 0.6.2  
+**npm Package:** `@chappibunny/repolens`  
+**Last Updated:** July 2025
 
 ---
 
-## v0.3.0 — Enhanced Analysis
+## What's Shipped (v0.1.0 → v0.6.2)
 
-**Target**: Q2 2026
+Everything below is live, tested, and available on npm.
 
-- **Dependency Graph Visualization** - Generate module dependency graphs with cycle detection
-- **Architecture Drift Detection** - Compare current architecture against reference snapshots
-- **Custom Renderer Plugins** - Allow users to define custom documentation renderers
-- **Enhanced API Detection** - Support GraphQL schemas, tRPC, and gRPC definitions
+### Core CLI (v0.1.0 – v0.2.0)
+- ✅ `init`, `doctor`, `publish`, `migrate`, `version`, `help` commands
+- ✅ Auto-discovery of `.repolens.yml` from cwd or parent directories
+- ✅ Repository scanning with fast-glob + performance guardrails (warn at 10k, fail at 50k files)
+- ✅ Package.json metadata extraction (tech stack, dependencies)
+- ✅ Branch-aware publishing with title namespacing
+- ✅ Unicode architecture diagrams (replaced Mermaid CLI)
+
+### Multi-Platform Publishing (v0.3.0 – v0.6.0)
+- ✅ **Markdown** — Write to `.repolens/` directory
+- ✅ **Notion** — Create/update pages via Notion API with branch filtering
+- ✅ **Confluence** — Atlassian Cloud REST API v1, storage format, Basic Auth
+- ✅ **Discord** — Rich embed webhook notifications (publish metrics, coverage)
+
+### AI-Assisted Documentation Intelligence (v0.4.0 – v0.5.0)
+- ✅ 11 audience-aware documents (3 non-technical, 4 mixed, 4 technical)
+- ✅ Provider-agnostic AI (OpenAI, Anthropic, Azure, Ollama/local models)
+- ✅ Zero-hallucination architecture: structured JSON context only, never raw code
+- ✅ Strict prompt templates with word limits and evidence-based reasoning
+- ✅ Graceful fallback to deterministic docs if AI fails or is disabled
+
+### Business Domain & Data Flow Analysis (v0.4.0 – v0.5.0)
+- ✅ 12 default business domain mappings (Authentication, Market Data, Payments, etc.)
+- ✅ Custom domain definitions in `.repolens.yml`
+- ✅ Heuristic-based data flow detection (4 flow types)
+- ✅ Change impact analysis from git diffs
+
+### Security & Reliability (v0.4.0 – v0.6.0)
+- ✅ Secret detection (15+ patterns: OpenAI, GitHub, AWS, Notion, etc.)
+- ✅ Input validation with injection prevention (shell, path traversal, command substitution)
+- ✅ Rate limiting (token bucket, 3 req/s for APIs)
+- ✅ Exponential backoff retry logic
+- ✅ Opt-in Sentry telemetry with secret sanitization
+- ✅ CI security gates (dependency audit + secret scanning)
+- ✅ 90 tests across 11 test files (including 43 security/fuzzing tests)
+
+### CI/CD & npm Publishing (v0.5.0 – v0.6.2)
+- ✅ GitHub Actions: `publish-docs.yml` (every push) + `release.yml` (tag-based)
+- ✅ npm registry publishing (`npm publish --access public`)
+- ✅ Workflow migration tool (`repolens migrate`)
+- ✅ Cross-platform CI fix for optional dependency resolution
 
 ---
 
-## v0.4.0 — Intelligence Layer
+## v0.7.0 — Polish & Reliability
 
-**Target**: Q3 2026
+**Target**: Next release
 
-- **Service Boundary Inference** - Automatically detect microservice boundaries
-- **Architecture Recommendations** - Suggest improvements based on best practices
-- **Complexity Metrics** - Calculate and track architectural complexity scores
-- **Change Impact Analysis** - Predict which modules are affected by changes
+- [ ] Interactive configuration wizard (`repolens init --interactive`)
+- [ ] Watch mode for local development (`repolens watch`)
+- [ ] Enhanced error messages with actionable guidance
+- [ ] Performance monitoring (scan/render/publish timing metrics)
+- [ ] Documentation coverage scoring improvements
+
+---
+
+## v0.8.0 — Extended Analysis
+
+- [ ] GraphQL schema detection
+- [ ] TypeScript type graph analysis
+- [ ] Dependency graph visualization with cycle detection
+- [ ] Architecture drift detection (compare against reference snapshots)
 
 ---
 
 ## v1.0.0 — Stable Release
 
-**Target**: Q4 2026
-
 **Stability Guarantees:**
-- ✅ Stable CLI commands and flags
-- ✅ Stable `.repolens.yml` schema (v1)
-- ✅ Stable publisher interface
-- ✅ Comprehensive integration test suite
-- ✅ Migration guides for any breaking changes
+- Stable CLI commands and flags
+- Stable `.repolens.yml` schema (v1) with migration tooling
+- Stable publisher interface
+- Comprehensive test suite with integration + e2e coverage
+- Semantic versioning with breaking change guarantees
 
 **Additional Features:**
-- **npm Registry Publishing** - Available via `npm install -g @chappibunny/repolens`
-- **VS Code Extension** - In-editor architecture visualization
-- **GitHub App** - Automated setup and status checks
-- **Plugin Ecosystem** - Third-party renderer and publisher support
+- [ ] Plugin system for custom renderers and publishers
+- [ ] VS Code extension for in-editor architecture visualization
+- [ ] GitHub App for automated setup and status checks
 
 ---
 
 ## v1.1.0+ — Growth & Scale
 
-**Post-v1.0 Features:**
-
-### Documentation
-- Interactive HTML documentation output
-- Architecture decision records (ADR) generation
-- API changelog generation
+### Publishers
+- [ ] GitHub Wiki publisher
+- [ ] Obsidian vault publisher
 
 ### Analysis
-- Cross-repository architecture analysis
-- Monorepo-aware module detection
-- Security boundary validation
-
-### Integration
-- Confluence publisher
-- GitHub Wiki publisher
-- Slack notifications
-- Custom webhook support
+- [ ] Cross-repository architecture analysis
+- [ ] Monorepo-aware module detection
+- [ ] Security boundary validation
 
 ### Developer Experience
-- Interactive configuration wizard
-- Watch mode for local development
-- Performance profiling and optimization
-- Architecture testing framework
+- [ ] Slack notifications
+- [ ] Custom webhook support
+- [ ] Interactive HTML documentation output
+- [ ] Architecture decision records (ADR) generation
 
 ---
 
@@ -94,6 +120,6 @@ Have a feature request? Open an issue on [GitHub](https://github.com/CHAPIBUNNY/
 
 ## Contributing
 
-RepoLens is currently in early access. As we approach v1.0, we'll open up contribution guidelines.
+RepoLens welcomes contributions. See the README for development setup instructions.
 
-For questions or discussions, contact the maintainers.
+For questions or discussions, open a GitHub issue or contact the maintainers.

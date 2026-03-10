@@ -1,9 +1,9 @@
 # Known Issues & Limitations
 
-This document tracks known issues, limitations, and edge cases in RepoLens v0.4.x. We're committed to transparency about what works, what doesn't, and what we're working on.
+This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
-**Last Updated:** March 9, 2026  
-**Version:** 0.4.3
+**Last Updated:** July 2025  
+**Version:** 0.6.2
 
 ---
 
@@ -36,7 +36,7 @@ These bugs were discovered in production and have been fixed:
 ### Current Limitations
 
 #### Manual Review Still Recommended
-**Issue:** While migration is highly reliable (47 tests passing), edge cases may exist in complex workflows.
+**Issue:** While migration is highly reliable (90 tests passing), edge cases may exist in complex workflows.
 
 **Workaround:** 
 1. Run `repolens migrate --dry-run` first
@@ -209,7 +209,7 @@ permissions:
   contents: write
 ```
 
-**Planned (v0.5.0+):** Reduce to minimum required permissions:
+**Planned:** Reduce to minimum required permissions:
 ```yaml
 permissions:
   contents: read
@@ -248,26 +248,34 @@ scan:
 
 ---
 
+## � CI/CD
+
+### macOS Lockfile on Linux Runners
+**Issue:** A `package-lock.json` generated on macOS doesn't include Linux platform-specific optional dependencies (e.g., `@rollup/rollup-linux-x64-gnu` used by Vitest/Vite).
+
+**Symptom:** `Cannot find module @rollup/rollup-linux-x64-gnu` during `npm test` in GitHub Actions.
+
+**Fix:** All CI workflows now use:
+```bash
+rm -rf node_modules package-lock.json && npm install
+```
+Do NOT use `npm ci` in GitHub Actions workflows.
+
+---
+
 ## 🔮 Planned Improvements
 
-### Short Term (v0.5.x - Next 4-6 weeks)
-- [ ] Usage telemetry (opt-in, anonymous repository stats)
-- [ ] Performance monitoring (scan/render/publish timing)
-- [ ] Security audit (secrets detection, fuzzing)
-- [ ] Enhanced error messages with actionable guidance
-
-### Medium Term (v0.6.x - Next 8-12 weeks)
-- [ ] Team features (shared workspaces, notifications)
-- [ ] Additional publishers (Confluence, GitHub Wiki, Obsidian)
+### Next Release (v0.7.0)
 - [ ] Interactive config wizard (`repolens init --interactive`)
 - [ ] Watch mode for local development (`repolens watch`)
+- [ ] Performance monitoring (scan/render/publish timing)
+- [ ] Enhanced error messages with actionable guidance
 
-### Long Term (v1.0 - Q3 2026)
-- [ ] Schema versioning with automated migration
+### Future
 - [ ] Plugin system for custom renderers
 - [ ] GraphQL schema detection
 - [ ] TypeScript type graph analysis
-- [ ] Production stability guarantees
+- [ ] Additional publishers (GitHub Wiki, Obsidian)
 
 ---
 
@@ -295,7 +303,7 @@ Know a workaround? Found a fix? Submit a PR:
 2. Create branch: `git checkout -b fix/your-issue`
 3. Add test case to `tests/` covering the issue
 4. Implement fix
-5. Verify `npm test` passes (47+ tests)
+5. Verify `npm test` passes (90+ tests)
 6. Submit PR with clear description
 
 We prioritize issues with:
