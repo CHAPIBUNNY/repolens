@@ -203,32 +203,6 @@ export function validateConfig(config) {
     }
   }
 
-  // Validate dashboard configuration (optional)
-  if (config.dashboard !== undefined) {
-    if (typeof config.dashboard !== "object" || Array.isArray(config.dashboard)) {
-      errors.push("dashboard must be an object");
-    } else {
-      // Validate enabled flag
-      if (config.dashboard.enabled !== undefined && typeof config.dashboard.enabled !== "boolean") {
-        errors.push("dashboard.enabled must be a boolean");
-      }
-
-      // Validate githubPages flag
-      if (config.dashboard.githubPages !== undefined && typeof config.dashboard.githubPages !== "boolean") {
-        errors.push("dashboard.githubPages must be a boolean");
-      }
-
-      // Validate staleThreshold
-      if (config.dashboard.staleThreshold !== undefined) {
-        if (typeof config.dashboard.staleThreshold !== "number") {
-          errors.push("dashboard.staleThreshold must be a number");
-        } else if (config.dashboard.staleThreshold < 1) {
-          errors.push("dashboard.staleThreshold must be at least 1");
-        }
-      }
-    }
-  }
-
   // Validate feature flags (optional)
   if (config.features !== undefined) {
     if (typeof config.features !== "object" || Array.isArray(config.features)) {

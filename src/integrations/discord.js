@@ -101,7 +101,6 @@ export function buildDocUpdateNotification(options) {
     modulesDetected,
     coverage,
     notionUrl,
-    dashboardUrl,
     changePercent,
   } = options;
 
@@ -165,9 +164,6 @@ export function buildDocUpdateNotification(options) {
   const links = [];
   if (notionUrl) {
     links.push(`[📚 Notion Docs](${notionUrl})`);
-  }
-  if (dashboardUrl) {
-    links.push(`[📊 Dashboard](${dashboardUrl})`);
   }
 
   if (links.length > 0) {

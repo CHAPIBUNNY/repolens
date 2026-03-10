@@ -5,8 +5,6 @@ import { shouldPublishToNotion, shouldPublishToConfluence, getCurrentBranch } fr
 import { info, warn } from "../utils/logger.js";
 import { trackPublishing } from "../utils/telemetry.js";
 import { collectMetrics } from "../utils/metrics.js";
-import { generateDashboard } from "../renderers/renderDashboard.js";
-import { publishDashboardToNotion } from "./notion.js";
 import {
   sendDiscordNotification,
   buildDocUpdateNotification,
@@ -82,33 +80,15 @@ export async function publishDocs(cfg, renderedPages, scanResult) {
     }
   }
 
-  // Collect metrics and generate dashboard (Phase 4)
-  const dashboardEnabled = cfg.dashboard?.enabled !== false; // Default true
-  if (dashboardEnabled) {
-    try {
-      info("Collecting documentation metrics...");
-      const docsPath = path.join(process.cwd(), ".repolens");
-      const historyPath = path.join(docsPath, "metrics-history.json");
-      
-      const metrics = await collectMetrics(scanResult, renderedPages, docsPath, historyPath);
-      
-      // Generate dashboard
-      const dashboardPath = path.join(docsPath, "dashboard", "index.html");
-      await generateDashboard(metrics, cfg, dashboardPath);
-      
-      // Publish dashboard to Notion if enabled
-      if (hasNotionSecrets() && shouldPublishToNotion(cfg, currentBranch)) {
-        try {
-          const parentPageId = process.env.NOTION_PARENT_PAGE_ID;
-          await publishDashboardToNotion(parentPageId, metrics, cfg);
-          info("✓ Dashboard published to Notion");
-        } catch (err) {
-          warn(`Failed to publish dashboard to Notion: ${err.message}`);
-          // Don't fail the whole publish if Notion dashboard fails
-        }
-      }
-      
-      // Send Discord notification if configured
+  // Collect metrics and send Discord notification
+  try {
+    info("Collecting documentation metrics...");
+    const docsPath = path.join(process.cwd(), ".repolens");
+    const historyPath = path.join(docsPath, "metrics-history.json");
+    
+    const metrics = await collectMetrics(scanResult, renderedPages, docsPath, historyPath);
+    
+    // Send Discord notification if configured
       const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
       const discordConfig = cfg.discord || {};
       const discordEnabled = discordConfig.enabled !== false; // Default true if webhook configured
@@ -132,37 +112,28 @@ export async function publishDocs(cfg, renderedPages, scanResult) {
           : undefined;
         
         if (shouldNotify(changePercent, notifyOn, significantThreshold)) {
-          const githubOwner = cfg.github?.owner || process.env.GITHUB_REPOSITORY?.split("/")[0];
-          const githubRepo = cfg.github?.repo || process.env.GITHUB_REPOSITORY?.split("/")[1];
-          const dashboardUrl = githubOwner && githubRepo
-            ? `https://${githubOwner}.github.io/${githubRepo}/`
-            : undefined;
-          
-          const notification = buildDocUpdateNotification({
-            branch: currentBranch,
-            commitSha: process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA,
-            commitMessage: process.env.GITHUB_EVENT_NAME === "push"
-              ? process.env.GITHUB_EVENT_HEAD_COMMIT_MESSAGE
-              : undefined,
-            filesScanned: scanResult.filesCount,
-            modulesDetected: scanResult.modules?.length || 0,
-            coverage: metrics.coverage.overall,
-            notionUrl,
-            dashboardUrl,
-            changePercent,
+        const notification = buildDocUpdateNotification({
+          branch: currentBranch,
+          commitSha: process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA,
+          commitMessage: process.env.GITHUB_EVENT_NAME === "push"
+            ? process.env.GITHUB_EVENT_HEAD_COMMIT_MESSAGE
+            : undefined,
+          filesScanned: scanResult.filesCount,
+          modulesDetected: scanResult.modules?.length || 0,
+          coverage: metrics.coverage.overall,
+          notionUrl,
           });
           
           await sendDiscordNotification(webhookUrl, notification);
         } else {
           info(`Skipping Discord notification: change ${changePercent?.toFixed(1) || 0}% below threshold ${significantThreshold}%`);
         }
-      } else if (!webhookUrl && discordConfig.enabled !== false) {
-        info("Discord webhook not configured. Set DISCORD_WEBHOOK_URL environment variable to enable notifications.");
-      }
-    } catch (err) {
-      warn(`Failed to generate dashboard or send notifications: ${err.message}`);
-      // Don't fail the whole publish if dashboard/notifications fail
+    } else if (!webhookUrl && discordConfig.enabled !== false) {
+      info("Discord webhook not configured. Set DISCORD_WEBHOOK_URL environment variable to enable notifications.");
     }
+  } catch (err) {
+    warn(`Failed to send notifications: ${err.message}`);
+    // Don't fail the whole publish if notifications fail
   }
   
   // Track publishing metrics

@@ -317,6 +317,8 @@ async function publishPage(cfg, key, markdown, cache) {
         title: existingPage.title,
         version: existingPage.version.number
       };
+      // Update existingPage to match cache structure (version as number)
+      existingPage = cache[key];
     }
   } else {
     // Verify cached page still exists

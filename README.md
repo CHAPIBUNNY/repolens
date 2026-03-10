@@ -16,7 +16,7 @@
 
 AI-assisted documentation intelligence system that generates architecture docs for engineers AND readable system docs for stakeholders
 
-**Current Status**: v0.6.0 — Team Features & Observability Dashboard
+**Current Status**: v0.6.0 — Confluence Publisher & Team Features
 
 RepoLens automatically generates and maintains living architecture documentation by analyzing your repository structure, extracting meaningful insights from your package.json, and creating visual dependency graphs. Run it once, or let it auto-update on every push.
 
@@ -128,56 +128,11 @@ RepoLens automatically detects:
 ✅ **Branch-Aware** - Prevent doc conflicts across branches  
 ✅ **GitHub Actions** - Autonomous operation on every push  
 ✅ **Team Notifications** - Discord integration with rich embeds (NEW in v0.6.0)  
-✅ **Observability Dashboard** - Interactive HTML metrics dashboard (NEW in v0.6.0)  
 ✅ **Health Score Tracking** - Monitor documentation quality over time (NEW in v0.6.0)  
-✅ **GitHub Pages Deployment** - Automated public dashboard hosting (NEW in v0.6.0)  
 
 ---
 
-## 👥 Team Features & Observability (New in v0.6.0)
-
-### 📊 Interactive Dashboard
-
-RepoLens now generates a beautiful HTML dashboard with real-time metrics and trends:
-
-**Features:**
-- **Health Score** — 0-100 rating based on coverage, freshness, and quality
-- **Coverage Metrics** — Module, API, and page documentation coverage with progress bars
-- **Freshness Tracking** — Identifies stale documentation (>90 days old)
-- **Quality Issues** — Lists undocumented modules, APIs, and pages with severity badges
-- **Trend Charts** — SVG visualization of coverage and health score over time
-- **Quick Links** — Direct links to Notion, GitHub, and Markdown documentation
-
-**Access your dashboard:**
-- **Local**: `.repolens/dashboard/index.html` after running `repolens publish`
-- **Public**: `https://OWNER.github.io/REPO/` (with GitHub Pages enabled)
-
-**Setup GitHub Pages (Optional):**
-
-1. **Add workflow** (created by `repolens init` in v0.6.0+):
-   - File: `.github/workflows/deploy-dashboard.yml`
-   - Triggers: Runs on every push to main
-
-2. **Enable GitHub Pages**:
-   - Go to repo Settings → Pages
-   - Source: **GitHub Actions**
-   - Save
-
-3. **Add secrets** (if using publishers or notifications):
-   ```
-   NOTION_TOKEN
-   NOTION_PARENT_PAGE_ID
-   CONFLUENCE_URL
-   CONFLUENCE_EMAIL
-   CONFLUENCE_API_TOKEN
-   CONFLUENCE_SPACE_KEY
-   CONFLUENCE_PARENT_PAGE_ID  # Optional
-   DISCORD_WEBHOOK_URL  # Optional
-   ```
-   DISCORD_WEBHOOK_URL
-   ```
-
-Your dashboard will be live at `https://OWNER.github.io/REPO/` within minutes!
+## 👥 Team Features (New in v0.6.0)
 
 ### 💬 Discord Notifications
 
@@ -221,7 +176,7 @@ Get notified when documentation changes significantly:
 - Files scanned and modules analyzed
 - Coverage percentage and health score
 - Change percentage from previous run
-- Direct links to dashboard, Notion, and GitHub
+- Direct links to Notion and GitHub documentation
 
 ---
 
@@ -914,12 +869,6 @@ discord:
     - main
     - develop
 
-# Observability dashboard (optional, new in v0.6.0)
-dashboard:
-  enabled: true                  # Default: true
-  githubPages: true             # Deploy to GitHub Pages
-  staleThreshold: 90            # Flag docs older than 90 days
-
 # GitHub integration (optional)
 github:
   owner: "your-username"
@@ -986,9 +935,6 @@ features:
 | `discord.notifyOn` | string | No | Notification policy: `always`, `significant`, `never` (default: `significant`) |
 | `discord.significantThreshold` | number | No | Change % threshold for notifications (default: `10`) |
 | `discord.branches` | array | No | Branch filter for notifications. Supports globs. (default: all) |
-| `dashboard.enabled` | boolean | No | Generate HTML dashboard (default: `true`) |
-| `dashboard.githubPages` | boolean | No | Deploy to GitHub Pages (default: `false`) |
-| `dashboard.staleThreshold` | number | No | Days before docs flagged as stale (default: `90`) |
 | `github.owner` | string | No | GitHub org/username for SVG hosting |
 | `github.repo` | string | No | Repository name for SVG hosting |
 | `scan.include` | array | Yes | Glob patterns for files to scan |
