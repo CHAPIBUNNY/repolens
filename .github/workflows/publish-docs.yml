@@ -73,7 +73,7 @@ jobs:
           node-version: 20
       
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit
       
       - name: Generate and publish documentation
         env:
@@ -91,4 +91,4 @@ jobs:
           REPOLENS_AI_MODEL: gpt-4-turbo-preview
           REPOLENS_AI_TEMPERATURE: 0.3
           REPOLENS_AI_MAX_TOKENS: 2000
-        run: npx @chappibunny/repolens@latest publish
+        run: node bin/repolens.js publish
