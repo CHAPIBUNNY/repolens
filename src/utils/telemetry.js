@@ -373,3 +373,61 @@ export function trackMigration(migratedCount, skippedCount) {
     // Silently fail
   }
 }
+
+// ============================================================
+// User Feedback
+// ============================================================
+
+/**
+ * Ensure Sentry is initialized for feedback submission.
+ * Feedback always works, even if REPOLENS_TELEMETRY_ENABLED is false.
+ */
+function ensureSentryForFeedback() {
+  if (enabled) return true;
+
+  // Initialize Sentry in a minimal mode just for feedback
+  try {
+    const packageJsonPath = join(__dirname, "../../package.json");
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+    const version = packageJson.version || "unknown";
+
+    Sentry.init({
+      dsn: "https://082083dbf5899ed7e65dfd9b8dc72f90@o4511014913703936.ingest.de.sentry.io/4511014919209040",
+      release: `repolens@${version}`,
+      environment: process.env.NODE_ENV || "production",
+      sampleRate: 1.0, // Always send feedback
+      tracesSampleRate: 0,
+    });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Send user feedback to Sentry
+ * Works even when telemetry is disabled — feedback is always accepted.
+ * @param {string} name - User's name
+ * @param {string} email - User's email
+ * @param {string} message - Feedback message
+ * @returns {Promise<boolean>} Whether feedback was sent successfully
+ */
+export async function sendFeedback(name, email, message) {
+  try {
+    if (!ensureSentryForFeedback()) {
+      return false;
+    }
+
+    Sentry.captureFeedback({
+      name,
+      email,
+      message,
+    });
+
+    // Flush to make sure feedback is sent before process exits
+    await Sentry.flush(5000);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}

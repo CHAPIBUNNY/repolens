@@ -31,8 +31,10 @@ import {
   closeTelemetry,
   trackUsage,
   startTimer,
-  stopTimer
+  stopTimer,
+  sendFeedback
 } from "./utils/telemetry.js";
+import { createInterface } from "node:readline";
 
 async function getPackageVersion() {
   const __filename = fileURLToPath(import.meta.url);
@@ -109,6 +111,7 @@ Commands:
   doctor      Validate your RepoLens setup
   migrate     Upgrade workflow files to v0.4.0 format
   publish     Scan, render, and publish documentation
+  feedback    Send feedback to the RepoLens team
   version     Print the current RepoLens version
 
 Options:
@@ -341,8 +344,51 @@ async function main() {
     return;
   }
 
+  if (command === "feedback") {
+    await printBanner();
+    info("Send feedback to the RepoLens team");
+    info("Your feedback is anonymous and helps us improve RepoLens.\n");
+
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const ask = (q) => new Promise((resolve) => rl.question(q, resolve));
+
+    try {
+      const name = await ask("Your name: ");
+      const email = await ask("Your email: ");
+      const message = await ask("Feedback: ");
+      rl.close();
+
+      if (!message.trim()) {
+        error("Feedback message cannot be empty.");
+        await closeTelemetry();
+        process.exit(1);
+      }
+
+      info("\nSending feedback...");
+      const sent = await sendFeedback(
+        name.trim() || "Anonymous",
+        email.trim() || "no-email@repolens.dev",
+        message.trim()
+      );
+
+      if (sent) {
+        info("✓ Thank you! Your feedback has been sent.");
+      } else {
+        error("Failed to send feedback. Please try again later.");
+      }
+    } catch (err) {
+      rl.close();
+      captureError(err, { command: "feedback" });
+      error("Failed to send feedback:");
+      error(err.message);
+    }
+
+    await closeTelemetry();
+    return;
+  }
+
   error(`Unknown command: ${command}`);
-  error("Available commands: init, doctor, migrate, publish, version, help");
+  error("Available commands: init, doctor, migrate, publish, feedback, version, help");
   process.exit(1);
 }
 

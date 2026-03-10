@@ -2,18 +2,18 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 0.6.2  
+**Current Version:** 0.6.3  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** July 2025
 
 ---
 
-## What's Shipped (v0.1.0 → v0.6.2)
+## What's Shipped (v0.1.0 → v0.6.3)
 
 Everything below is live, tested, and available on npm.
 
 ### Core CLI (v0.1.0 – v0.2.0)
-- ✅ `init`, `doctor`, `publish`, `migrate`, `version`, `help` commands
+- ✅ `init`, `doctor`, `publish`, `migrate`, `feedback`, `version`, `help` commands
 - ✅ Auto-discovery of `.repolens.yml` from cwd or parent directories
 - ✅ Repository scanning with fast-glob + performance guardrails (warn at 10k, fail at 50k files)
 - ✅ Package.json metadata extraction (tech stack, dependencies)
@@ -48,11 +48,12 @@ Everything below is live, tested, and available on npm.
 - ✅ CI security gates (dependency audit + secret scanning)
 - ✅ 90 tests across 11 test files (including 43 security/fuzzing tests)
 
-### CI/CD & npm Publishing (v0.5.0 – v0.6.2)
+### CI/CD & npm Publishing (v0.5.0 – v0.6.3)
 - ✅ GitHub Actions: `publish-docs.yml` (every push) + `release.yml` (tag-based)
 - ✅ npm registry publishing (`npm publish --access public`)
 - ✅ Workflow migration tool (`repolens migrate`)
 - ✅ Cross-platform CI fix for optional dependency resolution
+- ✅ Sentry user feedback via `repolens feedback` command
 
 ---
 

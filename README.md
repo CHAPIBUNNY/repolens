@@ -20,7 +20,7 @@
 
 AI-assisted documentation intelligence system that generates architecture docs for engineers AND readable system docs for stakeholders
 
-**Current Status**: v0.6.1 — Confluence Publisher & Team Features
+**Current Status**: v0.6.3 — Sentry User Feedback & Team Features
 
 RepoLens automatically generates and maintains living architecture documentation by analyzing your repository structure, extracting meaningful insights from your package.json, and creating visual dependency graphs. Run it once, or let it auto-update on every push.
 
@@ -224,7 +224,7 @@ npm link
 Install from a specific version:
 
 ```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v0.6.1/chappibunny-repolens-0.6.1.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v0.6.3/chappibunny-repolens-0.6.3.tgz
 ```
 </details>
 
@@ -1077,7 +1077,7 @@ Simulates the full user installation experience:
 npm pack
 
 # Install globally from tarball
-npm install -g chappibunny-repolens-0.6.1.tgz
+npm install -g chappibunny-repolens-0.6.3.tgz
 
 # Verify
 repolens --version
@@ -1152,13 +1152,13 @@ RepoLens uses automated GitHub Actions releases.
 ### Creating a Release
 
 ```bash
-# Patch version (0.6.1 → 0.6.2) - Bug fixes
+# Patch version (0.6.3 → 0.6.4) - Bug fixes
 npm run release:patch
 
-# Minor version (0.6.1 → 0.7.0) - New features
+# Minor version (0.6.3 → 0.7.0) - New features
 npm run release:minor
 
-# Major version (0.6.1 → 1.0.0) - Breaking changes
+# Major version (0.6.3 → 1.0.0) - Breaking changes
 npm run release:major
 
 # Push the tag to trigger workflow
@@ -1190,11 +1190,11 @@ RepoLens is currently in early access. v1.0 will open for community contribution
 
 ## 🗺️ Roadmap to v1.0
 
-**Current Status:** v0.6.1 — Confluence Publisher & Team Features
+**Current Status:** v0.6.3 — Sentry User Feedback & Team Features
 
 ### Completed ✅
 
-- [x] CLI commands: `init`, `doctor`, `publish`, `migrate`, `version`, `help`
+- [x] CLI commands: `init`, `doctor`, `publish`, `migrate`, `feedback`, `version`, `help`
 - [x] Config schema v1 with validation
 - [x] Auto-discovery of `.repolens.yml`
 - [x] Publishers: Notion + Confluence + Markdown
