@@ -20,7 +20,7 @@
 
 AI-assisted documentation intelligence system that generates architecture docs for engineers AND readable system docs for stakeholders
 
-**Current Status**: v0.6.0 — Confluence Publisher & Team Features
+**Current Status**: v0.6.1 — Confluence Publisher & Team Features
 
 RepoLens automatically generates and maintains living architecture documentation by analyzing your repository structure, extracting meaningful insights from your package.json, and creating visual dependency graphs. Run it once, or let it auto-update on every push.
 
@@ -53,7 +53,7 @@ For Confluence:
 ```bash
 # Edit .env and add:
 CONFLUENCE_URL=https://your-company.atlassian.net/wiki
-CONFLUENCE_EMAIL=your@email.com
+CONFLUENCE_EMAIL=trades@rabitaitrades.com
 CONFLUENCE_API_TOKEN=your-token
 CONFLUENCE_SPACE_KEY=DOCS
 ```
@@ -192,7 +192,7 @@ Get notified when documentation changes significantly:
 npm install @chappibunny/repolens
 ```
 
-Installs from npm registry. ✨ **Now available in beta!**
+Installs from npm registry.
 
 ### Alternative Methods
 
@@ -224,7 +224,7 @@ npm link
 Install from a specific version:
 
 ```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v0.2.0/repolens-0.2.0.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v0.6.1/chappibunny-repolens-0.6.1.tgz
 ```
 </details>
 
@@ -424,7 +424,7 @@ If using the Confluence publisher:
 Create `.env` in your project root:
 ```bash
 CONFLUENCE_URL=https://your-company.atlassian.net/wiki
-CONFLUENCE_EMAIL=your@email.com
+CONFLUENCE_EMAIL=trades@rabitaitrades.com
 CONFLUENCE_API_TOKEN=your-api-token-here
 CONFLUENCE_SPACE_KEY=DOCS
 CONFLUENCE_PARENT_PAGE_ID=123456789  # Optional
@@ -445,7 +445,7 @@ Add as repository secrets:
 2. Click **"New repository secret"**
 3. Add:
    - Name: `CONFLUENCE_URL`, Value: `https://your-company.atlassian.net/wiki`
-   - Name: `CONFLUENCE_EMAIL`, Value: `your@email.com`
+   - Name: `CONFLUENCE_EMAIL`, Value: `trades@rabitaitrades.com`
    - Name: `CONFLUENCE_API_TOKEN`, Value: `your-token`
    - Name: `CONFLUENCE_SPACE_KEY`, Value: `DOCS`
    - Name: `CONFLUENCE_PARENT_PAGE_ID`, Value: `123456789` (optional)
@@ -516,7 +516,7 @@ npx @chappibunny/repolens publish
 
 **Expected output:**
 ```
-RABITAI 🐰
+RepoLens 🔍
 ────────────────────────────────────────────────────
 [RepoLens] Using config: /path/to/.repolens.yml
 [RepoLens] Loading configuration...
@@ -541,7 +541,7 @@ ls .repolens/
 # api_surface.md
 # route_map.md
 # system_map.md
-# diagrams/system_map.svg
+# system_map.md
 ```
 
 **Notion Output:**
@@ -611,7 +611,7 @@ Validates:
 - ✅ Required config fields present
 - ✅ Publishers configured correctly
 - ✅ Scan patterns defined
-- ✅ Mermaid CLI installation status
+- ✅ Publisher configuration valid
 
 ### Migrate Workflows
 
@@ -813,7 +813,7 @@ RepoLens implements **defense-in-depth** security to protect your credentials, c
 
 ### Vulnerability Reporting
 
-- 📧 **Email**: [your-email@example.com] (replace with actual contact)
+- 📧 **Email**: trades@rabitaitrades.com
 - 🚨 **DO NOT** open public issues for security bugs
 - ⏱️ **Response**: Within 48 hours
 - 🔒 **Fix Timeline**: Critical issues within 7 days, others within 30 days
@@ -854,6 +854,7 @@ project:
 # Configure output destinations
 publishers:
   - notion
+  - confluence
   - markdown
 
 # Notion-specific settings (optional)
@@ -863,6 +864,11 @@ notion:
     - staging           # Also staging
     - release/*         # Glob patterns supported
   includeBranchInTitle: false  # Clean titles without [branch-name]
+
+# Confluence-specific settings (optional)
+confluence:
+  branches:
+    - main              # Only main branch publishes to Confluence
 
 # Discord notifications (optional, new in v0.6.0)
 discord:
@@ -932,15 +938,16 @@ features:
 | `configVersion` | number | No | Schema version (current: 1) for future migrations |
 | `project.name` | string | Yes | Project name |
 | `project.docs_title_prefix` | string | No | Prefix for documentation titles (default: project name) |
-| `publishers` | array | Yes | Output targets: `notion`, `markdown` |
+| `publishers` | array | Yes | Output targets: `notion`, `confluence`, `markdown` |
 | `notion.branches` | array | No | Branch whitelist for Notion publishing. Supports globs. |
 | `notion.includeBranchInTitle` | boolean | No | Add `[branch-name]` to titles (default: `true`) |
+| `confluence.branches` | array | No | Branch whitelist for Confluence publishing. Supports globs. |
 | `discord.enabled` | boolean | No | Enable Discord notifications (default: `true` if webhook set) |
 | `discord.notifyOn` | string | No | Notification policy: `always`, `significant`, `never` (default: `significant`) |
 | `discord.significantThreshold` | number | No | Change % threshold for notifications (default: `10`) |
 | `discord.branches` | array | No | Branch filter for notifications. Supports globs. (default: all) |
-| `github.owner` | string | No | GitHub org/username for SVG hosting |
-| `github.repo` | string | No | Repository name for SVG hosting |
+| `github.owner` | string | No | GitHub org/username |
+| `github.repo` | string | No | Repository name |
 | `scan.include` | array | Yes | Glob patterns for files to scan |
 | `scan.ignore` | array | Yes | Glob patterns to exclude |
 | `module_roots` | array | No | Root directories for module detection |
@@ -959,7 +966,17 @@ Required for Notion publisher:
 | `NOTION_PARENT_PAGE_ID` | Yes | Page ID where docs will be created |
 | `NOTION_VERSION` | No | API version (default: `2022-06-28`) |
 
-Optional for Discord notifications (new in v0.6.0):
+Required for Confluence publisher:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `CONFLUENCE_URL` | Yes | Base URL (e.g., `https://your-company.atlassian.net/wiki`) |
+| `CONFLUENCE_EMAIL` | Yes | Atlassian account email |
+| `CONFLUENCE_API_TOKEN` | Yes | API token from [Atlassian](https://id.atlassian.com/manage-profile/security/api-tokens) |
+| `CONFLUENCE_SPACE_KEY` | Yes | Target space key (e.g., `DOCS`, `ENG`) |
+| `CONFLUENCE_PARENT_PAGE_ID` | No | Parent page ID (docs created at space root if omitted) |
+
+Optional for Discord notifications:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -978,8 +995,8 @@ Optional for Discord notifications (new in v0.6.0):
 1. SCAN           2. ANALYZE         3. RENDER           4. PUBLISH
 ──────────────────────────────────────────────────────────────────
 Read files   →   Detect tech     →  Generate docs   →   Notion pages
-from patterns    stack patterns      with insights       + Markdown files
-                                                         + SVG diagrams
+from patterns    stack patterns      with insights       + Confluence pages
+                                                         + Markdown files
 ```
 
 **Scan Phase:**
@@ -1003,8 +1020,7 @@ from patterns    stack patterns      with insights       + Markdown files
 **Publish Phase:**
 - Markdown: Writes files to `.repolens/` directory
 - Notion: Creates/updates pages via API with retry logic
-- SVG: Generates diagrams with optional mermaid-cli
-- Git: Commits diagrams back to repo for GitHub CDN hosting
+- Confluence: Creates/updates pages via REST API v1 (storage format)
 
 ### Module Dependency Detection
 
@@ -1050,7 +1066,7 @@ npm test
 - Integration workflows
 - Doctor command validation
 
-**Coverage:** 32 tests passing
+**Coverage:** 90 tests passing across 11 test files
 
 ### Test Package Installation Locally
 
@@ -1061,7 +1077,7 @@ Simulates the full user installation experience:
 npm pack
 
 # Install globally from tarball
-npm install -g repolens-0.2.0.tgz
+npm install -g chappibunny-repolens-0.6.1.tgz
 
 # Verify
 repolens --version
@@ -1077,28 +1093,49 @@ repolens/
 │   ├── cli.js               # Command orchestration + banner
 │   ├── init.js              # Scaffolding command
 │   ├── doctor.js            # Validation command
+│   ├── migrate.js           # Workflow migration (legacy → current)
 │   ├── core/
 │   │   ├── config.js        # Config loading + validation
 │   │   ├── config-schema.js # Schema version tracking
 │   │   ├── diff.js          # Git diff operations
 │   │   └── scan.js          # Repository scanning + metadata extraction
+│   ├── analyzers/
+│   │   ├── domain-inference.js  # Business domain mapping
+│   │   ├── context-builder.js   # Structured AI context assembly
+│   │   └── flow-inference.js    # Data flow detection
+│   ├── ai/
+│   │   ├── provider.js          # Provider-agnostic AI generation
+│   │   ├── prompts.js           # Strict prompt templates
+│   │   ├── document-plan.js     # Document structure definition
+│   │   └── generate-sections.js # AI section generation + fallbacks
+│   ├── docs/
+│   │   ├── generate-doc-set.js  # Document generation orchestration
+│   │   └── write-doc-set.js     # Write docs to disk
 │   ├── renderers/
 │   │   ├── render.js        # System overview, catalog, API, routes
 │   │   ├── renderDiff.js    # Architecture diff rendering
-│   │   └── renderMap.js     # Mermaid dependency graphs
+│   │   └── renderMap.js     # Unicode dependency diagrams
 │   ├── publishers/
 │   │   ├── index.js         # Publisher orchestration + branch filtering
-│   │   ├── publish.js       # Notion publishing pipeline
+│   │   ├── publish.js       # Publishing pipeline
 │   │   ├── notion.js        # Notion API integration
+│   │   ├── confluence.js    # Confluence REST API integration
 │   │   └── markdown.js      # Local Markdown generation
+│   ├── integrations/
+│   │   └── discord.js       # Discord webhook notifications
 │   ├── delivery/
 │   │   └── comment.js       # PR comment delivery
 │   └── utils/
 │       ├── logger.js        # Logging utilities
-│       ├── retry.js         # API retry logic
+│       ├── retry.js         # API retry logic (exponential backoff)
 │       ├── branch.js        # Branch detection (multi-platform)
-│       └── mermaid.js       # SVG rendering + GitHub URL handling
-├── tests/                   # Vitest test suite
+│       ├── validate.js      # Configuration validation & security
+│       ├── metrics.js       # Documentation coverage & health scoring
+│       ├── rate-limit.js    # Token bucket rate limiter for APIs
+│       ├── secrets.js       # Secret detection & sanitization
+│       ├── telemetry.js     # Opt-in error tracking (Sentry)
+│       └── update-check.js  # Version update notifications
+├── tests/                   # Vitest test suite (90 tests across 11 files)
 ├── .repolens.yml            # Dogfooding config
 ├── package.json
 ├── CHANGELOG.md
@@ -1115,13 +1152,13 @@ RepoLens uses automated GitHub Actions releases.
 ### Creating a Release
 
 ```bash
-# Patch version (0.2.0 → 0.2.1) - Bug fixes
+# Patch version (0.6.1 → 0.6.2) - Bug fixes
 npm run release:patch
 
-# Minor version (0.2.0 → 0.3.0) - New features
+# Minor version (0.6.1 → 0.7.0) - New features
 npm run release:minor
 
-# Major version (0.2.0 → 1.0.0) - Breaking changes
+# Major version (0.6.1 → 1.0.0) - Breaking changes
 npm run release:major
 
 # Push the tag to trigger workflow
@@ -1129,10 +1166,11 @@ git push --follow-tags
 ```
 
 **What happens:**
-1. ✅ All tests run
-2. ✅ Package tarball created
-3. ✅ GitHub Release published
-4. ✅ Tarball attached as artifact
+1. ✅ Security audit runs (dependency audit + secret scanning)
+2. ✅ All tests run
+3. ✅ Package tarball created
+4. ✅ GitHub Release published with tarball attached
+5. ✅ npm package published to `@chappibunny/repolens`
 
 See [RELEASE.md](./RELEASE.md) for detailed workflow.
 
@@ -1152,30 +1190,30 @@ RepoLens is currently in early access. v1.0 will open for community contribution
 
 ## 🗺️ Roadmap to v1.0
 
-**Current Status:** v0.2.0 — ~92% production-ready
+**Current Status:** v0.6.1 — Confluence Publisher & Team Features
 
 ### Completed ✅
 
-- [x] CLI commands: `init`, `doctor`, `publish`, `version`, `help`
+- [x] CLI commands: `init`, `doctor`, `publish`, `migrate`, `version`, `help`
 - [x] Config schema v1 with validation
 - [x] Auto-discovery of `.repolens.yml`
-- [x] Publishers: Notion + Markdown
+- [x] Publishers: Notion + Confluence + Markdown
 - [x] Branch-aware publishing with filtering
 - [x] Smart tech stack detection from package.json
-- [x] Dependency graphs with actual module relationships
-- [x] Visual diagrams with optional SVG rendering
-- [x] GitHub Actions automation
+- [x] Unicode dependency diagrams (no external deps)
+- [x] AI-assisted documentation intelligence (provider-agnostic)
+- [x] Business domain inference & data flow analysis
+- [x] GitHub Actions automation (publish + release)
 - [x] PR architecture diff comments
 - [x] Performance guardrails (10k warning, 50k limit)
-- [x] Comprehensive test suite (32 tests)
-- [x] Interactive mermaid-cli installation
-
-### In Progress 🚧
-
-- [ ] Production stability validation
-- [ ] Enhanced error messages and debugging
-- [ ] Performance optimization for large repos
-- [ ] Additional framework detection (Remix, SvelteKit, Astro)
+- [x] Comprehensive test suite (90 tests across 11 files)
+- [x] Security hardening (secret detection, injection prevention, fuzzing)
+- [x] Discord notifications with rich embeds
+- [x] Documentation coverage & health scoring
+- [x] Opt-in telemetry (Sentry)
+- [x] npm registry publication (`@chappibunny/repolens`)
+- [x] Automated npm releases via GitHub Actions
+- [x] Workflow migration command (`repolens migrate`)
 
 ### Planned for v1.0 🎯
 
@@ -1184,7 +1222,7 @@ RepoLens is currently in early access. v1.0 will open for community contribution
 - [ ] TypeScript type graph analysis
 - [ ] Interactive configuration wizard
 - [ ] Watch mode for local development
-- [ ] npm registry publication
+- [ ] Additional publishers (GitHub Wiki, Obsidian)
 
 See [ROADMAP.md](./ROADMAP.md) for detailed planning.
 
@@ -1206,6 +1244,6 @@ MIT
 
 <div align="center">
 
-**Made with RABITAI for developers who care about architecture**
+**Made with ❤️ by RepoLens for developers who care about architecture**
 
 </div>

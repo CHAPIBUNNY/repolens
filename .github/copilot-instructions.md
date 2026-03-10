@@ -14,9 +14,12 @@
 
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
-**Version:** 0.4.1  
+**npm Package:** `@chappibunny/repolens`  
+**Version:** 0.6.1  
 **Status:** Production-ready, pre-v1.0 stability guarantees  
-**License:** MIT
+**License:** MIT  
+**Repository:** https://github.com/CHAPIBUNNY/repolens  
+**Author:** Charl van Zyl
 
 ## Core Value Proposition
 
@@ -26,7 +29,7 @@ RepoLens transforms repositories into documented, understandable systems that se
 3. **Context Building** - Structured artifacts for AI synthesis (no raw code)
 4. **AI Synthesis** (Optional) - Natural language explanations for non-technical readers
 5. **Rendering** - 11 audience-aware documents (technical + non-technical)
-6. **Publishing** - Multi-output delivery (Notion + Markdown) with branch-aware safety
+6. **Publishing** - Multi-output delivery (Notion + Confluence + Markdown) with branch-aware safety
 
 ## Architecture
 
@@ -34,45 +37,66 @@ RepoLens transforms repositories into documented, understandable systems that se
 
 ```
 bin/
-  repolens.js           # CLI entry point
+  repolens.js             # CLI entry point
 src/
-  cli.js                # Main CLI orchestration + banner
-  doctor.js             # Repository validation
-  init.js               # Scaffolding for new repos
+  cli.js                  # Main CLI orchestration + banner
+  doctor.js               # Repository validation
+  init.js                 # Scaffolding for new repos
+  migrate.js              # Workflow migration (legacy → current format)
   core/
-    config.js           # Configuration loading and validation
-    config-schema.js    # Schema versioning (configVersion: 1)
-    diff.js             # Git diff operations
-    scan.js             # Repository scanning logic + metadata extraction
+    config.js             # Configuration loading and validation
+    config-schema.js      # Schema versioning (configVersion: 1)
+    diff.js               # Git diff operations
+    scan.js               # Repository scanning logic + metadata extraction
   analyzers/
-    domain-inference.js # Business domain mapping from paths
-    context-builder.js  # Structured AI context assembly
-    flow-inference.js   # Data flow detection via heuristics
+    domain-inference.js   # Business domain mapping from paths
+    context-builder.js    # Structured AI context assembly
+    flow-inference.js     # Data flow detection via heuristics
   ai/
-    provider.js         # Provider-agnostic AI text generation
-    prompts.js          # Strict prompt templates preventing hallucination
-    document-plan.js    # Canonical document structure definition
-    generate-sections.js # AI-powered section generation with fallbacks
+    provider.js           # Provider-agnostic AI text generation
+    prompts.js            # Strict prompt templates preventing hallucination
+    document-plan.js      # Canonical document structure definition
+    generate-sections.js  # AI-powered section generation with fallbacks
   docs/
-    generate-doc-set.js # Document generation orchestration
-    write-doc-set.js    # Write documentation set to disk
+    generate-doc-set.js   # Document generation orchestration
+    write-doc-set.js      # Write documentation set to disk
   delivery/
-    comment.js          # PR comment management
+    comment.js            # PR comment management
+  integrations/
+    discord.js            # Discord webhook notifications (rich embeds)
   publishers/
-    index.js            # Publisher orchestration + branch filtering
-    markdown.js         # Markdown file generation
-    notion.js           # Notion API integration
-    publish.js          # Publishing pipeline + diagram URL validation
+    index.js              # Publisher orchestration + branch filtering
+    markdown.js           # Markdown file generation
+    notion.js             # Notion API integration
+    confluence.js         # Confluence REST API integration (storage format)
+    publish.js            # Publishing pipeline + diagram URL validation
   renderers/
-    render.js           # System overview, module catalog, API surface, route map
-    renderDiff.js       # Architecture diff rendering
-    renderMap.js        # System map (Unicode dependency diagrams)
+    render.js             # System overview, module catalog, API surface, route map
+    renderDiff.js         # Architecture diff rendering
+    renderMap.js          # System map (Unicode dependency diagrams)
   utils/
-    logger.js           # Logging utilities
-    retry.js            # Retry logic for API calls
-    branch.js           # Multi-platform branch detection
-    update-check.js     # Version update notifications
-tests/                  # Vitest test suite (32 tests passing)
+    logger.js             # Logging utilities
+    retry.js              # Retry logic for API calls (exponential backoff)
+    branch.js             # Multi-platform branch detection
+    update-check.js       # Version update notifications
+    validate.js           # Configuration validation & security
+    metrics.js            # Documentation coverage & health scoring
+    rate-limit.js         # Token bucket rate limiter for APIs
+    secrets.js            # Secret detection & sanitization
+    telemetry.js          # Opt-in error tracking (Sentry)
+tests/                    # Vitest test suite (90 tests across 11 files)
+  branch.test.js          # Branch detection tests
+  cli.test.js             # CLI command tests
+  config-discovery.test.js # Config auto-discovery tests
+  config.test.js          # Configuration validation tests
+  doctor.test.js          # Doctor command tests
+  init.test.js            # Init scaffolding tests
+  integration.test.js     # Integration tests
+  markdown.test.js        # Markdown publisher tests
+  migrate.test.js         # Migration tests
+  security-fuzzing.test.js # Security fuzzing tests
+  e2e/
+    migration.test.js     # End-to-end migration tests
 ```
 
 ### Key Commands
@@ -80,6 +104,7 @@ tests/                  # Vitest test suite (32 tests passing)
 - `repolens init` - Scaffold configuration and GitHub Actions workflow
 - `repolens doctor` - Validate repository setup (config, environment, etc.)
 - `repolens publish` - Scan repo, generate docs (with optional AI), publish to outputs
+- `repolens migrate` - Migrate legacy workflows to current format
 - `repolens version` - Display version
 - `repolens help` - Show usage
 
@@ -93,6 +118,12 @@ tests/                  # Vitest test suite (32 tests passing)
 - **Strict Prompts**: Word limits, required sections, concrete prose, no speculation
 - **Provider Agnostic**: OpenAI, Anthropic, Azure, local models (Ollama)
 - **Graceful Fallback**: Deterministic docs generated if AI fails or disabled
+
+### Multi-Platform Publishing
+- **Notion**: Create/update pages with branch-aware namespacing
+- **Confluence**: Atlassian Cloud REST API v1, storage format (HTML-like), Basic Auth (email + API token)
+- **Markdown**: Write to `.repolens/` directory
+- **Discord**: Rich embed notifications via webhooks (publish metrics, coverage stats)
 
 ### Business Domain Inference
 - **Purpose**: Map code structure to business functions
@@ -115,7 +146,7 @@ tests/                  # Vitest test suite (32 tests passing)
 - **Storage**: `.repolens/artifacts/` for debugging and inspection
 
 ### Branch-Aware Publishing
-- **Problem**: Multiple branches publishing to same Notion pages causes conflicts
+- **Problem**: Multiple branches publishing to same Notion/Confluence pages causes conflicts
 - **Solution**: `.repolens.yml` → `notion.branches` array filters which branches publish
 - **Title Namespacing**: Non-main branches get `[branch-name]` suffix
 - **Cache Scoping**: Branch-specific cache keys prevent cross-branch pollution
@@ -129,7 +160,18 @@ tests/                  # Vitest test suite (32 tests passing)
 - **Approach**: Simple box-drawing characters with emoji icons (🎯, ⚙️, 📋, 🔌, 🛠️, ✅, 📦)
 - **Benefits**: Always works, no external dependencies, no URL length limits
 - **Removed**: Mermaid CLI, SVG generation, mermaid.ink fallback complexity
-- **Reliability**: 100% success rate in Notion and Markdown
+- **Reliability**: 100% success rate in Notion, Confluence, and Markdown
+
+### Security Features
+- **Secret Detection**: Scans for API keys, tokens, passwords, connection strings (OpenAI, GitHub, AWS, Notion, etc.)
+- **Config Validation**: Schema validation with injection prevention
+- **CI Security Gates**: Dependency audit + secret scanning before every publish and release
+- **Telemetry Sanitization**: Secrets stripped before any data leaves the system
+
+### Telemetry & Metrics
+- **Error Tracking**: Opt-in Sentry integration (`REPOLENS_TELEMETRY_ENABLED=true`)
+- **Usage Metrics**: Documentation coverage, health scoring, staleness detection
+- **Rate Limiting**: Token bucket algorithm for API calls (Notion: 3 req/s)
 
 ## Coding Conventions
 
@@ -139,7 +181,7 @@ tests/                  # Vitest test suite (32 tests passing)
 - File imports require `.js` extension
 
 ### Dependencies
-- **Runtime**: dotenv, fast-glob, js-yaml, node-fetch
+- **Runtime**: dotenv, fast-glob, js-yaml, node-fetch, @sentry/node
 - **Optional**: @mermaid-js/mermaid-cli (50MB, interactive install)
 - **Dev**: vitest
 - Keep dependencies minimal - favor Node.js built-ins
@@ -151,16 +193,18 @@ tests/                  # Vitest test suite (32 tests passing)
 
 ### Testing
 - Framework: Vitest (`vitest run --no-watch --reporter=verbose`)
-- Test files: `tests/*.test.js`
+- Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
-- Test config discovery, validation, rendering, branch detection
-- **Coverage**: 32 tests passing (14 base + 18 branch tests)
+- Test config discovery, validation, rendering, branch detection, migration, security fuzzing
+- **Coverage**: 90 tests passing across 11 test files
+- Run: `npm test`
 
 ### Configuration
 - Config file: `.repolens.yml` (auto-discovered from cwd or parent directories)
 - YAML format with js-yaml parser
 - Schema version: `configVersion: 1` (for future migrations)
-- Must specify publishers (notion, markdown) and scan patterns
+- Supported publishers: `notion`, `markdown`, `confluence`
+- Supported page keys: `system_overview`, `module_catalog`, `api_surface`, `arch_diff`, `route_map`, `system_map`, `executive_summary`, `business_domains`, `architecture_overview`, `data_flows`, `change_impact`, `developer_onboarding`
 
 ### Async/Await
 - Use async/await throughout (not callbacks or raw promises)
@@ -174,17 +218,37 @@ tests/                  # Vitest test suite (32 tests passing)
 
 ### API Integration
 - Notion API: Use retry logic from `src/utils/retry.js`
-- Rate limiting: Implement backoff strategies (3 retries, exponential backoff)
+- Confluence API: Basic Auth (email:api_token), storage format content
+- Rate limiting: Token bucket algorithm in `src/utils/rate-limit.js` (3 req/s default)
+- Retry: Exponential backoff (3 retries) via `src/utils/retry.js`
 - Environment variables: Load via dotenv, document in `.env.example`
 
 ## Publishing Workflow
 
 1. **Scan**: Parse repository structure with fast-glob, extract metadata from package.json
-2. **Render**: Generate Markdown documentation with optional Mermaid diagrams
-3. **Publish**: 
-   - **Notion**: Create/update pages, embed SVGs or mermaid.ink images
-   - **Markdown**: Write to `.repolens/` directory with SVG embeds
-4. **Deliver**: Optionally post PR comments with diffs
+2. **Render**: Generate Markdown documentation with Unicode architecture diagrams
+3. **Publish**:
+   - **Notion**: Create/update pages via Notion API
+   - **Confluence**: Create/update pages via REST API v1 (storage format with code block handling)
+   - **Markdown**: Write to `.repolens/` directory
+4. **Notify**: Send Discord webhook with publish metrics
+5. **Deliver**: Optionally post PR comments with diffs
+
+## CI/CD Workflows
+
+### Publish Documentation (`publish-docs.yml`)
+- **Trigger**: Push to any branch + manual dispatch
+- **Jobs**: Security audit → Publish docs
+- **Install**: `npm install` (NOT `npm ci` — avoids rollup optional dep issues on Linux)
+- **Run**: `node bin/repolens.js publish` (uses local code, not npx from npm)
+- **Env**: Notion, Confluence, Discord, AI secrets from GitHub Actions secrets
+
+### Release (`release.yml`)
+- **Trigger**: Push of `v*` tags
+- **Jobs**: Security audit → Release (test, pack, GitHub Release, npm publish)
+- **Install**: `npm install` (NOT `npm ci`)
+- **npm Publish**: Uses `NODE_AUTH_TOKEN` from `NPM_TOKEN` secret
+- **Important**: Always use `npm install` instead of `npm ci` in CI — `npm ci` silently fails to install platform-specific optional dependencies like `@rollup/rollup-linux-x64-gnu`
 
 ## Git Integration
 
@@ -202,6 +266,8 @@ tests/                  # Vitest test suite (32 tests passing)
 6. **Exit Codes**: 0 for success, 1 for errors, 2 for validation failures
 7. **Performance Guardrails**: Warn at 10k files, fail at 50k files
 8. **Branch Safety**: Default to safe behavior (publish all branches) with opt-in filtering
+9. **Secret Safety**: Never log or embed secrets — use `src/utils/secrets.js` for detection
+10. **CI Install**: Always use `npm install` (not `npm ci`) in GitHub Actions workflows
 
 ## Development Workflow
 
@@ -220,7 +286,7 @@ npm run test:install
 npm run test:notion
 npm run init:test
 
-# Release workflow
+# Release workflow (auto-publishes to npm via GitHub Actions)
 npm run release:patch  # or minor or major
 git push --follow-tags
 ```
@@ -255,6 +321,47 @@ if (shouldPublishToNotion(branch, config)) {
 }
 ```
 
+### Discord Notifications
+```javascript
+import { sendDiscordNotification } from "./integrations/discord.js";
+await sendDiscordNotification(webhookUrl, {
+  repoName, branch, pagesPublished, coverage
+});
+```
+
+### Telemetry
+```javascript
+import { initTelemetry, captureError, trackUsage } from "./utils/telemetry.js";
+initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
+```
+
+## Environment Variables
+
+### Required (for publishing)
+- `NOTION_TOKEN` - Notion integration token
+- `NOTION_PARENT_PAGE_ID` - Parent page for Notion docs
+
+### Confluence (optional)
+- `CONFLUENCE_URL` - Base URL (e.g., https://company.atlassian.net/wiki)
+- `CONFLUENCE_EMAIL` - Atlassian account email
+- `CONFLUENCE_API_TOKEN` - API token from Atlassian
+- `CONFLUENCE_SPACE_KEY` - Target space key
+- `CONFLUENCE_PARENT_PAGE_ID` - Parent page ID
+
+### Discord (optional)
+- `DISCORD_WEBHOOK_URL` - Webhook URL for notifications
+
+### AI Enhancement (optional)
+- `REPOLENS_AI_ENABLED` - Enable AI-powered sections (true/false)
+- `REPOLENS_AI_API_KEY` - API key for AI provider
+- `REPOLENS_AI_BASE_URL` - API base URL (default: https://api.openai.com/v1)
+- `REPOLENS_AI_MODEL` - Model name (e.g., gpt-4-turbo-preview)
+- `REPOLENS_AI_TEMPERATURE` - Generation temperature (default: 0.3)
+- `REPOLENS_AI_MAX_TOKENS` - Max tokens per request (default: 2000)
+
+### Telemetry (optional)
+- `REPOLENS_TELEMETRY_ENABLED` - Enable Sentry error tracking (true/false)
+
 ## Avoid
 
 - ❌ CommonJS (`require`, `module.exports`)
@@ -263,10 +370,12 @@ if (shouldPublishToNotion(branch, config)) {
 - ❌ console.log (use logger utilities)
 - ❌ Large dependencies (keep bundle small, ~4MB limit)
 - ❌ Breaking changes to config schema without migration and `configVersion` bump
+- ❌ `npm ci` in CI workflows (use `npm install` — see CI/CD section)
+- ❌ `npx @chappibunny/repolens@latest` in CI (use `node bin/repolens.js` for local code)
 
 ## Future Enhancements
 
-- Additional publishers (Confluence, GitHub Wiki, Obsidian)
+- Additional publishers (GitHub Wiki, Obsidian)
 - Enhanced diff visualization with visual diffs
 - Interactive configuration wizard (`repolens init --interactive`)
 - Watch mode for local development (`repolens watch`)

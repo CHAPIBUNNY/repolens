@@ -1,6 +1,6 @@
 {
   "name": "@chappibunny/repolens",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "AI-assisted documentation intelligence system for technical and non-technical audiences",
   "license": "MIT",
   "type": "module",
@@ -22,15 +22,15 @@
     "architecture",
     "github",
     "notion",
+    "confluence",
     "markdown",
     "developer-tools",
-    "rabitai",
     "repolens",
     "observability",
-    "dashboard",
     "metrics",
     "team-collaboration",
-    "discord"
+    "discord",
+    "ai-documentation"
   ],
   "repository": {
     "type": "git",
