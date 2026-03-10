@@ -248,7 +248,7 @@ tests/                    # Vitest test suite (90 tests across 11 files)
 - **Jobs**: Security audit → Release (test, pack, GitHub Release, npm publish)
 - **Install**: `npm install` (NOT `npm ci`)
 - **npm Publish**: Uses `NODE_AUTH_TOKEN` from `NPM_TOKEN` secret
-- **Important**: Always use `npm install` instead of `npm ci` in CI — `npm ci` silently fails to install platform-specific optional dependencies like `@rollup/rollup-linux-x64-gnu`
+- **Important**: Always use `npm install` instead of `npm ci` in CI, AND delete `package-lock.json` before install — `npm install` with a macOS-generated lockfile still fails to resolve platform-specific optional dependencies like `@rollup/rollup-linux-x64-gnu` on Linux runners
 
 ## Git Integration
 
