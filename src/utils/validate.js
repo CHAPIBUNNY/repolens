@@ -135,7 +135,7 @@ function validatePublishers(publishers) {
     return errors;
   }
   
-  const validPublishers = ["notion", "markdown"];
+  const validPublishers = ["notion", "markdown", "confluence"];
   
   if (Array.isArray(publishers)) {
     for (const pub of publishers) {

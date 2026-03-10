@@ -79,6 +79,11 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
+          CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+          CONFLUENCE_EMAIL: ${{ secrets.CONFLUENCE_EMAIL }}
+          CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+          CONFLUENCE_SPACE_KEY: ${{ secrets.CONFLUENCE_SPACE_KEY }}
+          CONFLUENCE_PARENT_PAGE_ID: ${{ secrets.CONFLUENCE_PARENT_PAGE_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           REPOLENS_AI_ENABLED: true
           REPOLENS_AI_API_KEY: ${{ secrets.REPOLENS_AI_API_KEY }}
@@ -86,4 +91,4 @@ jobs:
           REPOLENS_AI_MODEL: gpt-4-turbo-preview
           REPOLENS_AI_TEMPERATURE: 0.3
           REPOLENS_AI_MAX_TOKENS: 2000
-        run: npx @rabitai/repolens@latest publish
+        run: node bin/repolens.js publish

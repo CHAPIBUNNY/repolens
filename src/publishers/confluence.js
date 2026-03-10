@@ -142,8 +142,17 @@ function markdownToConfluenceStorage(markdown) {
   // Basic Markdown → Storage Format conversion
   // Storage Format is Confluence's HTML-like format
   
-  let html = markdown
-    // Escape HTML entities
+  // STEP 1: Extract and convert code blocks FIRST (before escaping)
+  const codeBlocks = [];
+  let html = markdown.replace(/```(\w+)?\n([\s\S]+?)```/g, (match, lang, code) => {
+    const language = lang || "none";
+    const placeholder = `<<<CODE_BLOCK_${codeBlocks.length}>>>`;
+    codeBlocks.push(`<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">${language}</ac:parameter><ac:plain-text-body><![CDATA[${code}]]></ac:plain-text-body></ac:structured-macro>`);
+    return placeholder;
+  });
+  
+  // STEP 2: Now escape HTML entities (won't affect code blocks)
+  html = html
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -165,17 +174,6 @@ function markdownToConfluenceStorage(markdown) {
     // Links
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
     
-    // Code blocks with language
-    .replace(/```(\w+)?\n([\s\S]+?)```/g, (match, lang, code) => {
-      const language = lang || "none";
-      // Unescape the code content
-      const unescaped = code
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&amp;/g, "&");
-      return `<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">${language}</ac:parameter><ac:plain-text-body><![CDATA[${unescaped}]]></ac:plain-text-body></ac:structured-macro>`;
-    })
-    
     // Horizontal rules
     .replace(/^---$/gm, "<hr />")
     
@@ -194,6 +192,11 @@ function markdownToConfluenceStorage(markdown) {
     
     // Line breaks
     .replace(/\n/g, "");
+
+  // STEP 3: Restore code blocks
+  codeBlocks.forEach((block, index) => {
+    html = html.replace(`&lt;&lt;&lt;CODE_BLOCK_${index}&gt;&gt;&gt;`, block);
+  });
 
   return html;
 }

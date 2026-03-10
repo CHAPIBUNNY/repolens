@@ -11,3 +11,4 @@ dist/
 test-*.sh
 notion-test.js
 INTERACTIVE-TEST-GUIDE.md
+.cache/
