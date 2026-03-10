@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 0.6.3  
+**Current Version:** 0.6.4  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** July 2025
 
 ---
 
-## What's Shipped (v0.1.0 → v0.6.3)
+## What's Shipped (v0.1.0 → v0.6.4)
 
 Everything below is live, tested, and available on npm.
 
@@ -48,7 +48,7 @@ Everything below is live, tested, and available on npm.
 - ✅ CI security gates (dependency audit + secret scanning)
 - ✅ 90 tests across 11 test files (including 43 security/fuzzing tests)
 
-### CI/CD & npm Publishing (v0.5.0 – v0.6.3)
+### CI/CD & npm Publishing (v0.5.0 – v0.6.4)
 - ✅ GitHub Actions: `publish-docs.yml` (every push) + `release.yml` (tag-based)
 - ✅ npm registry publishing (`npm publish --access public`)
 - ✅ Workflow migration tool (`repolens migrate`)

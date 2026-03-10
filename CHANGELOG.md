@@ -2,6 +2,12 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 0.6.4
+
+### 🔧 Maintenance
+- Removed internal infrastructure branding from user-facing documentation
+- Re-published to npm with corrected README and CHANGELOG
+
 ## 0.6.3
 
 ### ✨ New Features
