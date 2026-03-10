@@ -23,7 +23,7 @@ jobs:
           node-version: 20
       
       - name: Install dependencies
-        run: npm install
+        run: rm -f package-lock.json && npm install
       
       - name: Run dependency audit
         run: |
@@ -73,7 +73,7 @@ jobs:
           node-version: 20
       
       - name: Install dependencies
-        run: npm install
+        run: rm -f package-lock.json && npm install
       
       - name: Generate and publish documentation
         env:
