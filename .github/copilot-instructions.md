@@ -105,7 +105,7 @@ tests/                    # Vitest test suite (90 tests across 11 files)
 - `repolens doctor` - Validate repository setup (config, environment, etc.)
 - `repolens publish` - Scan repo, generate docs (with optional AI), publish to outputs
 - `repolens migrate` - Migrate legacy workflows to current format
-- `repolens feedback` - Send feedback to the RepoLens team via Sentry
+- `repolens feedback` - Send feedback to the RepoLens team
 - `repolens version` - Display version
 - `repolens help` - Show usage
 

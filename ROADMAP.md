@@ -44,7 +44,7 @@ Everything below is live, tested, and available on npm.
 - ✅ Input validation with injection prevention (shell, path traversal, command substitution)
 - ✅ Rate limiting (token bucket, 3 req/s for APIs)
 - ✅ Exponential backoff retry logic
-- ✅ Opt-in Sentry telemetry with secret sanitization
+- ✅ Opt-in telemetry with secret sanitization
 - ✅ CI security gates (dependency audit + secret scanning)
 - ✅ 90 tests across 11 test files (including 43 security/fuzzing tests)
 
@@ -53,7 +53,7 @@ Everything below is live, tested, and available on npm.
 - ✅ npm registry publishing (`npm publish --access public`)
 - ✅ Workflow migration tool (`repolens migrate`)
 - ✅ Cross-platform CI fix for optional dependency resolution
-- ✅ Sentry user feedback via `repolens feedback` command
+- ✅ User feedback via `repolens feedback` command
 
 ---
 

@@ -5,10 +5,9 @@ All notable changes to RepoLens will be documented in this file.
 ## 0.6.3
 
 ### ✨ New Features
-- **User Feedback**: Added `repolens feedback` CLI command for sending feedback directly to the RepoLens team via Sentry
+- **User Feedback**: Added `repolens feedback` CLI command for sending feedback directly to the RepoLens team
   - Interactive prompts for name, email, and message
   - Works even when telemetry is disabled — feedback is always accepted
-  - Uses `Sentry.captureFeedback()` from `@sentry/node`
 
 ### 🔧 Maintenance
 - Updated version references across all documentation

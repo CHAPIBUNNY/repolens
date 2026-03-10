@@ -20,7 +20,7 @@
 
 AI-assisted documentation intelligence system that generates architecture docs for engineers AND readable system docs for stakeholders
 
-**Current Status**: v0.6.3 — Sentry User Feedback & Team Features
+**Current Status**: v0.6.3 — User Feedback & Team Features
 
 RepoLens automatically generates and maintains living architecture documentation by analyzing your repository structure, extracting meaningful insights from your package.json, and creating visual dependency graphs. Run it once, or let it auto-update on every push.
 
@@ -1190,7 +1190,7 @@ RepoLens is currently in early access. v1.0 will open for community contribution
 
 ## 🗺️ Roadmap to v1.0
 
-**Current Status:** v0.6.3 — Sentry User Feedback & Team Features
+**Current Status:** v0.6.3 — User Feedback & Team Features
 
 ### Completed ✅
 
