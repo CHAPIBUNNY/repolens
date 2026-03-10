@@ -158,7 +158,7 @@ Here are real examples of what we track (sanitized):
 
 - Review our [Privacy Policy](https://github.com/CHAPIBUNNY/repolens#privacy)
 - Open an [issue](https://github.com/CHAPIBUNNY/repolens/issues) with questions
-- Email: trades@rabitaitrades.com
+- Email: trades@chappibunnytrades.com
 
 ---
 

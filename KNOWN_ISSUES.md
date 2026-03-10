@@ -42,7 +42,7 @@ These bugs were discovered in production and have been fixed:
 1. Run `repolens migrate --dry-run` first
 2. Review the diff before applying
 3. Check backup files created as `*.backup`
-4. Test locally with `npx @rabitai/repolens@latest publish`
+4. Test locally with `npx @chappibunny/repolens@latest publish`
 
 #### Multi-File Workflows Not Supported
 **Issue:** If RepoLens publish steps are split across multiple workflow files, migration may miss some.
@@ -162,7 +162,7 @@ AZURE_OPENAI_DEPLOYMENT_NAME=your-deployment
 
 **Workaround:** Use `--config` flag explicitly:
 ```bash
-npx @rabitai/repolens@latest publish --config ../shared/.repolens.yml
+npx @chappibunny/repolens@latest publish --config ../shared/.repolens.yml
 ```
 
 #### YAML Schema Version Compatibility
@@ -177,7 +177,7 @@ npx @rabitai/repolens@latest publish --config ../shared/.repolens.yml
 ## 📦 Package Management
 
 ### Scoped Package Name
-**Issue:** Package was renamed from `repolens` to `@rabitai/repolens` due to npm name conflict.
+**Issue:** Package was renamed from `repolens` to `@chappibunny/repolens` due to npm name conflict.
 
 **Impact:** Old documentation may reference unscoped name.
 
@@ -278,7 +278,7 @@ If you encounter a bug not listed here:
 1. **Check Sentry:** If telemetry enabled, error automatically reported
 2. **GitHub Issues:** https://github.com/CHAPIBUNNY/repolens/issues
 3. **Include:**
-   - RepoLens version (`npx @rabitai/repolens@latest version`)
+   - RepoLens version (`npx @chappibunny/repolens@latest version`)
    - Node.js version (`node --version`)
    - Operating system
    - `.repolens.yml` config (sanitize secrets)

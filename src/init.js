@@ -51,7 +51,7 @@ jobs:
           CONFLUENCE_API_TOKEN: \${{ secrets.CONFLUENCE_API_TOKEN }}
           CONFLUENCE_SPACE_KEY: \${{ secrets.CONFLUENCE_SPACE_KEY }}
           CONFLUENCE_PARENT_PAGE_ID: \${{ secrets.CONFLUENCE_PARENT_PAGE_ID }}
-        run: npx @rabitai/repolens@latest publish
+        run: npx @chappibunny/repolens@latest publish
 `;
 
 const DEFAULT_ENV_EXAMPLE = `# Notion Publishing
@@ -78,7 +78,7 @@ CONFLUENCE_PARENT_PAGE_ID=
 
 const DEFAULT_REPOLENS_README = `# RepoLens Documentation
 
-This repository is configured to use [RepoLens](https://github.com/CHAPIBUNNY/repolens) (@rabitai/repolens) for automatic architecture documentation.
+This repository is configured to use [RepoLens](https://github.com/CHAPIBUNNY/repolens) (@chappibunny/repolens) for automatic architecture documentation.
 
 ## 📋 What RepoLens Created
 
@@ -93,7 +93,7 @@ This repository is configured to use [RepoLens](https://github.com/CHAPIBUNNY/re
 
 \`\`\`bash
 # Test documentation generation locally
-npx @rabitai/repolens publish
+npx @chappibunny/repolens publish
 \`\`\`
 
 ### Notion Publishing
@@ -556,7 +556,7 @@ NOTION_VERSION=2022-06-28
     info("   Your credentials are stored in .env (gitignored)\n");
     info("Next steps:");
     info("  1. Review .repolens.yml to customize your documentation");
-    info("  2. Run 'npx @rabitai/repolens publish' to generate your first docs (deterministic mode)");
+    info("  2. Run 'npx @chappibunny/repolens publish' to generate your first docs (deterministic mode)");
     info("  3. (Optional) Enable AI features by adding to .env:");
     info("     REPOLENS_AI_ENABLED=true");
     info("     REPOLENS_AI_API_KEY=sk-...");
@@ -576,7 +576,7 @@ NOTION_VERSION=2022-06-28
     info("     REPOLENS_AI_ENABLED=true");
     info("     REPOLENS_AI_API_KEY=sk-...");
     info("     See: https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md");
-    info("  4. Run 'npx @rabitai/repolens publish' to test locally");
+    info("  4. Run 'npx @chappibunny/repolens publish' to test locally");
     info("  5. Commit the generated files");
   }
 }

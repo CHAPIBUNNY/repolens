@@ -78,7 +78,7 @@ ai:
 ### 3. Run Publish
 
 ```bash
-npx @rabitai/repolens publish
+npx @chappibunny/repolens publish
 ```
 
 ## AI Providers

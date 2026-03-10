@@ -28,12 +28,12 @@ RepoLens automatically generates and maintains living architecture documentation
 
 **Step 1: Install**
 ```bash
-npm install @rabitai/repolens
+npm install @chappibunny/repolens
 ```
 
 **Step 2: Initialize** (creates config + GitHub Actions workflow)
 ```bash
-npx @rabitai/repolens init
+npx @chappibunny/repolens init
 ```
 
 **Step 3: Configure Publishing** (optional, skip if using Markdown only)
@@ -56,13 +56,13 @@ CONFLUENCE_SPACE_KEY=DOCS
 
 **Step 4: Publish**
 ```bash
-npx @rabitai/repolens publish
+npx @chappibunny/repolens publish
 ```
 
 **Done!** Your docs are now live in Notion, Confluence, and/or `.repolens/` directory.
 
 **🔄 Upgrading from v0.3.0 or earlier?**
-Run `npx @rabitai/repolens migrate` to automatically update your workflow files. See [MIGRATION.md](MIGRATION.md) for details.
+Run `npx @chappibunny/repolens migrate` to automatically update your workflow files. See [MIGRATION.md](MIGRATION.md) for details.
 
 ---
 
@@ -230,7 +230,7 @@ Get notified when documentation changes significantly:
 ### Recommended: npm Registry
 
 ```bash
-npm install @rabitai/repolens
+npm install @chappibunny/repolens
 ```
 
 Installs from npm registry. ✨ **Now available in beta!**
@@ -278,7 +278,7 @@ npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v0.2.0/repo
 Run this in your project root:
 
 ```bash
-npx @rabitai/repolens init
+npx @chappibunny/repolens init
 ```
 
 **What it creates:**
@@ -552,7 +552,7 @@ module_roots:
 Run locally to test:
 
 ```bash
-npx @rabitai/repolens publish
+npx @chappibunny/repolens publish
 ```
 
 **Expected output:**
@@ -622,12 +622,12 @@ git push
 
 Auto-discovers `.repolens.yml`:
 ```bash
-npx @rabitai/repolens publish
+npx @chappibunny/repolens publish
 ```
 
 Specify config path explicitly:
 ```bash
-npx @rabitai/repolens publish --config /path/to/.repolens.yml
+npx @chappibunny/repolens publish --config /path/to/.repolens.yml
 ```
 
 Via npm script (add to package.json):
@@ -644,7 +644,7 @@ Via npm script (add to package.json):
 Check if your RepoLens setup is valid:
 
 ```bash
-npx @rabitai/repolens doctor
+npx @chappibunny/repolens doctor
 ```
 
 Validates:
@@ -659,17 +659,17 @@ Validates:
 **🚨 Upgrading from v0.3.0 or earlier?** Automatically update your GitHub Actions workflows:
 
 ```bash
-npx @rabitai/repolens migrate
+npx @chappibunny/repolens migrate
 ```
 
 Preview changes without applying:
 ```bash
-npx @rabitai/repolens migrate --dry-run
+npx @chappibunny/repolens migrate --dry-run
 ```
 
 What it fixes:
 - ❌ Removes outdated `cd tools/repolens` commands
-- ✅ Updates to `npx @rabitai/repolens@latest publish`
+- ✅ Updates to `npx @chappibunny/repolens@latest publish`
 - ✅ Adds Node.js setup step if missing
 - ✅ Adds environment variables (NOTION_TOKEN, REPOLENS_AI_API_KEY)
 - 💾 Creates backup files for safety
@@ -686,8 +686,8 @@ See [MIGRATION.md](MIGRATION.md) for detailed upgrade guide.
 ### Get Help
 
 ```bash
-npx @rabitai/repolens --help
-npx @rabitai/repolens --version
+npx @chappibunny/repolens --help
+npx @chappibunny/repolens --version
 ```
 
 ---
