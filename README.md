@@ -26,7 +26,9 @@ The CLI, configuration schema, and plugin interface are **stable** as of v1.0. S
 
 ## 🎬 Demo
 
-![RepoLens Demo](repo_demo_movie.gif)
+<a href="https://raw.githubusercontent.com/CHAPIBUNNY/repolens/main/repo_demo_movie.gif">
+  <img src="repo_demo_movie.gif" alt="RepoLens Demo" width="100%">
+</a>
 
 ---
 
