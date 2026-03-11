@@ -26,9 +26,11 @@ The CLI, configuration schema, and plugin interface are **stable** as of v1.0. S
 
 ## 🎬 Demo
 
-<a href="https://raw.githubusercontent.com/CHAPIBUNNY/repolens/main/repo_demo_movie.gif">
-  <img src="repo_demo_movie.gif" alt="RepoLens Demo" width="100%">
-</a>
+> **Try it now** — no installation required. Run `npx @chappibunny/repolens demo` on any repo for an instant local preview.
+
+[![RepoLens Demo](https://img.youtube.com/vi/kj2FlgbLE0g/maxresdefault.jpg)](https://youtu.be/kj2FlgbLE0g)
+
+▶️ *Click to watch on YouTube*
 
 ---
 
