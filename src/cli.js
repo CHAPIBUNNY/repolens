@@ -21,11 +21,13 @@ import { upsertPrComment } from "./delivery/comment.js";
 import { runInit } from "./init.js";
 import { runMigrate } from "./migrate.js";
 import { runWatch } from "./watch.js";
-import { info, error } from "./utils/logger.js";
+import { info, error, warn } from "./utils/logger.js";
 import { formatError } from "./utils/errors.js";
 import { checkForUpdates } from "./utils/update-check.js";
 import { generateDocumentSet } from "./docs/generate-doc-set.js";
 import { writeDocumentSet } from "./docs/write-doc-set.js";
+import { loadPlugins } from "./plugins/loader.js";
+import { PluginManager } from "./plugins/manager.js";
 import { 
   initTelemetry, 
   captureError, 
@@ -313,6 +315,19 @@ async function main() {
       process.exit(2);
     }
 
+    // Load plugins
+    let pluginManager;
+    try {
+      const plugins = await loadPlugins(cfg.plugins, cfg.__repoRoot);
+      pluginManager = new PluginManager(plugins);
+      if (pluginManager.hasPlugins()) {
+        info(`Loaded ${pluginManager.count} plugin(s): ${pluginManager.names.join(", ")}`);
+      }
+    } catch (err) {
+      warn(`Plugin loading failed: ${err.message}`);
+      pluginManager = new PluginManager([]);
+    }
+
     try {
       info("Scanning repository...");
       const scanTimer = startTimer("scan");
@@ -336,7 +351,7 @@ async function main() {
     try {
       info("Generating documentation set...");
       const renderTimer = startTimer("render");
-      const docSet = await generateDocumentSet(scan, cfg, rawDiff);
+      const docSet = await generateDocumentSet(scan, cfg, rawDiff, pluginManager);
       stopTimer(renderTimer);
       
       info("Writing documentation to disk...");
@@ -353,7 +368,7 @@ async function main() {
       
       info("Publishing documentation...");
       const publishTimer = startTimer("publish_docs");
-      await publishDocs(cfg, renderedPages, scan);
+      await publishDocs(cfg, renderedPages, scan, pluginManager);
       stopTimer(publishTimer);
       
       await upsertPrComment(diffData);

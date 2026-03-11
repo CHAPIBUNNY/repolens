@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 0.8.0  
+**Version:** 0.9.0  
 **Status:** Production-ready, pre-v1.0 stability guarantees  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -91,7 +91,10 @@ src/
     rate-limit.js         # Token bucket rate limiter for APIs
     secrets.js            # Secret detection & sanitization
     telemetry.js          # Opt-in error tracking + performance timers
-tests/                    # Vitest test suite (121 tests across 12 files)
+  plugins/
+    loader.js             # Plugin resolution and dynamic import
+    manager.js            # Plugin registry and lifecycle orchestration
+tests/                    # Vitest test suite (163 tests across 14 files)
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
   config-discovery.test.js # Config auto-discovery tests
@@ -103,6 +106,7 @@ tests/                    # Vitest test suite (121 tests across 12 files)
   migrate.test.js         # Migration tests
   security-fuzzing.test.js # Security fuzzing tests
   extended-analysis.test.js # Extended analysis tests (GraphQL, TS, deps, drift)
+  plugins.test.js         # Plugin system tests (loader, manager, config)
   e2e/
     migration.test.js     # End-to-end migration tests
 ```
@@ -184,6 +188,15 @@ tests/                    # Vitest test suite (121 tests across 12 files)
 - **Usage Metrics**: Documentation coverage, health scoring, staleness detection
 - **Rate Limiting**: Token bucket algorithm for API calls (Notion: 3 req/s)
 
+### Plugin System
+- **Purpose**: Extend RepoLens with custom renderers, publishers, and lifecycle hooks
+- **Loading**: Plugins declared in `.repolens.yml` `plugins` array (local paths or npm packages)
+- **Registration**: ES module exporting `register()` → returns descriptor with `name`, `version`, optional `renderers`, `publishers`, `hooks`
+- **Renderers**: Custom document types with `render(context)` + `title`; merged into document generation pipeline
+- **Publishers**: Custom output targets with `publish(cfg, renderedPages)`; invoked alongside core publishers
+- **Hooks**: `afterScan`, `afterRender`, `afterPublish` — chained in load order, error-isolated per plugin
+- **Validation**: Strict descriptor validation at load time; graceful failure on missing/broken plugins
+
 ## Coding Conventions
 
 ### Module System
@@ -207,7 +220,7 @@ tests/                    # Vitest test suite (121 tests across 12 files)
 - Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
 - Test config discovery, validation, rendering, branch detection, migration, security fuzzing
-- **Coverage**: 121 tests passing across 12 test files
+- **Coverage**: 163 tests passing across 14 test files
 - Run: `npm test`
 
 ### Configuration
@@ -390,6 +403,4 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - Enhanced diff visualization with visual diffs
 - Interactive configuration wizard (`repolens init --interactive`)
 - Watch mode for local development (`repolens watch`)
-- Plugin system for custom renderers
-- GraphQL schema detection
-- TypeScript type graph analysis
+- ~~Plugin system for custom renderers~~ ✅ Shipped in v0.9.0

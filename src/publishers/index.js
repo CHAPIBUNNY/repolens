@@ -16,7 +16,7 @@ function hasNotionSecrets() {
   return !!process.env.NOTION_TOKEN && !!process.env.NOTION_PARENT_PAGE_ID;
 }
 
-export async function publishDocs(cfg, renderedPages, scanResult) {
+export async function publishDocs(cfg, renderedPages, scanResult, pluginManager = null) {
   const publishers = cfg.publishers || ["markdown", "notion"];
   const currentBranch = getCurrentBranch();
   const publishedTo = [];
@@ -80,6 +80,23 @@ export async function publishDocs(cfg, renderedPages, scanResult) {
     }
   }
 
+  // Run plugin publishers
+  if (pluginManager) {
+    const pluginPublishers = pluginManager.getPublishers();
+    for (const [key, publisher] of Object.entries(pluginPublishers)) {
+      if (publishers.includes(key)) {
+        try {
+          info(`Publishing via plugin: ${key}`);
+          await publisher.publish(cfg, renderedPages);
+          publishedTo.push(key);
+        } catch (err) {
+          publishStatus = "failure";
+          throw err;
+        }
+      }
+    }
+  }
+
   // Collect metrics and send Discord notification
   try {
     info("Collecting documentation metrics...");
@@ -138,4 +155,9 @@ export async function publishDocs(cfg, renderedPages, scanResult) {
   
   // Track publishing metrics
   trackPublishing(publishedTo, publishStatus);
+
+  // Run afterPublish hook
+  if (pluginManager) {
+    await pluginManager.runHook("afterPublish", { publishedTo, publishStatus });
+  }
 }

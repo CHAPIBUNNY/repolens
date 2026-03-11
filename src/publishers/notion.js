@@ -333,8 +333,7 @@ function markdownToNotionBlocks(markdown) {
             table_width: columnCount,
             has_column_header: true,
             has_row_header: false,
-            children: tableRows.map((row, rowIdx) => ({
-              object: "block",
+            children: tableRows.map((row) => ({
               type: "table_row",
               table_row: {
                 cells: row.slice(0, columnCount).map(cell => parseInlineRichText(cell))
@@ -447,6 +446,9 @@ function markdownToNotionBlocks(markdown) {
 
   return blocks;
 }
+
+// Exported for testing
+export { markdownToNotionBlocks, parseInlineRichText };
 
 export async function replacePageContent(pageId, markdown) {
   // Ensure page is unarchived before editing

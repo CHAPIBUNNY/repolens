@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 0.8.0  
+**Current Version:** 0.9.0  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** March 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v0.8.0)
+## What's Shipped (v0.1.0 → v0.9.0)
 
 Everything below is live, tested, and available on npm.
 
@@ -46,7 +46,7 @@ Everything below is live, tested, and available on npm.
 - ✅ Exponential backoff retry logic
 - ✅ Opt-in telemetry with secret sanitization
 - ✅ CI security gates (dependency audit + secret scanning)
-- ✅ 121 tests across 12 test files (including 43 security/fuzzing tests)
+- ✅ 163 tests across 14 test files (including 43 security/fuzzing tests)
 
 ### CI/CD & npm Publishing (v0.5.0 – v0.6.4)
 - ✅ GitHub Actions: `publish-docs.yml` (every push) + `release.yml` (tag-based)
@@ -68,7 +68,16 @@ Everything below is live, tested, and available on npm.
 - ✅ Dependency graph with cycle detection (ES/CJS imports, iterative DFS, hub/orphan analysis)
 - ✅ Architecture drift detection (8 categories, severity levels, baseline snapshots)
 - ✅ 4 new document types (graphql_schema, type_graph, dependency_graph, architecture_drift)
-- ✅ 121 tests across 12 test files
+- ✅ 163 tests across 14 test files
+
+### Plugin System (v0.9.0)
+- ✅ Plugin loader: resolve local paths and npm packages
+- ✅ Plugin manager: registry, getters, lifecycle hook runner
+- ✅ Custom renderers: plugins register new document types with `render(context)` functions
+- ✅ Custom publishers: plugins register new output targets with `publish(cfg, renderedPages)` functions
+- ✅ Lifecycle hooks: `afterScan`, `afterRender`, `afterPublish` with chained transforms
+- ✅ Config support: `plugins` array in `.repolens.yml`
+- ✅ 163 tests across 14 test files
 
 ---
 
@@ -82,7 +91,7 @@ Everything below is live, tested, and available on npm.
 - Semantic versioning with breaking change guarantees
 
 **Additional Features:**
-- [ ] Plugin system for custom renderers and publishers
+- [x] Plugin system for custom renderers and publishers
 - [ ] VS Code extension for in-editor architecture visualization
 - [ ] GitHub App for automated setup and status checks
 

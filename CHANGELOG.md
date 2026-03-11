@@ -2,6 +2,29 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 0.9.0
+
+### ✨ New Features
+- **Plugin System** (`src/plugins/`): Extensible architecture for custom renderers and publishers
+  - `loader.js`: Resolves and imports plugins from local paths or npm packages
+  - `manager.js`: `PluginManager` class — registry, getters, and lifecycle hook runner
+  - Plugin interface: `register()` → `{ name, version, renderers, publishers, hooks }`
+  - **Custom Renderers**: Plugins can register new document types with `render(context)` functions
+  - **Custom Publishers**: Plugins can register new output targets with `publish(cfg, renderedPages)` functions
+  - **Lifecycle Hooks**: `afterScan`, `afterRender`, `afterPublish` — transform data or trigger side effects
+  - Hooks run in plugin load order; errors are caught per-plugin without breaking the pipeline
+  - Config: `plugins: ["./my-plugin.js", "@org/repolens-plugin-foo"]` in `.repolens.yml`
+  - Config schema updated: `plugins` array validated, custom publisher names accepted
+
+### 🧪 Tests
+- Added 21 new plugin tests + 21 publisher parser tests (163 tests across 14 files)
+
+### 🔧 Output Quality
+- **Notion Publisher**: Full table support (table blocks with `table_row` children), blockquote → callout, dividers, numbered lists, h3 headings, inline rich text (`**bold**`, `*italic*`, `` `code` ``)
+- **Confluence Publisher**: Rewritten as line-by-line parser — proper `<table>` HTML output, blockquotes → info panels, merged `<ul>`/`<ol>` lists, fixed code block HTML entity escaping bug
+- **Renderers**: Tables replace bullet-point lists across all 8 renderers, descriptive prose, removed ASCII banner art
+- **Fallback Generators**: All 6 deterministic fallbacks rewritten with tables, descriptive paragraphs, and module descriptions
+
 ## 0.8.0
 
 ### ✨ New Features

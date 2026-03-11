@@ -3,7 +3,7 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** July 2025  
-**Version:** 0.8.0
+**Version:** 0.9.0
 
 ---
 
@@ -36,7 +36,7 @@ These bugs were discovered in production and have been fixed:
 ### Current Limitations
 
 #### Manual Review Still Recommended
-**Issue:** While migration is highly reliable (121 tests passing), edge cases may exist in complex workflows.
+**Issue:** While migration is highly reliable (163 tests passing), edge cases may exist in complex workflows.
 
 **Workaround:** 
 1. Run `repolens migrate --dry-run` first

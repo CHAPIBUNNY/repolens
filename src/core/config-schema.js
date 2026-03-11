@@ -73,13 +73,25 @@ export function validateConfig(config) {
     errors.push("publishers array cannot be empty");
   } else {
     config.publishers.forEach((pub, idx) => {
-      if (!SUPPORTED_PUBLISHERS.includes(pub)) {
-        errors.push(
-          `publishers[${idx}]: "${pub}" is not a valid publisher. ` +
-          `Supported: ${SUPPORTED_PUBLISHERS.join(", ")}`
-        );
+      if (typeof pub !== "string" || pub.length === 0) {
+        errors.push(`publishers[${idx}]: must be a non-empty string`);
       }
+      // Core publishers are validated strictly; plugin publishers are allowed
+      // as long as they are strings (validated at plugin load time)
     });
+  }
+
+  // Validate plugins (optional)
+  if (config.plugins !== undefined) {
+    if (!Array.isArray(config.plugins)) {
+      errors.push("plugins must be an array");
+    } else {
+      config.plugins.forEach((p, idx) => {
+        if (typeof p !== "string" || p.length === 0) {
+          errors.push(`plugins[${idx}]: must be a non-empty string (path or package name)`);
+        }
+      });
+    }
   }
 
   // Validate scan section

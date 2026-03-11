@@ -121,7 +121,7 @@ RepoLens implements defense-in-depth security:
 **Security Checks (CI/CD)**:
 1. **Dependency Audit**: Fails on critical/high vulnerabilities
 2. **Secrets Scanning**: Detects hardcoded credentials
-3. **Test Suite**: 121 tests including 43 security tests
+3. **Test Suite**: 163 tests including 43 security tests
 
 **Workflow Hardening**:
 ```yaml

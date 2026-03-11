@@ -294,6 +294,9 @@ function inlineMarkdownToHtml(text) {
   return html;
 }
 
+// Exported for testing
+export { markdownToConfluenceStorage };
+
 // Find existing page by title
 async function findPageByTitle(spaceKey, title) {
   try {
