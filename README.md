@@ -24,6 +24,12 @@ The CLI, configuration schema, and plugin interface are **stable** as of v1.0. S
 
 ---
 
+## 🎬 Demo
+
+![RepoLens Demo](repo_demo_movie.gif)
+
+---
+
 ## 🚀 Quick Start (60 seconds)
 
 **Step 1: Install**
