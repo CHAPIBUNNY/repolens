@@ -2,6 +2,37 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.1.0
+
+### ✨ GitHub Wiki Publisher UX Enhancement
+
+Major upgrade to the wiki output quality — better information hierarchy, audience-aware navigation, and richer page structure.
+
+- **Audience-grouped Home page**: Pages organized by reader (Stakeholders, Engineers, New Contributors, Change Tracking) instead of a flat list
+- **Page descriptions**: Each link on Home includes a one-line summary of the page's purpose
+- **Status rail**: Home page now shows a metadata table (project, branch, page count, publisher, source)
+- **Recommended reading order**: Guided path through the docs for first-time readers
+- **Grouped sidebar**: Navigation split into Overview and Architecture sections (plus Custom Pages)
+- **Page metadata headers**: Every page gets a `[← Home](Home)` back-link, audience tag, and branch indicator
+- **Cleaner footer**: Compact format with branch context and Home link
+- **New constants**: `PAGE_DESCRIPTIONS`, `AUDIENCE_GROUPS`, `SIDEBAR_GROUPS`, `PAGE_AUDIENCE`
+- **New helpers**: `getPageDisplayTitle()`, `getCustomPageKeys()`, `wikiLink()`, `pageHeader()`
+
+### 🐛 Bug Fixes
+- **Temperature still sent to GPT-5**: `DEFAULT_TEMPERATURE = 0.2` always leaked into API requests even after v1.0.1 fixes — the fallback chain (`temperature ?? aiConfig.temperature ?? DEFAULT_TEMPERATURE`) guaranteed it was never `undefined`. Removed the default entirely; temperature is now only sent when explicitly configured via `REPOLENS_AI_TEMPERATURE` env var or `ai.temperature` in config.
+
+## 1.0.1
+
+### 🐛 Bug Fixes
+- **GPT-5 API compatibility**: Use `max_completion_tokens` instead of deprecated `max_tokens` parameter
+- **GPT-5 temperature handling**: Omit `temperature` from API requests for models that only support the default value (e.g. gpt-5-mini)
+- Removed all hardcoded `temperature: 0.2` overrides from AI section generators
+- Removed `REPOLENS_AI_TEMPERATURE` from CI workflow and `.env.example`
+- Updated `init` scaffolding to omit temperature from default config
+
+### 🔧 Improvements
+- Upgraded GitHub Actions: checkout v4.2.2, setup-node v4.2.0, Node.js 22
+
 ## 1.0.0
 
 ### 🎉 Stable Release

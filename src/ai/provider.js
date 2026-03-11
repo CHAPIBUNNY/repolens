@@ -4,7 +4,6 @@ import { warn, info } from "../utils/logger.js";
 import { executeAIRequest } from "../utils/rate-limit.js";
 
 const DEFAULT_TIMEOUT_MS = 60000;
-const DEFAULT_TEMPERATURE = 0.2;
 const DEFAULT_MAX_TOKENS = 2500;
 
 export async function generateText({ system, user, temperature, maxTokens, config }) {
@@ -27,8 +26,8 @@ export async function generateText({ system, user, temperature, maxTokens, confi
   const model = process.env.REPOLENS_AI_MODEL || "gpt-5-mini";
   const timeoutMs = parseInt(process.env.REPOLENS_AI_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
   
-  // Use config values as fallback for temperature/maxTokens
-  const resolvedTemp = temperature ?? aiConfig.temperature ?? DEFAULT_TEMPERATURE;
+  // Use config values as fallback for maxTokens; temperature only when explicitly set
+  const resolvedTemp = temperature ?? aiConfig.temperature ?? undefined;
   const resolvedMaxTokens = maxTokens ?? aiConfig.max_tokens ?? DEFAULT_MAX_TOKENS;
   
   // Validate configuration
@@ -90,8 +89,9 @@ async function callOpenAICompatibleAPI({ baseUrl, apiKey, model, system, user, t
         ],
         max_completion_tokens: maxTokens
       };
-      // Some models (e.g. gpt-5-mini) reject non-default temperature values
-      if (temperature != null && temperature !== 1) {
+      // Only send temperature when explicitly configured — some models
+      // (e.g. gpt-5-mini) reject any non-default value
+      if (temperature != null) {
         body.temperature = temperature;
       }
 
@@ -142,7 +142,7 @@ export function getAIConfig() {
     provider: process.env.REPOLENS_AI_PROVIDER || "openai_compatible",
     model: process.env.REPOLENS_AI_MODEL || "gpt-5-mini",
     hasApiKey: !!process.env.REPOLENS_AI_API_KEY,
-    temperature: parseFloat(process.env.REPOLENS_AI_TEMPERATURE || DEFAULT_TEMPERATURE),
+    temperature: process.env.REPOLENS_AI_TEMPERATURE ? parseFloat(process.env.REPOLENS_AI_TEMPERATURE) : undefined,
     maxTokens: parseInt(process.env.REPOLENS_AI_MAX_TOKENS || DEFAULT_MAX_TOKENS)
   };
 }
