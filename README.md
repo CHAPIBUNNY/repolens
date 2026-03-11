@@ -16,7 +16,7 @@
 
 AI-assisted documentation intelligence system that generates architecture docs for engineers AND readable system docs for stakeholders
 
-**Current Status**: v0.7.0 — Polish & Reliability
+**Current Status**: v0.8.0 — Extended Analysis
 
 RepoLens automatically generates and maintains living architecture documentation by analyzing your repository structure, extracting meaningful insights from your package.json, and creating visual dependency graphs. Run it once, or let it auto-update on every push.
 
@@ -133,6 +133,10 @@ RepoLens automatically detects:
 ✅ **Interactive Setup** - Step-by-step configuration wizard (NEW in v0.7.0)  
 ✅ **Performance Metrics** - Timing breakdown for scan/render/publish (NEW in v0.7.0)  
 ✅ **Actionable Errors** - Enhanced error messages with fix guidance (NEW in v0.7.0)  
+✅ **GraphQL Schema Detection** - Discover types, queries, mutations, and resolvers (NEW in v0.8.0)  
+✅ **TypeScript Type Graph** - Map interfaces, classes, and type relationships (NEW in v0.8.0)  
+✅ **Dependency Graph** - Import analysis with circular dependency detection (NEW in v0.8.0)  
+✅ **Architecture Drift** - Track structural changes against a baseline (NEW in v0.8.0)  
 
 ---
 
@@ -224,7 +228,7 @@ npm link
 Install from a specific version:
 
 ```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v0.7.0/chappibunny-repolens-0.7.0.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v0.8.0/chappibunny-repolens-0.8.0.tgz
 ```
 </details>
 
@@ -1077,7 +1081,7 @@ Simulates the full user installation experience:
 npm pack
 
 # Install globally from tarball
-npm install -g chappibunny-repolens-0.7.0.tgz
+npm install -g chappibunny-repolens-0.8.0.tgz
 
 # Verify
 repolens --version
@@ -1101,9 +1105,13 @@ repolens/
 │   │   ├── diff.js          # Git diff operations
 │   │   └── scan.js          # Repository scanning + metadata extraction
 │   ├── analyzers/
-│   │   ├── domain-inference.js  # Business domain mapping
-│   │   ├── context-builder.js   # Structured AI context assembly
-│   │   └── flow-inference.js    # Data flow detection
+│   │   ├── domain-inference.js    # Business domain mapping
+│   │   ├── context-builder.js     # Structured AI context assembly
+│   │   ├── flow-inference.js      # Data flow detection
+│   │   ├── graphql-analyzer.js    # GraphQL schema detection
+│   │   ├── typescript-analyzer.js # TypeScript type graph analysis
+│   │   ├── dependency-graph.js    # Import graph with cycle detection
+│   │   └── drift-detector.js      # Architecture drift detection
 │   ├── ai/
 │   │   ├── provider.js          # Provider-agnostic AI generation
 │   │   ├── prompts.js           # Strict prompt templates
@@ -1113,9 +1121,10 @@ repolens/
 │   │   ├── generate-doc-set.js  # Document generation orchestration
 │   │   └── write-doc-set.js     # Write docs to disk
 │   ├── renderers/
-│   │   ├── render.js        # System overview, catalog, API, routes
-│   │   ├── renderDiff.js    # Architecture diff rendering
-│   │   └── renderMap.js     # Unicode dependency diagrams
+│   │   ├── render.js           # System overview, catalog, API, routes
+│   │   ├── renderDiff.js       # Architecture diff rendering
+│   │   ├── renderMap.js        # Unicode dependency diagrams
+│   │   └── renderAnalysis.js   # Extended analysis renderers
 │   ├── publishers/
 │   │   ├── index.js         # Publisher orchestration + branch filtering
 │   │   ├── publish.js       # Publishing pipeline
@@ -1137,7 +1146,7 @@ repolens/
 │       ├── telemetry.js     # Opt-in error tracking + performance timers
 │       ├── errors.js        # Enhanced error messages with guidance
 │       └── update-check.js  # Version update notifications
-├── tests/                   # Vitest test suite (90 tests across 11 files)
+├── tests/                   # Vitest test suite (121 tests across 12 files)
 ├── .repolens.yml            # Dogfooding config
 ├── package.json
 ├── CHANGELOG.md
@@ -1154,13 +1163,13 @@ RepoLens uses automated GitHub Actions releases.
 ### Creating a Release
 
 ```bash
-# Patch version (0.7.0 → 0.7.1) - Bug fixes
+# Patch version (0.8.0 → 0.8.1) - Bug fixes
 npm run release:patch
 
-# Minor version (0.7.0 → 0.8.0) - New features
+# Minor version (0.8.0 → 0.9.0) - New features
 npm run release:minor
 
-# Major version (0.7.0 → 1.0.0) - Breaking changes
+# Major version (0.8.0 → 1.0.0) - Breaking changes
 npm run release:major
 
 # Push the tag to trigger workflow
@@ -1192,7 +1201,7 @@ RepoLens is currently in early access. v1.0 will open for community contribution
 
 ## 🗺️ Roadmap to v1.0
 
-**Current Status:** v0.7.0 — Polish & Reliability
+**Current Status:** v0.8.0 — Extended Analysis
 
 ### Completed ✅
 
@@ -1208,7 +1217,7 @@ RepoLens is currently in early access. v1.0 will open for community contribution
 - [x] GitHub Actions automation (publish + release)
 - [x] PR architecture diff comments
 - [x] Performance guardrails (10k warning, 50k limit)
-- [x] Comprehensive test suite (90 tests across 11 files)
+- [x] Comprehensive test suite (121 tests across 12 files)
 - [x] Security hardening (secret detection, injection prevention, fuzzing)
 - [x] Discord notifications with rich embeds
 - [x] Documentation coverage & health scoring
@@ -1221,12 +1230,14 @@ RepoLens is currently in early access. v1.0 will open for community contribution
 - [x] Enhanced error messages with actionable guidance
 - [x] Performance monitoring (scan/render/publish timing)
 - [x] Improved documentation coverage scoring
+- [x] GraphQL schema detection (queries, mutations, types, resolvers)
+- [x] TypeScript type graph analysis (interfaces, classes, relationships)
+- [x] Dependency graph with circular dependency detection
+- [x] Architecture drift detection (baseline comparison)
 
 ### Planned for v1.0 🎯
 
 - [ ] Plugin system for custom renderers
-- [ ] GraphQL schema detection
-- [ ] TypeScript type graph analysis
 - [ ] Additional publishers (GitHub Wiki, Obsidian)
 
 See [ROADMAP.md](./ROADMAP.md) for detailed planning.

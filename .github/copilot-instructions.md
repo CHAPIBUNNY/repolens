@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 0.7.0  
+**Version:** 0.8.0  
 **Status:** Production-ready, pre-v1.0 stability guarantees  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -53,6 +53,10 @@ src/
     domain-inference.js   # Business domain mapping from paths
     context-builder.js    # Structured AI context assembly
     flow-inference.js     # Data flow detection via heuristics
+    graphql-analyzer.js   # GraphQL schema detection
+    typescript-analyzer.js # TypeScript type graph analysis
+    dependency-graph.js   # Import graph with cycle detection
+    drift-detector.js     # Architecture drift detection
   ai/
     provider.js           # Provider-agnostic AI text generation
     prompts.js            # Strict prompt templates preventing hallucination
@@ -75,6 +79,7 @@ src/
     render.js             # System overview, module catalog, API surface, route map
     renderDiff.js         # Architecture diff rendering
     renderMap.js          # System map (Unicode dependency diagrams)
+    renderAnalysis.js     # Extended analysis renderers (GraphQL, TS, deps, drift)
   utils/
     logger.js             # Logging utilities
     errors.js             # Enhanced error messages with actionable guidance
@@ -86,7 +91,7 @@ src/
     rate-limit.js         # Token bucket rate limiter for APIs
     secrets.js            # Secret detection & sanitization
     telemetry.js          # Opt-in error tracking + performance timers
-tests/                    # Vitest test suite (90 tests across 11 files)
+tests/                    # Vitest test suite (121 tests across 12 files)
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
   config-discovery.test.js # Config auto-discovery tests
@@ -97,6 +102,7 @@ tests/                    # Vitest test suite (90 tests across 11 files)
   markdown.test.js        # Markdown publisher tests
   migrate.test.js         # Migration tests
   security-fuzzing.test.js # Security fuzzing tests
+  extended-analysis.test.js # Extended analysis tests (GraphQL, TS, deps, drift)
   e2e/
     migration.test.js     # End-to-end migration tests
 ```

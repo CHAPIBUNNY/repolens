@@ -3,7 +3,7 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** July 2025  
-**Version:** 0.7.0
+**Version:** 0.8.0
 
 ---
 
@@ -265,17 +265,15 @@ Do NOT use `npm ci` in GitHub Actions workflows.
 
 ## 🔮 Planned Improvements
 
-### Next Release (v0.7.0)
-- [ ] Interactive config wizard (`repolens init --interactive`)
-- [ ] Watch mode for local development (`repolens watch`)
-- [ ] Performance monitoring (scan/render/publish timing)
-- [ ] Enhanced error messages with actionable guidance
+### Next Release (v0.9.0)
+- [ ] Plugin system for custom renderers
+- [ ] Additional publishers (GitHub Wiki, Obsidian)
 
 ### Future
 - [ ] Plugin system for custom renderers
-- [ ] GraphQL schema detection
-- [ ] TypeScript type graph analysis
 - [ ] Additional publishers (GitHub Wiki, Obsidian)
+- [ ] Cross-repository architecture analysis
+- [ ] VS Code extension for architecture visualization
 
 ---
 

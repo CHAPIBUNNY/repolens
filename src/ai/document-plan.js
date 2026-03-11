@@ -88,6 +88,38 @@ export const DOCUMENT_PLAN = [
     audience: "technical",
     ai: true,
     description: "Quick start guide for new developers"
+  },
+  {
+    key: "graphql_schema",
+    filename: "11-graphql-schema.md",
+    title: "GraphQL Schema",
+    audience: "technical",
+    ai: false,
+    description: "GraphQL types, queries, mutations, and resolver map"
+  },
+  {
+    key: "type_graph",
+    filename: "12-type-graph.md",
+    title: "TypeScript Type Graph",
+    audience: "technical",
+    ai: false,
+    description: "TypeScript interfaces, types, classes, and relationships"
+  },
+  {
+    key: "dependency_graph",
+    filename: "13-dependency-graph.md",
+    title: "Dependency Graph",
+    audience: "technical",
+    ai: false,
+    description: "Module dependency analysis with cycle detection"
+  },
+  {
+    key: "architecture_drift",
+    filename: "14-architecture-drift.md",
+    title: "Architecture Drift",
+    audience: "mixed",
+    ai: false,
+    description: "Structural changes compared to baseline snapshot"
   }
 ];
 

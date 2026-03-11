@@ -21,6 +21,10 @@ const ALL_DOCUMENT_KEYS = [
   "data_flows",
   "change_impact",
   "developer_onboarding",
+  "graphql_schema",
+  "type_graph",
+  "dependency_graph",
+  "architecture_drift",
 ];
 
 /**

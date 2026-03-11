@@ -409,7 +409,8 @@ export async function scanRepo(cfg) {
     api,
     pages,
     metadata,
-    externalApis
+    externalApis,
+    _files: files
   };
   
   // Track scan metrics

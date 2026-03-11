@@ -2,6 +2,19 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 0.8.0
+
+### ✨ New Features
+- **GraphQL Schema Detection** (`src/analyzers/graphql-analyzer.js`): Detects `.graphql`/`.gql` schema files, inline SDL via gql tagged templates, 11 library patterns (Apollo, Yoga, Mercurius, Nexus, Pothos, type-graphql, Relay, urql, etc.), and resolver patterns. Parses queries, mutations, subscriptions, object types, enums, inputs, interfaces, unions, scalars, and directives.
+- **TypeScript Type Graph Analysis** (`src/analyzers/typescript-analyzer.js`): Parses interfaces (with extends), type aliases (with reference extraction), classes (extends + implements), enums, and generic constraints. Builds relationship graph with deduplication, filtering to project-declared types only.
+- **Dependency Graph with Cycle Detection** (`src/analyzers/dependency-graph.js`): Parses ES imports, dynamic imports, CommonJS require, and re-exports. Builds directed adjacency graph with cycle detection via iterative DFS (3-color marking). Tracks hub modules, orphan files, and external dependencies.
+- **Architecture Drift Detection** (`src/analyzers/drift-detector.js`): Compares current architecture against stored baseline snapshots. Detects changes across 8 categories (modules, APIs, pages, dependencies, frameworks, circular deps, GraphQL types, file count). Categorizes drifts by severity: 🔴 critical, 🟡 warning, 🟢 info. Baselines auto-saved to `.repolens/architecture-baseline.json`.
+- **Extended Analysis Renderers** (`src/renderers/renderAnalysis.js`): Markdown renderers for all 4 new document types with tables, Unicode relationship trees, and severity-grouped reports.
+- **4 New Document Types**: `graphql_schema`, `type_graph`, `dependency_graph`, `architecture_drift` — bringing total to 15 audience-aware documents.
+
+### 🧪 Tests
+- Added 31 new tests for extended analysis features (121 tests across 12 files)
+
 ## 0.7.0
 
 ### ✨ New Features

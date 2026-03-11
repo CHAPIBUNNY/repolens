@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 0.7.0  
+**Current Version:** 0.8.0  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** July 2025
 
 ---
 
-## What's Shipped (v0.1.0 → v0.7.0)
+## What's Shipped (v0.1.0 → v0.8.0)
 
 Everything below is live, tested, and available on npm.
 
@@ -62,14 +62,13 @@ Everything below is live, tested, and available on npm.
 - ✅ Performance monitoring (scan/render/publish timing summary)
 - ✅ Documentation coverage scoring improvements (section completeness, metrics.json snapshots)
 
----
-
-## v0.8.0 — Extended Analysis
-
-- [ ] GraphQL schema detection
-- [ ] TypeScript type graph analysis
-- [ ] Dependency graph visualization with cycle detection
-- [ ] Architecture drift detection (compare against reference snapshots)
+### Extended Analysis (v0.8.0)
+- ✅ GraphQL schema detection (schema files, inline SDL, 11 library patterns, resolver detection)
+- ✅ TypeScript type graph analysis (interfaces, type aliases, classes, enums, relationship graph)
+- ✅ Dependency graph with cycle detection (ES/CJS imports, iterative DFS, hub/orphan analysis)
+- ✅ Architecture drift detection (8 categories, severity levels, baseline snapshots)
+- ✅ 4 new document types (graphql_schema, type_graph, dependency_graph, architecture_drift)
+- ✅ 121 tests across 12 test files
 
 ---
 

@@ -2,6 +2,10 @@
 
 import { buildAIContext, buildModuleContext } from "../analyzers/context-builder.js";
 import { inferDataFlows } from "../analyzers/flow-inference.js";
+import { analyzeGraphQL } from "../analyzers/graphql-analyzer.js";
+import { analyzeTypeScript } from "../analyzers/typescript-analyzer.js";
+import { analyzeDependencyGraph } from "../analyzers/dependency-graph.js";
+import { buildSnapshot, loadBaseline, saveBaseline, detectDrift } from "../analyzers/drift-detector.js";
 import { getActiveDocuments } from "../ai/document-plan.js";
 import {
   generateExecutiveSummary,
@@ -16,7 +20,14 @@ import { renderRouteMap as renderRouteMapOriginal } from "../renderers/render.js
 import { renderApiSurface as renderApiSurfaceOriginal } from "../renderers/render.js";
 import { renderSystemMap } from "../renderers/renderMap.js";
 import { renderArchitectureDiff } from "../renderers/renderDiff.js";
+import {
+  renderGraphQLSchema,
+  renderTypeGraph,
+  renderDependencyGraph,
+  renderArchitectureDrift as renderDriftReport
+} from "../renderers/renderAnalysis.js";
 import { info } from "../utils/logger.js";
+import path from "node:path";
 
 export async function generateDocumentSet(scanResult, config, diffData = null) {
   info("Building structured context for AI...");
@@ -25,6 +36,23 @@ export async function generateDocumentSet(scanResult, config, diffData = null) {
   const aiContext = buildAIContext(scanResult, config);
   const moduleContext = buildModuleContext(scanResult.modules, config);
   const flows = inferDataFlows(scanResult, config);
+  
+  // Run extended analysis (v0.8.0)
+  const repoRoot = config.__repoRoot || process.cwd();
+  const scanFiles = scanResult._files || [];
+  
+  info("Running extended analysis...");
+  const graphqlResult = await analyzeGraphQL(scanFiles, repoRoot);
+  const tsResult = await analyzeTypeScript(scanFiles, repoRoot);
+  const depGraph = await analyzeDependencyGraph(scanFiles, repoRoot);
+  
+  // Architecture drift detection
+  const outputDir = path.join(repoRoot, ".repolens");
+  const baseline = await loadBaseline(outputDir);
+  const snapshot = buildSnapshot(scanResult, depGraph, graphqlResult, tsResult);
+  const driftResult = detectDrift(baseline, snapshot);
+  // Save current snapshot as new baseline
+  await saveBaseline(snapshot, outputDir);
   
   // Get active documents based on config
   const activeDocuments = getActiveDocuments(config);
@@ -35,7 +63,11 @@ export async function generateDocumentSet(scanResult, config, diffData = null) {
   const artifacts = {
     context: aiContext,
     modules: moduleContext,
-    flows
+    flows,
+    graphql: graphqlResult.detected ? graphqlResult : undefined,
+    typescript: tsResult.detected ? tsResult : undefined,
+    dependencyGraph: depGraph.stats,
+    drift: driftResult,
   };
   
   // Generate each document
@@ -49,7 +81,11 @@ export async function generateDocumentSet(scanResult, config, diffData = null) {
         aiContext,
         moduleContext,
         flows,
-        diffData
+        diffData,
+        graphqlResult,
+        tsResult,
+        depGraph,
+        driftResult,
       });
       
       documents.push({
@@ -74,7 +110,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null) {
 
 async function generateDocument(docPlan, context) {
   const { key } = docPlan;
-  const { scanResult, config, aiContext, moduleContext, flows, diffData } = context;
+  const { scanResult, config, aiContext, moduleContext, flows, diffData, graphqlResult, tsResult, depGraph, driftResult } = context;
   
   switch (key) {
     case "executive_summary":
@@ -116,6 +152,18 @@ async function generateDocument(docPlan, context) {
       
     case "developer_onboarding":
       return await generateDeveloperOnboarding(aiContext);
+      
+    case "graphql_schema":
+      return renderGraphQLSchema(graphqlResult);
+      
+    case "type_graph":
+      return renderTypeGraph(tsResult);
+      
+    case "dependency_graph":
+      return renderDependencyGraph(depGraph);
+      
+    case "architecture_drift":
+      return renderDriftReport(driftResult);
       
     default:
       throw new Error(`Unknown document type: ${key}`);
