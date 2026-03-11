@@ -216,7 +216,7 @@ describe("GitHub Wiki Publisher", () => {
       }
     });
 
-    it("generates sidebar with correct wiki links", async () => {
+    it("generates sidebar with grouped wiki links", async () => {
       const { publishToGitHubWiki } = await import("../src/publishers/github-wiki.js");
 
       let writtenFiles = {};
@@ -230,14 +230,11 @@ describe("GitHub Wiki Publisher", () => {
         return "";
       });
 
-      // Intercept fs.writeFile to capture what's written
-      const originalWriteFile = fs.writeFile;
       const writeSpy = vi.spyOn(fs, "writeFile").mockImplementation(async (filePath, content, enc) => {
         const basename = path.basename(filePath);
         writtenFiles[basename] = content;
       });
 
-      // Also mock mkdtemp and rm
       vi.spyOn(fs, "mkdtemp").mockResolvedValue(tmpDir);
       vi.spyOn(fs, "rm").mockResolvedValue(undefined);
 
@@ -249,21 +246,35 @@ describe("GitHub Wiki Publisher", () => {
       const pages = {
         system_overview: "# Overview",
         api_surface: "# API",
+        executive_summary: "# Exec Summary",
       };
 
       await publishToGitHubWiki(cfg, pages);
 
-      // Sidebar should exist
+      // Sidebar should have grouped sections and wiki links
       expect(writtenFiles["_Sidebar.md"]).toBeDefined();
+      expect(writtenFiles["_Sidebar.md"]).toContain("[[Home]]");
+      expect(writtenFiles["_Sidebar.md"]).toContain("**Overview**");
+      expect(writtenFiles["_Sidebar.md"]).toContain("**Architecture**");
       expect(writtenFiles["_Sidebar.md"]).toContain("[[System Overview|System-Overview]]");
       expect(writtenFiles["_Sidebar.md"]).toContain("[[API Surface|API-Surface]]");
+      expect(writtenFiles["_Sidebar.md"]).toContain("[[Executive Summary|Executive-Summary]]");
 
       // Footer should NOT exist (footer: false)
       expect(writtenFiles["_Footer.md"]).toBeUndefined();
 
-      // Home.md should exist
+      // Home.md should have audience-grouped layout
       expect(writtenFiles["Home.md"]).toBeDefined();
       expect(writtenFiles["Home.md"]).toContain("MyApp Documentation");
+      expect(writtenFiles["Home.md"]).toContain("For Stakeholders");
+      expect(writtenFiles["Home.md"]).toContain("For Engineers");
+      expect(writtenFiles["Home.md"]).toContain("For New Contributors");
+      expect(writtenFiles["Home.md"]).toContain("## Status");
+
+      // Pages should have metadata headers
+      expect(writtenFiles["System-Overview.md"]).toBeDefined();
+      expect(writtenFiles["System-Overview.md"]).toContain("[← Home](Home)");
+      expect(writtenFiles["System-Overview.md"]).toContain("**Audience:**");
 
       writeSpy.mockRestore();
     });

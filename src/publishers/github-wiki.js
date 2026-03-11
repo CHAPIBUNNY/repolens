@@ -58,33 +58,125 @@ const PAGE_TITLES = {
   arch_diff: "Architecture Diff",
 };
 
+const PAGE_DESCRIPTIONS = {
+  executive_summary: "High-level project summary for non-technical readers.",
+  system_overview: "Snapshot of stack, scale, structure, and detected capabilities.",
+  business_domains: "Functional areas inferred from the repository and business logic.",
+  architecture_overview: "Layered technical view of the system and its major components.",
+  module_catalog: "Structured inventory of modules, directories, and responsibilities.",
+  route_map: "Frontend routes and page structure detected across the application.",
+  api_surface: "Detected endpoints, handlers, methods, and API structure.",
+  data_flows: "How information moves through the system and its major pathways.",
+  change_impact: "Contextual architecture changes and likely downstream effects.",
+  system_map: "Visual map of system relationships and dependencies.",
+  developer_onboarding: "What a new engineer needs to understand the repository quickly.",
+  graphql_schema: "GraphQL types, operations, and schema structure.",
+  type_graph: "Type-level relationships and structural coupling across the codebase.",
+  dependency_graph: "Module and package dependency relationships.",
+  architecture_drift: "Detected drift between intended and current architecture patterns.",
+  arch_diff: "Architecture-level diff across branches or revisions.",
+};
+
+// Audience-based grouping for Home page
+const AUDIENCE_GROUPS = [
+  {
+    title: "For Stakeholders",
+    emoji: "📊",
+    keys: ["executive_summary", "business_domains", "data_flows"],
+  },
+  {
+    title: "For Engineers",
+    emoji: "🔧",
+    keys: [
+      "architecture_overview", "module_catalog", "api_surface",
+      "route_map", "system_map", "graphql_schema", "type_graph",
+      "dependency_graph", "architecture_drift",
+    ],
+  },
+  {
+    title: "For New Contributors",
+    emoji: "🚀",
+    keys: ["developer_onboarding", "system_overview"],
+  },
+  {
+    title: "Change Tracking",
+    emoji: "📋",
+    keys: ["change_impact", "arch_diff"],
+  },
+];
+
+// Sidebar grouping (compact navigation)
+const SIDEBAR_GROUPS = [
+  {
+    title: "Overview",
+    keys: [
+      "executive_summary", "system_overview", "business_domains",
+      "data_flows", "developer_onboarding",
+    ],
+  },
+  {
+    title: "Architecture",
+    keys: [
+      "architecture_overview", "module_catalog", "route_map",
+      "api_surface", "system_map", "graphql_schema", "type_graph",
+      "dependency_graph", "architecture_drift", "arch_diff", "change_impact",
+    ],
+  },
+];
+
+// Audience labels for page metadata headers
+const PAGE_AUDIENCE = {
+  executive_summary: "Stakeholders · Leadership",
+  system_overview: "All Audiences",
+  business_domains: "Stakeholders · Product",
+  architecture_overview: "Engineers · Tech Leads",
+  module_catalog: "Engineers",
+  route_map: "Engineers",
+  api_surface: "Engineers",
+  data_flows: "Stakeholders · Engineers",
+  change_impact: "Engineers · Tech Leads",
+  system_map: "All Audiences",
+  developer_onboarding: "New Contributors",
+  graphql_schema: "Engineers",
+  type_graph: "Engineers",
+  dependency_graph: "Engineers",
+  architecture_drift: "Engineers · Tech Leads",
+  arch_diff: "Engineers · Tech Leads",
+};
+
+/**
+ * Get the display title for a page key.
+ */
+function getPageDisplayTitle(key) {
+  return PAGE_TITLES[key] || key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Get custom page keys not in the standard order.
+ */
+function getCustomPageKeys(pageKeys) {
+  return pageKeys.filter((key) => !PAGE_ORDER.includes(key));
+}
+
 /**
  * Detect the GitHub repository (owner/repo) from environment or git remote.
  */
 function detectGitHubRepo() {
-  // GitHub Actions sets this automatically
   if (process.env.GITHUB_REPOSITORY) {
     return process.env.GITHUB_REPOSITORY;
   }
 
-  // Detect from git remote
   try {
     const remoteUrl = execSync("git remote get-url origin", {
       encoding: "utf8",
       stdio: ["pipe", "pipe", "ignore"],
     }).trim();
 
-    // HTTPS: https://github.com/owner/repo.git
     const httpsMatch = remoteUrl.match(/github\.com\/([^/]+\/[^/.]+)/);
-    if (httpsMatch) {
-      return httpsMatch[1];
-    }
+    if (httpsMatch) return httpsMatch[1];
 
-    // SSH: git@github.com:owner/repo.git
     const sshMatch = remoteUrl.match(/github\.com:([^/]+\/[^/.]+)/);
-    if (sshMatch) {
-      return sshMatch[1];
-    }
+    if (sshMatch) return sshMatch[1];
   } catch {
     // git command failed
   }
@@ -101,39 +193,117 @@ function buildWikiCloneUrl(repo, token) {
 
 /**
  * Convert a page key to a wiki-safe filename.
- * GitHub Wiki filenames become the page URLs.
  */
 function pageFileName(key) {
-  const title = PAGE_TITLES[key] || key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-  // GitHub Wiki uses filenames as page titles, dashes for URL slugs
+  const title = getPageDisplayTitle(key);
   return title.replace(/\s+/g, "-") + ".md";
 }
 
 /**
- * Generate _Sidebar.md with links to all pages.
+ * Build a wiki link for a page key.
+ */
+function wikiLink(key) {
+  const display = getPageDisplayTitle(key);
+  const slug = pageFileName(key).replace(/\.md$/, "");
+  return `[[${display}|${slug}]]`;
+}
+
+/**
+ * Generate the Home.md page — audience-grouped with descriptions and status.
+ */
+function generateHome(pageKeys, projectName, branch, repo) {
+  const title = getBranchQualifiedTitle(projectName + " Documentation", branch);
+  const lines = [
+    `# ${title}`,
+    "",
+    `> Architecture documentation for **${projectName}**, auto-generated by [RepoLens](https://github.com/CHAPIBUNNY/repolens).`,
+    "",
+    "## Status",
+    "",
+    `| | |`,
+    `|---|---|`,
+    `| **Project** | ${projectName} |`,
+    `| **Branch** | \`${branch}\` |`,
+    `| **Pages** | ${pageKeys.length} |`,
+    `| **Publisher** | GitHub Wiki |`,
+    `| **Source** | [RepoLens](https://github.com/CHAPIBUNNY/repolens) |`,
+    "",
+    "---",
+    "",
+  ];
+
+  // Audience-grouped sections
+  for (const group of AUDIENCE_GROUPS) {
+    const activeKeys = group.keys.filter((k) => pageKeys.includes(k));
+    if (activeKeys.length === 0) continue;
+
+    lines.push(`## ${group.emoji} ${group.title}`, "");
+    for (const key of activeKeys) {
+      const desc = PAGE_DESCRIPTIONS[key] || "";
+      lines.push(`- ${wikiLink(key)}${desc ? " — " + desc : ""}`);
+    }
+    lines.push("");
+  }
+
+  // Custom / plugin pages
+  const customKeys = getCustomPageKeys(pageKeys);
+  if (customKeys.length > 0) {
+    lines.push("## 🧩 Custom Pages", "");
+    for (const key of customKeys.sort()) {
+      const desc = PAGE_DESCRIPTIONS[key] || "";
+      lines.push(`- ${wikiLink(key)}${desc ? " — " + desc : ""}`);
+    }
+    lines.push("");
+  }
+
+  // Recommended reading order
+  lines.push(
+    "---",
+    "",
+    "## 📖 Recommended Reading Order",
+    "",
+    "1. [[Executive Summary|Executive-Summary]] — Start here for a quick overview",
+    "2. [[System Overview|System-Overview]] — Understand the stack and scale",
+    "3. [[Architecture Overview|Architecture-Overview]] — Deep dive into system design",
+    "4. [[Developer Onboarding|Developer-Onboarding]] — Get started contributing",
+    "",
+    "---",
+    "",
+    `*This wiki is auto-generated. Manual edits will be overwritten on the next publish.*`,
+  );
+
+  return lines.join("\n");
+}
+
+/**
+ * Generate _Sidebar.md — grouped navigation.
  */
 function generateSidebar(pageKeys, projectName, branch) {
   const title = getBranchQualifiedTitle(projectName, branch);
-  const lines = [`### ${title}`, ""];
+  const lines = [`### ${title}`, "", "[[Home]]", ""];
 
-  for (const key of PAGE_ORDER) {
-    if (pageKeys.includes(key)) {
-      const displayTitle = PAGE_TITLES[key] || key;
-      const wikiPageName = pageFileName(key).replace(/\.md$/, "");
-      lines.push(`- [[${displayTitle}|${wikiPageName}]]`);
+  for (const group of SIDEBAR_GROUPS) {
+    const activeKeys = group.keys.filter((k) => pageKeys.includes(k));
+    if (activeKeys.length === 0) continue;
+
+    lines.push(`**${group.title}**`, "");
+    for (const key of activeKeys) {
+      lines.push(`- ${wikiLink(key)}`);
     }
+    lines.push("");
   }
 
-  // Include any custom/plugin pages not in the standard order
-  for (const key of pageKeys) {
-    if (!PAGE_ORDER.includes(key)) {
-      const displayTitle = key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-      const wikiPageName = pageFileName(key).replace(/\.md$/, "");
-      lines.push(`- [[${displayTitle}|${wikiPageName}]]`);
+  // Custom / plugin pages
+  const customKeys = getCustomPageKeys(pageKeys);
+  if (customKeys.length > 0) {
+    lines.push("**Custom Pages**", "");
+    for (const key of customKeys.sort()) {
+      lines.push(`- ${wikiLink(key)}`);
     }
+    lines.push("");
   }
 
-  lines.push("", "---", `*Generated by [RepoLens](https://github.com/CHAPIBUNNY/repolens)*`);
+  lines.push("---", `*[RepoLens](https://github.com/CHAPIBUNNY/repolens)*`);
   return lines.join("\n");
 }
 
@@ -142,9 +312,27 @@ function generateSidebar(pageKeys, projectName, branch) {
  */
 function generateFooter(branch) {
   const branchNote = branch !== "main" && branch !== "master"
-    ? ` from branch \`${branch}\``
+    ? ` · Branch: \`${branch}\``
     : "";
-  return `---\n*Documentation generated by [RepoLens](https://github.com/CHAPIBUNNY/repolens)${branchNote}*`;
+  return [
+    "---",
+    `📚 Generated by [RepoLens](https://github.com/CHAPIBUNNY/repolens)${branchNote} · [← Home](Home)`,
+  ].join("\n");
+}
+
+/**
+ * Build a metadata header to prepend to each page.
+ */
+function pageHeader(key, branch) {
+  const audience = PAGE_AUDIENCE[key] || "All Audiences";
+  return [
+    `[← Home](Home)`,
+    "",
+    `> **Audience:** ${audience} · **Branch:** \`${branch}\` · **Generated by** [RepoLens](https://github.com/CHAPIBUNNY/repolens)`,
+    "",
+    "---",
+    "",
+  ].join("\n");
 }
 
 /**
@@ -160,7 +348,6 @@ function git(args, cwd) {
       env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
     });
   } catch (err) {
-    // Sanitize any token from error messages
     const sanitized = (err.stderr || err.message || "").replace(
       /x-access-token:[^\s@]+/g,
       "x-access-token:***"
@@ -196,13 +383,11 @@ export async function publishToGitHubWiki(cfg, renderedPages) {
   const includeFooter = wikiConfig.footer !== false;
   const projectName = cfg.project?.name || repo.split("/")[1] || "RepoLens";
 
-  // Clone wiki into a temp directory
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "repolens-wiki-"));
 
   try {
     const cloneUrl = buildWikiCloneUrl(repo, token);
 
-    // Try to clone; if wiki doesn't exist yet, initialize an empty repo
     try {
       git(`clone --depth 1 ${cloneUrl} .`, tmpDir);
     } catch {
@@ -211,38 +396,17 @@ export async function publishToGitHubWiki(cfg, renderedPages) {
       git(`remote add origin ${cloneUrl}`, tmpDir);
     }
 
-    // Write Home.md (index page)
-    const homeLines = [
-      `# ${getBranchQualifiedTitle(projectName + " Documentation", branch)}`,
-      "",
-      `> Auto-generated architecture documentation by [RepoLens](https://github.com/CHAPIBUNNY/repolens)`,
-      "",
-      "## Pages",
-      "",
-    ];
-
     const pageKeys = Object.keys(renderedPages);
-    for (const key of PAGE_ORDER) {
-      if (pageKeys.includes(key)) {
-        const displayTitle = PAGE_TITLES[key] || key;
-        const wikiPageName = pageFileName(key).replace(/\.md$/, "");
-        homeLines.push(`- [[${displayTitle}|${wikiPageName}]]`);
-      }
-    }
-    for (const key of pageKeys) {
-      if (!PAGE_ORDER.includes(key)) {
-        const displayTitle = key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-        const wikiPageName = pageFileName(key).replace(/\.md$/, "");
-        homeLines.push(`- [[${displayTitle}|${wikiPageName}]]`);
-      }
-    }
 
-    await fs.writeFile(path.join(tmpDir, "Home.md"), homeLines.join("\n"), "utf8");
+    // Write Home.md
+    const home = generateHome(pageKeys, projectName, branch, repo);
+    await fs.writeFile(path.join(tmpDir, "Home.md"), home, "utf8");
 
-    // Write each rendered page
+    // Write each rendered page with metadata header
     for (const [key, markdown] of Object.entries(renderedPages)) {
       const fileName = pageFileName(key);
-      await fs.writeFile(path.join(tmpDir, fileName), markdown, "utf8");
+      const header = pageHeader(key, branch);
+      await fs.writeFile(path.join(tmpDir, fileName), header + markdown, "utf8");
     }
 
     // Generate sidebar
@@ -262,7 +426,6 @@ export async function publishToGitHubWiki(cfg, renderedPages) {
     git("config user.email \"repolens@users.noreply.github.com\"", tmpDir);
     git("add -A", tmpDir);
 
-    // Check if there are changes to commit
     try {
       execSync("git diff --cached --quiet", { cwd: tmpDir, stdio: "pipe" });
       info("GitHub Wiki is already up to date — no changes to push.");
@@ -279,7 +442,6 @@ export async function publishToGitHubWiki(cfg, renderedPages) {
     info(`GitHub Wiki published: https://github.com/${repo}/wiki`);
 
   } finally {
-    // Clean up temp directory
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
 }
