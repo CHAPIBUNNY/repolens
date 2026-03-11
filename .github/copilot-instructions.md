@@ -29,7 +29,7 @@ RepoLens transforms repositories into documented, understandable systems that se
 3. **Context Building** - Structured artifacts for AI synthesis (no raw code)
 4. **AI Synthesis** (Optional) - Natural language explanations for non-technical readers
 5. **Rendering** - 15 audience-aware documents (technical + non-technical)
-6. **Publishing** - Multi-output delivery (Notion + Confluence + Markdown) with branch-aware safety
+6. **Publishing** - Multi-output delivery (Notion + Confluence + GitHub Wiki + Markdown) with branch-aware safety
 
 ## Architecture
 
@@ -42,7 +42,7 @@ src/
   cli.js                  # Main CLI orchestration + banner
   doctor.js               # Repository validation
   init.js                 # Scaffolding for new repos (+ interactive wizard)
-  migrate.js              # Workflow migration (legacy → current format)
+  migrate.js              # Workflow + config migration (legacy → current format)
   watch.js                # Watch mode for local development
   core/
     config.js             # Configuration loading and validation
@@ -95,7 +95,7 @@ src/
   plugins/
     loader.js             # Plugin resolution and dynamic import
     manager.js            # Plugin registry and lifecycle orchestration
-tests/                    # Vitest test suite (180 tests across 15 files)
+tests/                    # Vitest test suite (185 tests across 15 files)
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
   config-discovery.test.js # Config auto-discovery tests
@@ -119,7 +119,7 @@ tests/                    # Vitest test suite (180 tests across 15 files)
 - `repolens doctor` - Validate repository setup (config, environment, etc.)
 - `repolens publish` - Scan repo, generate docs (with optional AI), publish to outputs
 - `repolens watch` - Watch for file changes and regenerate docs (Markdown only)
-- `repolens migrate` - Migrate legacy workflows to current format
+- `repolens migrate` - Migrate legacy workflows + config files (adds `configVersion: 1` if missing)
 - `repolens feedback` - Send feedback to the RepoLens team
 - `repolens version` - Display version
 - `repolens help` - Show usage
@@ -138,7 +138,7 @@ tests/                    # Vitest test suite (180 tests across 15 files)
 ### Multi-Platform Publishing
 - **Notion**: Create/update pages with branch-aware namespacing
 - **Confluence**: Atlassian Cloud REST API v1, storage format (HTML-like), Basic Auth (email + API token)
-- **GitHub Wiki**: Publish to repository wiki via git clone/push
+- **GitHub Wiki**: Audience-grouped Home page, grouped sidebar, page metadata headers, `master` branch push for compatibility
 - **Markdown**: Write to `.repolens/` directory
 - **Discord**: Rich embed notifications via webhooks (publish metrics, coverage stats)
 
@@ -222,14 +222,14 @@ tests/                    # Vitest test suite (180 tests across 15 files)
 - Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
 - Test config discovery, validation, rendering, branch detection, migration, security fuzzing
-- **Coverage**: 180 tests passing across 15 test files
+- **Coverage**: 185 tests passing across 15 test files
 - Run: `npm test`
 
 ### Configuration
 - Config file: `.repolens.yml` (auto-discovered from cwd or parent directories)
 - YAML format with js-yaml parser
 - Schema version: `configVersion: 1` (for future migrations)
-- Supported publishers: `notion`, `markdown`, `confluence`
+- Supported publishers: `notion`, `markdown`, `confluence`, `github_wiki`
 - Supported page keys: `system_overview`, `module_catalog`, `api_surface`, `arch_diff`, `route_map`, `system_map`, `executive_summary`, `business_domains`, `architecture_overview`, `data_flows`, `change_impact`, `developer_onboarding`
 
 ### Async/Await
@@ -256,7 +256,7 @@ tests/                    # Vitest test suite (180 tests across 15 files)
 3. **Publish**:
    - **Notion**: Create/update pages via Notion API
    - **Confluence**: Create/update pages via REST API v1 (storage format with code block handling)
-   - **GitHub Wiki**: Clone wiki repo, write pages, commit and push
+   - **GitHub Wiki**: Clone wiki repo, write audience-grouped pages, push to `master` branch
    - **Markdown**: Write to `.repolens/` directory
 4. **Notify**: Send Discord webhook with publish metrics
 5. **Deliver**: Optionally post PR comments with diffs
@@ -378,12 +378,15 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 ### Discord (optional)
 - `DISCORD_WEBHOOK_URL` - Webhook URL for notifications
 
+### GitHub Wiki (optional)
+- `GITHUB_TOKEN` - Personal access token or Actions token (requires repo scope)
+
 ### AI Enhancement (optional)
 - `REPOLENS_AI_ENABLED` - Enable AI-powered sections (true/false)
 - `REPOLENS_AI_API_KEY` - API key for AI provider
 - `REPOLENS_AI_BASE_URL` - API base URL (default: https://api.openai.com/v1)
 - `REPOLENS_AI_MODEL` - Model name (e.g., gpt-5-mini)
-- `REPOLENS_AI_TEMPERATURE` - Generation temperature (not supported by gpt-5-mini; model-dependent)
+- `REPOLENS_AI_TEMPERATURE` - Generation temperature (only sent when explicitly set; omitted by default for GPT-5 compatibility)
 - `REPOLENS_AI_MAX_TOKENS` - Max completion tokens per request (default: 2000)
 
 ### Telemetry (optional)
