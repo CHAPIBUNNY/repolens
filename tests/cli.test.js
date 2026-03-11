@@ -23,7 +23,7 @@ function runNode(args = []) {
 describe("cli", () => {
   it("prints version", async () => {
     const { stdout } = await runNode(["--version"]);
-    expect(stdout.trim()).toBe("1.2.0");
+    expect(stdout.trim()).toBe("1.3.0");
   });
 
   it("prints help", async () => {
@@ -32,6 +32,7 @@ describe("cli", () => {
     expect(stdout).toContain("init");
     expect(stdout).toContain("doctor");
     expect(stdout).toContain("publish");
+    expect(stdout).toContain("demo");
     expect(stdout).toContain("watch");
     expect(stdout).toContain("feedback");
     expect(stdout).toContain("version");

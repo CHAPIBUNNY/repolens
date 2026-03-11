@@ -20,6 +20,7 @@ RepoLens follows semantic versioning (semver):
 | `init --interactive` | Stable | Step-by-step configuration wizard |
 | `doctor` | Stable | Validate repository setup |
 | `publish` | Stable | Scan, generate, and publish documentation |
+| `demo` | Stable | Generate local docs without API keys (quick preview) |
 | `watch` | Stable | Watch for file changes and regenerate docs |
 | `migrate` | Stable | Migrate legacy workflows to current format |
 | `feedback` | Stable | Send feedback to the RepoLens team |

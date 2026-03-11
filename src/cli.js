@@ -143,6 +143,7 @@ Commands:
   doctor      Validate your RepoLens setup
   migrate     Upgrade workflow files to current format
   publish     Scan, render, and publish documentation
+  demo        Generate local docs without API keys (quick preview)
   watch       Watch for file changes and regenerate docs
   feedback    Send feedback to the RepoLens team
   version     Print the current RepoLens version
@@ -166,6 +167,7 @@ Examples:
   repolens migrate --dry-run                    # Preview changes without applying
   repolens publish                              # Auto-discovers .repolens.yml
   repolens publish --config /path/.repolens.yml # Explicit config path
+  repolens demo                                  # Quick local preview (no API keys)
   repolens watch                                # Watch mode (Markdown only)
   repolens --version
 `);
@@ -424,6 +426,95 @@ async function main() {
     return;
   }
 
+  if (command === "demo") {
+    await printBanner();
+    info("Demo mode — generating local documentation (no API keys required)...");
+    
+    const commandTimer = startTimer("demo");
+    const targetDir = getArg("--target") || process.cwd();
+    
+    // Try to load existing config, otherwise use sensible defaults
+    let cfg;
+    try {
+      const configPath = getArg("--config") || await findConfig();
+      info(`Using config: ${configPath}`);
+      cfg = await loadConfig(configPath);
+    } catch {
+      info("No .repolens.yml found — using default scan patterns");
+      cfg = {
+        configVersion: 1,
+        project: { name: path.basename(targetDir) },
+        publishers: ["markdown"],
+        scan: {
+          include: ["**/*.{js,ts,jsx,tsx,mjs,cjs,py,go,rs,java,rb,php,cs,swift,kt}"],
+          ignore: ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**", "**/vendor/**", "**/target/**", "**/__pycache__/**"],
+        },
+        module_roots: ["src", "lib", "app", "packages"],
+        outputs: {
+          pages: [
+            { key: "system_overview", title: "System Overview" },
+            { key: "module_catalog", title: "Module Catalog" },
+            { key: "api_surface", title: "API Surface" },
+            { key: "route_map", title: "Route Map" },
+            { key: "system_map", title: "System Map" },
+            { key: "executive_summary", title: "Executive Summary" },
+            { key: "business_domains", title: "Business Domains" },
+            { key: "architecture_overview", title: "Architecture Overview" },
+            { key: "data_flows", title: "Data Flows" },
+            { key: "developer_onboarding", title: "Developer Onboarding" },
+          ],
+        },
+        __repoRoot: targetDir,
+        __configPath: path.join(targetDir, ".repolens.yml"),
+      };
+    }
+    
+    try {
+      info("Scanning repository...");
+      const scanTimer = startTimer("scan");
+      const scan = await scanRepo(cfg);
+      stopTimer(scanTimer);
+      info(`Detected ${scan.modules?.length || 0} modules, ${scan.filesCount || 0} files`);
+      
+      const rawDiff = getGitDiff("origin/main");
+      
+      info("Generating documentation set...");
+      const renderTimer = startTimer("render");
+      const docSet = await generateDocumentSet(scan, cfg, rawDiff);
+      stopTimer(renderTimer);
+      
+      info("Writing documentation to disk...");
+      const writeResult = await writeDocumentSet(docSet, targetDir);
+      
+      const totalDuration = stopTimer(commandTimer);
+      
+      info(`\n✓ Generated ${writeResult.documentCount} documents in ${writeResult.outputDir}`);
+      info("Browse your docs: open the .repolens/ directory");
+      info("\nTo publish to Notion, Confluence, or GitHub Wiki, run: repolens publish");
+      
+      printPerformanceSummary();
+      
+      trackUsage("demo", "success", {
+        duration: totalDuration,
+        fileCount: scan.filesCount || 0,
+        moduleCount: scan.modules?.length || 0,
+        documentCount: writeResult.documentCount,
+        usedConfig: Boolean(cfg.__configPath && cfg.__configPath !== path.join(targetDir, ".repolens.yml")),
+      });
+    } catch (err) {
+      stopTimer(commandTimer);
+      captureError(err, { command: "demo", targetDir });
+      trackUsage("demo", "failure");
+      error("Demo failed:");
+      error(err.message);
+      await closeTelemetry();
+      process.exit(EXIT_ERROR);
+    }
+    
+    await closeTelemetry();
+    return;
+  }
+
   if (command === "feedback") {
     await printBanner();
     info("Send feedback to the RepoLens team");
@@ -470,7 +561,7 @@ async function main() {
   }
 
   error(`Unknown command: ${command}`);
-  error("Available commands: init, doctor, migrate, publish, watch, feedback, version, help");
+  error("Available commands: init, doctor, migrate, publish, demo, watch, feedback, version, help");
   process.exit(EXIT_ERROR);
 }
 

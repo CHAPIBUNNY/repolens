@@ -16,7 +16,7 @@
 
 AI-assisted documentation intelligence system that generates architecture docs for engineers AND readable system docs for stakeholders
 
-**Current Status**: v1.2.0 — Stable Release
+**Current Status**: v1.3.0 — Stable Release
 
 RepoLens automatically generates and maintains living architecture documentation by analyzing your repository structure, extracting meaningful insights from your package.json, and creating visual dependency graphs. Run it once, or let it auto-update on every push.
 
@@ -230,7 +230,7 @@ npm link
 Install from a specific version:
 
 ```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.2.0/chappibunny-repolens-1.2.0.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.3.0/chappibunny-repolens-1.3.0.tgz
 ```
 </details>
 
@@ -655,6 +655,15 @@ Error: Process completed with exit code 1.
 ```
 
 See [MIGRATION.md](MIGRATION.md) for detailed upgrade guide.
+
+### Quick Preview (No API Keys)
+
+Generate local documentation instantly — no Notion, Confluence, or GitHub tokens needed:
+```bash
+npx @chappibunny/repolens demo
+```
+
+Works on any repo, even without a `.repolens.yml`. Output is written to `.repolens/`.
 
 ### Get Help
 
@@ -1106,7 +1115,7 @@ Simulates the full user installation experience:
 npm pack
 
 # Install globally from tarball
-npm install -g chappibunny-repolens-1.2.0.tgz
+npm install -g chappibunny-repolens-1.3.0.tgz
 
 # Verify
 repolens --version
@@ -1230,11 +1239,11 @@ See [RELEASE.md](./RELEASE.md) for detailed workflow.
 
 ## 🗺️ Roadmap
 
-**Current Status:** v1.2.0 — Stable Release
+**Current Status:** v1.3.0 — Stable Release
 
 ### v1.0 — Complete ✅
 
-- [x] CLI commands: `init`, `doctor`, `publish`, `migrate`, `watch`, `feedback`, `version`, `help`
+- [x] CLI commands: `init`, `doctor`, `publish`, `demo`, `migrate`, `watch`, `feedback`, `version`, `help`
 - [x] Config schema v1 with validation (frozen)
 - [x] Auto-discovery of `.repolens.yml`
 - [x] Publishers: Notion + Confluence + GitHub Wiki + Markdown

@@ -2,7 +2,7 @@
 
 This guide helps you upgrade RepoLens across breaking changes and major versions.
 
-**Current Version:** 1.2.0  
+**Current Version:** 1.3.0  
 **Last Updated:** March 2026
 
 ---

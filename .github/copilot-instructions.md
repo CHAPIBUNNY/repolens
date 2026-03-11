@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.2.0  
+**Version:** 1.3.0  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -118,6 +118,7 @@ tests/                    # Vitest test suite (185 tests across 15 files)
 - `repolens init --interactive` - Step-by-step configuration wizard
 - `repolens doctor` - Validate repository setup (config, environment, etc.)
 - `repolens publish` - Scan repo, generate docs (with optional AI), publish to outputs
+- `repolens demo` - Generate local docs without API keys (quick preview)
 - `repolens watch` - Watch for file changes and regenerate docs (Markdown only)
 - `repolens migrate` - Migrate legacy workflows + config files (adds `configVersion: 1` if missing)
 - `repolens feedback` - Send feedback to the RepoLens team

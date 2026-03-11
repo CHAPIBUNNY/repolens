@@ -2,6 +2,20 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.3.0
+
+### ✨ New Feature: `repolens demo`
+
+- **Zero-config local preview**: New `demo` command generates documentation locally without any API keys or publisher configuration. Works on any repository, even without a `.repolens.yml` — uses sensible default scan patterns.
+- **Instant onboarding**: Run `npx @chappibunny/repolens demo` on any repo to see what RepoLens generates. Output written to `.repolens/` directory.
+- **Config-aware**: If a `.repolens.yml` exists, demo uses it. Otherwise, defaults to scanning common source patterns (`js`, `ts`, `py`, `go`, `rs`, `java`, etc.) with standard ignore paths.
+
+### 📝 Documentation
+
+- Added demo command to all documentation: README, STABILITY, ROADMAP, copilot-instructions
+- Added "Quick Preview" section to README usage guide
+- Updated all version references to 1.3.0
+
 ## 1.2.0
 
 ### ✨ Config Migration
