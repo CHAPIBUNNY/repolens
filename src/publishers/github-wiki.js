@@ -258,6 +258,8 @@ export async function publishToGitHubWiki(cfg, renderedPages) {
     }
 
     // Stage, commit, push
+    git("config user.name \"RepoLens Bot\"", tmpDir);
+    git("config user.email \"repolens@users.noreply.github.com\"", tmpDir);
     git("add -A", tmpDir);
 
     // Check if there are changes to commit

@@ -94,7 +94,7 @@ async function callOpenAICompatibleAPI({ baseUrl, apiKey, model, system, user, t
             { role: "user", content: user }
           ],
           temperature,
-          max_tokens: maxTokens
+          max_completion_tokens: maxTokens
         }),
         signal: controller.signal
       });
