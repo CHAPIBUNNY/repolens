@@ -28,6 +28,11 @@ publishers:
   - markdown
   - notion
   - confluence
+  - github_wiki
+
+github_wiki:
+  sidebar: true
+  footer: true
 
 # Multi-branch publishing with namespaced titles
 # All branches publish to Notion, but with [branch-name] suffix to prevent conflicts
