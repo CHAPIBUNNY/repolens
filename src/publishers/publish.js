@@ -1,5 +1,6 @@
 import { ensurePage, replacePageContent } from "./notion.js";
 import { getCurrentBranch, getBranchQualifiedTitle } from "../utils/branch.js";
+import { warn } from "../utils/logger.js";
 
 export async function publishToNotion(cfg, renderedPages) {
   const parentPageId = process.env.NOTION_PARENT_PAGE_ID;
@@ -22,7 +23,7 @@ export async function publishToNotion(cfg, renderedPages) {
     
     // Skip if content not generated (e.g., disabled feature or generation error)
     if (!markdown) {
-      console.log(`⚠️  Skipping ${page.key}: No content generated`);
+      warn(`Skipping ${page.key}: No content generated`);
       continue;
     }
     

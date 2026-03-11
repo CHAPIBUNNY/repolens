@@ -41,6 +41,11 @@ import {
 } from "./utils/telemetry.js";
 import { createInterface } from "node:readline";
 
+// Standardized exit codes
+const EXIT_SUCCESS = 0;
+const EXIT_ERROR = 1;
+const EXIT_VALIDATION = 2;
+
 function formatDuration(ms) {
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
@@ -136,7 +141,7 @@ Usage:
 Commands:
   init        Scaffold RepoLens files in your repository
   doctor      Validate your RepoLens setup
-  migrate     Upgrade workflow files to v0.4.0 format
+  migrate     Upgrade workflow files to current format
   publish     Scan, render, and publish documentation
   watch       Watch for file changes and regenerate docs
   feedback    Send feedback to the RepoLens team
@@ -213,7 +218,7 @@ async function main() {
       error("Failed to initialize RepoLens:");
       error(err.message);
       await closeTelemetry();
-      process.exit(1);
+      process.exit(EXIT_ERROR);
     }
     return;
   }
@@ -225,10 +230,16 @@ async function main() {
     
     const timer = startTimer("doctor");
     try {
-      await runDoctor(targetDir);
+      const result = await runDoctor(targetDir);
       const duration = stopTimer(timer);
-      info("✓ RepoLens validation passed");
       
+      if (result && result.ok === false) {
+        trackUsage("doctor", "failure", { duration });
+        await closeTelemetry();
+        process.exit(EXIT_VALIDATION);
+      }
+      
+      info("✓ RepoLens validation passed");
       trackUsage("doctor", "success", { duration });
       await closeTelemetry();
     } catch (err) {
@@ -238,7 +249,7 @@ async function main() {
       error("Validation failed:");
       error(err.message);
       await closeTelemetry();
-      process.exit(2);
+      process.exit(EXIT_VALIDATION);
     }
     return;
   }
@@ -267,7 +278,7 @@ async function main() {
       error("Migration failed:");
       error(err.message);
       await closeTelemetry();
-      process.exit(1);
+      process.exit(EXIT_ERROR);
     }
     return;
   }
@@ -280,13 +291,20 @@ async function main() {
       info(`Using config: ${configPath}`);
     } catch (err) {
       error(err.message);
-      process.exit(2);
+      process.exit(EXIT_VALIDATION);
     }
     await runWatch(configPath);
     return;
   }
 
-  if (command === "publish" || !command || command.startsWith("--")) {
+  // Reject unknown flags/commands before falling through to publish
+  if (command && command.startsWith("--") && !["--help", "-h", "--version", "-v"].includes(command)) {
+    error(`Unknown option: ${command}`);
+    error("Run 'repolens help' for usage information.");
+    process.exit(EXIT_ERROR);
+  }
+
+  if (command === "publish" || !command) {
     await printBanner();
     
     const commandTimer = startTimer("publish");
@@ -299,7 +317,7 @@ async function main() {
     } catch (err) {
       stopTimer(commandTimer);
       error(err.message);
-      process.exit(2);
+      process.exit(EXIT_VALIDATION);
     }
 
     let cfg, scan;
@@ -312,7 +330,7 @@ async function main() {
       trackUsage("publish", "failure", { step: "config-load" });
       error(formatError("CONFIG_VALIDATION_FAILED", err));
       await closeTelemetry();
-      process.exit(2);
+      process.exit(EXIT_VALIDATION);
     }
 
     // Load plugins
@@ -342,7 +360,7 @@ async function main() {
                  : err.message?.includes("limit") ? "SCAN_TOO_MANY_FILES" : null;
       error(code ? formatError(code, err) : `Failed to scan repository:\n  ${err.message}`);
       await closeTelemetry();
-      process.exit(1);
+      process.exit(EXIT_ERROR);
     }
 
     const rawDiff = getGitDiff("origin/main");
@@ -399,7 +417,7 @@ async function main() {
       error("Failed to publish documentation:");
       error(err.message);
       await closeTelemetry();
-      process.exit(1);
+      process.exit(EXIT_ERROR);
     }
 
     await closeTelemetry();
@@ -423,7 +441,7 @@ async function main() {
       if (!message.trim()) {
         error("Feedback message cannot be empty.");
         await closeTelemetry();
-        process.exit(1);
+        process.exit(EXIT_ERROR);
       }
 
       info("\nSending feedback...");
@@ -437,6 +455,8 @@ async function main() {
         info("✓ Thank you! Your feedback has been sent.");
       } else {
         error("Failed to send feedback. Please try again later.");
+        await closeTelemetry();
+        process.exit(EXIT_ERROR);
       }
     } catch (err) {
       rl.close();
@@ -451,7 +471,7 @@ async function main() {
 
   error(`Unknown command: ${command}`);
   error("Available commands: init, doctor, migrate, publish, watch, feedback, version, help");
-  process.exit(1);
+  process.exit(EXIT_ERROR);
 }
 
 main().catch(async (err) => {
@@ -481,5 +501,5 @@ main().catch(async (err) => {
   }
   
   await closeTelemetry();
-  process.exit(1);
+  process.exit(EXIT_ERROR);
 });

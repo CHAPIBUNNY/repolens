@@ -103,13 +103,13 @@ function validateScanConfig(scan) {
     }
   }
   
-  if (scan.exclude) {
-    if (!Array.isArray(scan.exclude)) {
-      errors.push("scan.exclude must be an array of glob patterns");
+  if (scan.ignore) {
+    if (!Array.isArray(scan.ignore)) {
+      errors.push("scan.ignore must be an array of glob patterns");
     } else {
-      for (const pattern of scan.exclude) {
+      for (const pattern of scan.ignore) {
         if (typeof pattern !== "string") {
-          errors.push(`Invalid pattern in scan.exclude: ${pattern} (must be string)`);
+          errors.push(`Invalid pattern in scan.ignore: ${pattern} (must be string)`);
           continue; // Skip further checks if not a string
         }
       }
@@ -207,33 +207,34 @@ function checkNotionWarnings(notion) {
 }
 
 /**
- * Validate domains configuration
+ * Validate domains configuration (object format: { key: { match: [], description? } })
  */
 function validateDomains(domains) {
   const errors = [];
   
-  if (!Array.isArray(domains)) {
-    errors.push("domains must be an array");
+  if (typeof domains !== "object" || Array.isArray(domains)) {
+    errors.push("domains must be an object");
     return errors;
   }
   
-  for (const domain of domains) {
-    if (!domain.name || typeof domain.name !== "string") {
-      errors.push("Each domain must have a 'name' field (string)");
+  for (const [key, domain] of Object.entries(domains)) {
+    if (typeof domain !== "object" || Array.isArray(domain)) {
+      errors.push(`domains.${key} must be an object`);
+      continue;
     }
     
-    if (!domain.patterns || !Array.isArray(domain.patterns)) {
-      errors.push(`Domain '${domain.name}' must have 'patterns' array`);
+    if (!domain.match || !Array.isArray(domain.match)) {
+      errors.push(`domains.${key} must have a 'match' array`);
     } else {
-      for (const pattern of domain.patterns) {
+      for (const pattern of domain.match) {
         if (typeof pattern !== "string") {
-          errors.push(`Invalid pattern in domain '${domain.name}': ${pattern}`);
+          errors.push(`Invalid pattern in domains.${key}.match: ${pattern}`);
         }
       }
     }
     
     if (domain.description && typeof domain.description !== "string") {
-      errors.push(`Domain '${domain.name}' description must be a string`);
+      errors.push(`domains.${key}.description must be a string`);
     }
   }
   
@@ -319,17 +320,25 @@ function checkForInjection(config) {
     });
   }
   
-  // Check domain patterns
-  if (config.domains && Array.isArray(config.domains)) {
-    config.domains.forEach((domain, i) => {
-      if (domain.patterns && Array.isArray(domain.patterns)) {
-        domain.patterns.forEach((pattern, j) => {
+  if (config.scan?.ignore && Array.isArray(config.scan.ignore)) {
+    config.scan.ignore.forEach((pattern, i) => {
+      if (typeof pattern === "string") {
+        checkString(pattern, `scan.ignore[${i}]`);
+      }
+    });
+  }
+  
+  // Check domain patterns (object format: { key: { match: [] } })
+  if (config.domains && typeof config.domains === "object" && !Array.isArray(config.domains)) {
+    for (const [domainKey, domain] of Object.entries(config.domains)) {
+      if (domain.match && Array.isArray(domain.match)) {
+        domain.match.forEach((pattern, j) => {
           if (typeof pattern === "string") {
-            checkString(pattern, `domains[${i}].patterns[${j}]`);
+            checkString(pattern, `domains.${domainKey}.match[${j}]`);
           }
         });
       }
-    });
+    }
   }
   
   return errors;

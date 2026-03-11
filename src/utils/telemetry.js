@@ -33,8 +33,10 @@ export function initTelemetry() {
     const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
     const version = packageJson.version || "unknown";
 
+    const dsn = process.env.REPOLENS_SENTRY_DSN || "https://082083dbf5899ed7e65dfd9b8dc72f90@o4511014913703936.ingest.de.sentry.io/4511014919209040";
+
     Sentry.init({
-      dsn: "https://082083dbf5899ed7e65dfd9b8dc72f90@o4511014913703936.ingest.de.sentry.io/4511014919209040", // TODO: Replace with actual DSN
+      dsn,
       
       // Release tracking
       release: `repolens@${version}`,
@@ -412,8 +414,10 @@ function ensureSentryForFeedback() {
     const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
     const version = packageJson.version || "unknown";
 
+    const dsn = process.env.REPOLENS_SENTRY_DSN || "https://082083dbf5899ed7e65dfd9b8dc72f90@o4511014913703936.ingest.de.sentry.io/4511014919209040";
+
     Sentry.init({
-      dsn: "https://082083dbf5899ed7e65dfd9b8dc72f90@o4511014913703936.ingest.de.sentry.io/4511014919209040",
+      dsn,
       release: `repolens@${version}`,
       environment: process.env.NODE_ENV || "production",
       sampleRate: 1.0, // Always send feedback

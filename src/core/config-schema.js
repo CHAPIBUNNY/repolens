@@ -39,17 +39,17 @@ class ValidationError extends Error {
 export function validateConfig(config) {
   const errors = [];
 
-  // Check schema version
-  if (config.configVersion !== undefined) {
-    if (typeof config.configVersion !== "number") {
-      errors.push("configVersion must be a number");
-    } else if (config.configVersion > CURRENT_SCHEMA_VERSION) {
-      errors.push(
-        `Config schema version ${config.configVersion} is not supported. ` +
-        `This version of RepoLens supports schema version ${CURRENT_SCHEMA_VERSION}. ` +
-        `Please upgrade RepoLens or downgrade your config.`
-      );
-    }
+  // Check schema version (required for v1.0+)
+  if (config.configVersion === undefined || config.configVersion === null) {
+    errors.push("Missing required field: configVersion (must be 1)");
+  } else if (typeof config.configVersion !== "number") {
+    errors.push("configVersion must be a number");
+  } else if (config.configVersion > CURRENT_SCHEMA_VERSION) {
+    errors.push(
+      `Config schema version ${config.configVersion} is not supported. ` +
+      `This version of RepoLens supports schema version ${CURRENT_SCHEMA_VERSION}. ` +
+      `Please upgrade RepoLens or downgrade your config.`
+    );
   }
 
   // Validate project section
@@ -173,6 +173,26 @@ export function validateConfig(config) {
     }
   }
 
+  // Validate Confluence configuration (optional)
+  if (config.confluence !== undefined) {
+    if (typeof config.confluence !== "object" || Array.isArray(config.confluence)) {
+      errors.push("confluence must be an object");
+    } else {
+      // Validate branches filter
+      if (config.confluence.branches !== undefined) {
+        if (!Array.isArray(config.confluence.branches)) {
+          errors.push("confluence.branches must be an array");
+        } else {
+          config.confluence.branches.forEach((branch, idx) => {
+            if (typeof branch !== "string") {
+              errors.push(`confluence.branches[${idx}] must be a string`);
+            }
+          });
+        }
+      }
+    }
+  }
+
   // Validate Discord configuration (optional)
   if (config.discord !== undefined) {
     if (typeof config.discord !== "object" || Array.isArray(config.discord)) {
@@ -241,9 +261,13 @@ export function validateConfig(config) {
       }
       if (config.ai.temperature !== undefined && typeof config.ai.temperature !== "number") {
         errors.push("ai.temperature must be a number");
+      } else if (typeof config.ai.temperature === "number" && (config.ai.temperature < 0 || config.ai.temperature > 2)) {
+        errors.push("ai.temperature must be between 0 and 2");
       }
       if (config.ai.max_tokens !== undefined && typeof config.ai.max_tokens !== "number") {
         errors.push("ai.max_tokens must be a number");
+      } else if (typeof config.ai.max_tokens === "number" && config.ai.max_tokens <= 0) {
+        errors.push("ai.max_tokens must be greater than 0");
       }
     }
   }

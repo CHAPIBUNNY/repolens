@@ -7,9 +7,10 @@ const DEFAULT_TIMEOUT_MS = 60000;
 const DEFAULT_TEMPERATURE = 0.2;
 const DEFAULT_MAX_TOKENS = 2500;
 
-export async function generateText({ system, user, temperature, maxTokens }) {
-  // Check if AI is enabled
-  const enabled = process.env.REPOLENS_AI_ENABLED === "true";
+export async function generateText({ system, user, temperature, maxTokens, config }) {
+  // Check if AI is enabled (env var takes precedence, then config)
+  const aiConfig = config?.ai || {};
+  const enabled = process.env.REPOLENS_AI_ENABLED === "true" || aiConfig.enabled === true;
   
   if (!enabled) {
     return {
@@ -19,12 +20,16 @@ export async function generateText({ system, user, temperature, maxTokens }) {
     };
   }
   
-  // Get provider configuration from environment
+  // Get provider configuration (env vars take precedence, then config, then defaults)
   const provider = process.env.REPOLENS_AI_PROVIDER || "openai_compatible";
   const baseUrl = process.env.REPOLENS_AI_BASE_URL;
   const apiKey = process.env.REPOLENS_AI_API_KEY;
   const model = process.env.REPOLENS_AI_MODEL || "gpt-4-turbo-preview";
   const timeoutMs = parseInt(process.env.REPOLENS_AI_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
+  
+  // Use config values as fallback for temperature/maxTokens
+  const resolvedTemp = temperature ?? aiConfig.temperature ?? DEFAULT_TEMPERATURE;
+  const resolvedMaxTokens = maxTokens ?? aiConfig.max_tokens ?? DEFAULT_MAX_TOKENS;
   
   // Validate configuration
   if (!apiKey) {
@@ -47,8 +52,8 @@ export async function generateText({ system, user, temperature, maxTokens }) {
       model,
       system,
       user,
-      temperature: temperature ?? DEFAULT_TEMPERATURE,
-      maxTokens: maxTokens ?? DEFAULT_MAX_TOKENS,
+      temperature: resolvedTemp,
+      maxTokens: resolvedMaxTokens,
       timeoutMs
     });
     

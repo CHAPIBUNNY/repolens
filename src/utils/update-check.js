@@ -104,7 +104,7 @@ export async function checkForUpdates() {
 }
 
 function showUpdateMessage(current, latest) {
-  console.log("");
+  info("");
   warn("┌────────────────────────────────────────────────────────────┐");
   warn("│                   📦 Update Available                      │");
   warn("├────────────────────────────────────────────────────────────┤");
@@ -118,7 +118,7 @@ function showUpdateMessage(current, latest) {
   warn("│                                                            │");
   warn("│  Release notes: https://github.com/CHAPIBUNNY/repolens    │");
   warn("└────────────────────────────────────────────────────────────┘");
-  console.log("");
+  info("");
 }
 
 export async function forceCheckForUpdates() {

@@ -234,7 +234,7 @@ export async function runMigrate(targetDir = process.cwd(), options = {}) {
         console.log("\n📝 Next steps:");
         console.log("   1. Review the changes: git diff .github/workflows/");
         console.log("   2. Test locally: npx @chappibunny/repolens@latest publish");
-        console.log("   3. Commit: git add .github/workflows/ && git commit -m 'chore: migrate RepoLens workflow to v0.4.0'");
+        console.log("   3. Commit: git add .github/workflows/ && git commit -m 'chore: migrate RepoLens workflow to latest format'");
         console.log("   4. Push: git push");
         console.log("\n💡 Tip: Backups saved as *.backup - delete them once verified");
       } else {
@@ -259,6 +259,6 @@ export async function runMigrate(targetDir = process.cwd(), options = {}) {
 async function printMigrationBanner() {
   console.log("\n" + "=".repeat(60));
   console.log("🔄 RepoLens Workflow Migration Tool");
-  console.log("   Upgrading to v0.4.0 format");
+  console.log("   Upgrading to latest format");
   console.log("=".repeat(60));
 }

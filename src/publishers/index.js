@@ -90,8 +90,8 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
           await publisher.publish(cfg, renderedPages);
           publishedTo.push(key);
         } catch (err) {
+          warn(`Plugin publisher "${key}" failed: ${err.message}`);
           publishStatus = "failure";
-          throw err;
         }
       }
     }

@@ -2,6 +2,37 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.0.0
+
+### 🎉 Stable Release
+
+RepoLens v1.0.0 marks the first stable release with a frozen public API. All CLI commands, configuration schema, and plugin interfaces are now covered by semantic versioning guarantees. See [STABILITY.md](STABILITY.md) for the full contract.
+
+### 🐛 Bug Fixes
+- **Doctor false-success**: `repolens doctor` now correctly exits with code 2 when `runDoctor()` reports failures (previously always printed "validation passed")
+- **Feedback exit code**: `repolens feedback` now exits with code 1 when feedback fails to send (previously exited 0)
+- **Unknown flags**: `repolens --unknown-flag` now prints an error instead of silently running publish
+- **scan.ignore security bypass**: Security validator now checks `scan.ignore` patterns (was incorrectly checking non-existent `scan.exclude`)
+- **Domains type mismatch**: Both validators now expect `domains` as an object (was array in security validator, object in schema validator)
+- **Plugin publisher crash isolation**: Plugin publisher errors are now caught and logged instead of crashing the pipeline
+
+### ✅ Config Stability
+- `configVersion: 1` is now **required** (was optional in schema validator)
+- Added `confluence` config section validation (branches array)
+- Added `ai.temperature` range validation (0–2)
+- Added `ai.max_tokens` range validation (>0)
+- AI config values from `.repolens.yml` are now used as fallbacks when env vars are not set
+
+### 🔧 Improvements
+- Standardized exit codes: `EXIT_SUCCESS=0`, `EXIT_ERROR=1`, `EXIT_VALIDATION=2` as named constants
+- Replaced all `console.log`/`console.warn` in production code with logger utilities
+- Removed stale "v0.4.0" references from CLI help text and migrate command
+- Sentry DSN moved to `REPOLENS_SENTRY_DSN` env var (with backwards-compatible default)
+- Hardcoded email in `init` scaffolding replaced with `your-email@example.com` placeholder
+
+### 📄 Documentation
+- Added [STABILITY.md](STABILITY.md): Complete public API contract (CLI, config schema, plugin interface, exit codes, env vars)
+
 ## 0.9.0
 
 ### ✨ New Features

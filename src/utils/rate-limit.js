@@ -5,6 +5,8 @@
  * to prevent abuse and respect API limits.
  */
 
+import { warn } from "./logger.js";
+
 /**
  * Rate limiter class using token bucket algorithm
  */
@@ -193,7 +195,7 @@ export async function executeNotionRequest(fn, options = {}) {
         if (options.onRetry) {
           options.onRetry(attempt, maxRetries, delay, error);
         } else {
-          console.warn(
+          warn(
             `Notion API retry ${attempt}/${maxRetries} after ${Math.round(delay)}ms (${error.message})`
           );
         }
@@ -221,7 +223,7 @@ export async function executeAIRequest(fn, options = {}) {
         if (options.onRetry) {
           options.onRetry(attempt, maxRetries, delay, error);
         } else {
-          console.warn(
+          warn(
             `AI API retry ${attempt}/${maxRetries} after ${Math.round(delay)}ms (${error.message})`
           );
         }

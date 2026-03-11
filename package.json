@@ -1,6 +1,6 @@
 {
   "name": "@chappibunny/repolens",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "description": "AI-assisted documentation intelligence system for technical and non-technical audiences",
   "license": "MIT",
   "type": "module",

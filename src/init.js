@@ -94,7 +94,7 @@ NOTION_VERSION=2022-06-28
 
 # Confluence Publishing
 CONFLUENCE_URL=https://your-company.atlassian.net/wiki
-CONFLUENCE_EMAIL=trades@rabitaitrades.com
+CONFLUENCE_EMAIL=your-email@example.com
 CONFLUENCE_API_TOKEN=
 CONFLUENCE_SPACE_KEY=DOCS
 CONFLUENCE_PARENT_PAGE_ID=

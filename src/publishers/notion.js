@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { log } from "../utils/logger.js";
+import { log, warn } from "../utils/logger.js";
 import { fetchWithRetry } from "../utils/retry.js";
 import { executeNotionRequest } from "../utils/rate-limit.js";
 import { createRepoLensError } from "../utils/errors.js";
@@ -243,7 +243,7 @@ function parseInlineRichText(text) {
 function markdownToNotionBlocks(markdown) {
   // Safety check: handle undefined/null markdown
   if (!markdown || typeof markdown !== 'string') {
-    console.warn(`Warning: markdownToNotionBlocks received invalid markdown: ${typeof markdown}`);
+    warn(`markdownToNotionBlocks received invalid markdown: ${typeof markdown}`);
     return [];
   }
   
