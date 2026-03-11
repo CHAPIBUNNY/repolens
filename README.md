@@ -234,6 +234,8 @@ npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.0.0/chap
 ```
 </details>
 
+> **Having install problems?** See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for solutions to common issues like `ENOTEMPTY`, `npm ci` failures, and stale versions.
+
 ---
 
 ## 🎓 Complete Onboarding Guide
@@ -1283,6 +1285,8 @@ MIT
 
 ## 💬 Support & Contact
 
+- **Troubleshooting**: [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — installation, config, publishing, AI, and CI/CD issues
+- **Diagnostics**: Run `npx @chappibunny/repolens doctor` to validate your setup
 - **Issues**: [GitHub Issues](https://github.com/CHAPIBUNNY/repolens/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/CHAPIBUNNY/repolens/discussions)
 - **Email**: Contact repository maintainers
