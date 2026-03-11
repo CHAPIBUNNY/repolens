@@ -344,7 +344,6 @@ REPOLENS_AI_API_KEY=sk-xxxxxxxxxxxxx
 # Optional: Customize provider
 REPOLENS_AI_BASE_URL=https://api.openai.com/v1
 REPOLENS_AI_MODEL=gpt-5-mini
-REPOLENS_AI_TEMPERATURE=0.3
 REPOLENS_AI_MAX_TOKENS=2000
 ```
 
@@ -354,7 +353,6 @@ REPOLENS_AI_MAX_TOKENS=2000
 ai:
   enabled: true              # Enable AI features
   mode: hybrid               # hybrid, full, or off
-  temperature: 0.3           # Lower = more focused (0.0-1.0)
   max_tokens: 2000           # Token limit per request
 
 features:
@@ -973,8 +971,8 @@ features:
 | `features` | object | No | Feature flags (boolean values) |
 | `ai.enabled` | boolean | No | Enable AI-powered documentation |
 | `ai.mode` | string | No | AI mode: `hybrid`, `full`, or `off` |
-| `ai.temperature` | number | No | Generation temperature (0\u20132) |
-| `ai.max_tokens` | number | No | Max tokens per request (>0) |
+| `ai.temperature` | number | No | Generation temperature (0–2). Not supported by all models (e.g. gpt-5-mini ignores it) |
+| `ai.max_tokens` | number | No | Max completion tokens per request (>0) |
 
 ---
 

@@ -13,7 +13,6 @@ github:
 ai:
   enabled: true
   mode: hybrid              # hybrid = deterministic + AI enhancements
-  temperature: 0.3          # Lower = more focused (0.0-1.0)
   max_tokens: 2000          # Token limit per request
 
 features:

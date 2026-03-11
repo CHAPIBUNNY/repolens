@@ -105,7 +105,6 @@ CONFLUENCE_PARENT_PAGE_ID=
 # REPOLENS_AI_API_KEY=sk-...
 # REPOLENS_AI_BASE_URL=https://api.openai.com/v1
 # REPOLENS_AI_MODEL=gpt-5-mini
-# REPOLENS_AI_TEMPERATURE=0.3
 # REPOLENS_AI_MAX_TOKENS=2000
 `;
 
@@ -206,7 +205,6 @@ AI features add natural language explanations for non-technical stakeholders.
    ai:
      enabled: true
      mode: hybrid
-     temperature: 0.3
    
    features:
      executive_summary: true
@@ -607,7 +605,6 @@ function buildWizardConfig(answers) {
     lines.push(`ai:`);
     lines.push(`  enabled: true`);
     lines.push(`  mode: hybrid`);
-    lines.push(`  temperature: 0.3`);
     lines.push(``);
     lines.push(`features:`);
     lines.push(`  executive_summary: true`);

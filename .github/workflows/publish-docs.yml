@@ -15,12 +15,12 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       
       - name: Setup Node.js
-        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a  # v4.2.0
         with:
-          node-version: 20
+          node-version: 22
       
       - name: Install dependencies
         run: rm -rf node_modules package-lock.json && npm install
@@ -65,12 +65,12 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       
       - name: Setup Node.js
-        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a  # v4.2.0
         with:
-          node-version: 20
+          node-version: 22
       
       - name: Install dependencies
         run: rm -rf node_modules package-lock.json && npm install
@@ -90,6 +90,5 @@ jobs:
           REPOLENS_AI_API_KEY: ${{ secrets.REPOLENS_AI_API_KEY }}
           REPOLENS_AI_BASE_URL: https://api.openai.com/v1
           REPOLENS_AI_MODEL: gpt-5-mini
-          REPOLENS_AI_TEMPERATURE: 0.3
           REPOLENS_AI_MAX_TOKENS: 2000
         run: node bin/repolens.js publish

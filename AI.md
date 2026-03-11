@@ -78,7 +78,6 @@ features:
 ai:
   enabled: true
   mode: "hybrid" # deterministic facts + AI explanations
-  temperature: 0.2 # low = more deterministic
   max_tokens: 2500
 ```
 
@@ -141,8 +140,6 @@ ai:
     # mixed: Readable by technical and non-technical
     # technical: Developer-focused
     # non-technical: Leadership/stakeholder-focused
-  
-  temperature: 0.2 # 0.0 = deterministic, 1.0 = creative
   
   max_tokens: 2500 # Maximum response length
 ```
@@ -277,13 +274,12 @@ Increase timeout: `REPOLENS_AI_TIMEOUT_MS=120000` (2 minutes)
 
 ### "Rate limit exceeded"
 
-Wait and retry, or reduce `temperature` and `max_tokens`
+Wait and retry, or reduce `max_tokens`
 
 ### Poor quality output
 
 - Try `gpt-5.4` for highest quality output
 - Increase `max_tokens`
-- Adjust `temperature` (try 0.1 for more focus)
 - Add more detail to `domains` configuration
 
 ### Running costs too high
@@ -297,5 +293,5 @@ Wait and retry, or reduce `temperature` and `max_tokens`
 1. Start with default settings and `gpt-5-mini`
 2. Review generated documentation
 3. Add business domains to improve quality
-4. Adjust `temperature` and `max_tokens` as needed
+4. Adjust `max_tokens` as needed
 5. Switch to `gpt-5-nano` to reduce costs if quality is acceptable

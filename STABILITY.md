@@ -107,8 +107,8 @@ outputs:
 | `ai` | object | AI configuration |
 | `ai.enabled` | boolean | Enable AI-powered documentation |
 | `ai.mode` | string | `"hybrid"`, `"full"`, or `"off"` |
-| `ai.temperature` | number | 0–2, generation temperature |
-| `ai.max_tokens` | number | >0, max tokens per request |
+| `ai.temperature` | number | 0–2, generation temperature (model-dependent; gpt-5-mini ignores it) |
+| `ai.max_tokens` | number | >0, max completion tokens per request |
 | `documentation` | object | Documentation output settings |
 | `documentation.output_dir` | string | Output directory (default: `.repolens`) |
 | `documentation.include_artifacts` | boolean | Include AI context artifacts |

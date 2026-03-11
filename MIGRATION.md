@@ -112,7 +112,6 @@ AI features are opt-in. Add to `.repolens.yml`:
 ai:
   enabled: true
   mode: hybrid
-  temperature: 0.2
   max_tokens: 2500
 
 features:

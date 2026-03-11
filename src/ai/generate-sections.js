@@ -25,7 +25,6 @@ export async function generateExecutiveSummary(context) {
   const result = await generateText({
     system: SYSTEM_PROMPT,
     user: createExecutiveSummaryPrompt(context),
-    temperature: 0.2,
     maxTokens: 1500
   });
   
@@ -47,7 +46,6 @@ export async function generateSystemOverview(context) {
   const result = await generateText({
     system: SYSTEM_PROMPT,
     user: createSystemOverviewPrompt(context),
-    temperature: 0.2,
     maxTokens: 1200
   });
   
@@ -68,7 +66,6 @@ export async function generateBusinessDomains(context) {
   const result = await generateText({
     system: SYSTEM_PROMPT,
     user: createBusinessDomainsPrompt(context),
-    temperature: 0.2,
     maxTokens: 2000
   });
   
@@ -89,7 +86,6 @@ export async function generateArchitectureOverview(context) {
   const result = await generateText({
     system: SYSTEM_PROMPT,
     user: createArchitectureOverviewPrompt(context),
-    temperature: 0.2,
     maxTokens: 1800
   });
   
@@ -110,7 +106,6 @@ export async function generateDataFlows(flows, context) {
   const result = await generateText({
     system: SYSTEM_PROMPT,
     user: createDataFlowsPrompt(flows, context),
-    temperature: 0.2,
     maxTokens: 1800
   });
   
@@ -131,7 +126,6 @@ export async function generateDeveloperOnboarding(context) {
   const result = await generateText({
     system: SYSTEM_PROMPT,
     user: createDeveloperOnboardingPrompt(context),
-    temperature: 0.2,
     maxTokens: 2200
   });
   

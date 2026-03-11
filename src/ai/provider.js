@@ -81,21 +81,27 @@ async function callOpenAICompatibleAPI({ baseUrl, apiKey, model, system, user, t
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
     try {
+      // Build request body — omit temperature if not supported by model
+      const body = {
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user }
+        ],
+        max_completion_tokens: maxTokens
+      };
+      // Some models (e.g. gpt-5-mini) reject non-default temperature values
+      if (temperature != null && temperature !== 1) {
+        body.temperature = temperature;
+      }
+
       const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`
         },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: user }
-          ],
-          temperature,
-          max_completion_tokens: maxTokens
-        }),
+        body: JSON.stringify(body),
         signal: controller.signal
       });
       

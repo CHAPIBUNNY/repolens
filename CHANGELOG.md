@@ -19,6 +19,10 @@ RepoLens v1.0.0 marks the first stable release with a frozen public API. All CLI
   - 17 tests covering publishing, branch filtering, config validation, and security
 
 ### 🐛 Bug Fixes
+- **GPT-5 API compatibility**: Use `max_completion_tokens` instead of deprecated `max_tokens` parameter
+- **GPT-5 temperature handling**: Omit `temperature` from API requests for models that only support the default value (e.g. gpt-5-mini)
+- **Git identity in wiki publisher**: Set committer name/email (`RepoLens Bot`) so CI runners can commit
+- **Publisher allowlist**: Added `github_wiki` to `validate.js` publisher validation (was only in `config-schema.js`)
 - **Doctor false-success**: `repolens doctor` now correctly exits with code 2 when `runDoctor()` reports failures (previously always printed "validation passed")
 - **Feedback exit code**: `repolens feedback` now exits with code 1 when feedback fails to send (previously exited 0)
 - **Unknown flags**: `repolens --unknown-flag` now prints an error instead of silently running publish
