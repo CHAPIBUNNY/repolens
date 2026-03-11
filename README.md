@@ -16,7 +16,7 @@
 
 AI-assisted documentation intelligence system that generates architecture docs for engineers AND readable system docs for stakeholders
 
-**Current Status**: v1.0.0 — Stable Release
+**Current Status**: v1.2.0 — Stable Release
 
 RepoLens automatically generates and maintains living architecture documentation by analyzing your repository structure, extracting meaningful insights from your package.json, and creating visual dependency graphs. Run it once, or let it auto-update on every push.
 
@@ -230,7 +230,7 @@ npm link
 Install from a specific version:
 
 ```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.0.0/chappibunny-repolens-1.0.0.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.2.0/chappibunny-repolens-1.2.0.tgz
 ```
 </details>
 
@@ -1106,7 +1106,7 @@ Simulates the full user installation experience:
 npm pack
 
 # Install globally from tarball
-npm install -g chappibunny-repolens-1.0.0.tgz
+npm install -g chappibunny-repolens-1.2.0.tgz
 
 # Verify
 repolens --version
@@ -1230,7 +1230,7 @@ See [RELEASE.md](./RELEASE.md) for detailed workflow.
 
 ## 🗺️ Roadmap
 
-**Current Status:** v1.0.0 — Stable Release
+**Current Status:** v1.2.0 — Stable Release
 
 ### v1.0 — Complete ✅
 

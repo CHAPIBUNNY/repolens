@@ -120,7 +120,7 @@ describe("GitHub Wiki Publisher", () => {
       // Verify add, commit, push were called
       expect(gitCommands.some(c => c.includes("add -A"))).toBe(true);
       expect(gitCommands.some(c => c.includes("commit"))).toBe(true);
-      expect(gitCommands.some(c => c.includes("push"))).toBe(true);
+      expect(gitCommands.some(c => c.includes("push origin HEAD:refs/heads/master"))).toBe(true);
     });
 
     it("skips push when wiki is up to date", async () => {
@@ -180,9 +180,12 @@ describe("GitHub Wiki Publisher", () => {
 
       await publishToGitHubWiki(cfg, pages);
 
-      // Should fall back to git init + remote add
-      expect(gitCommands.some(c => c.includes("init"))).toBe(true);
+      // Should fall back to git init with master branch + remote add
+      expect(gitCommands.some(c => c.includes("init -b master"))).toBe(true);
       expect(gitCommands.some(c => c.includes("remote add origin"))).toBe(true);
+
+      // Should push explicitly to master for GitHub Wiki compatibility
+      expect(gitCommands.some(c => c.includes("push origin HEAD:refs/heads/master"))).toBe(true);
     });
 
     it("sanitizes token from error messages", async () => {

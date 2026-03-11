@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.0.0  
+**Current Version:** 1.2.0  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** March 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v0.9.0)
+## What's Shipped (v0.1.0 → v1.1.0)
 
 Everything below is live, tested, and available on npm.
 
@@ -114,10 +114,10 @@ Everything below is live, tested, and available on npm.
 
 ---
 
-## v1.1.0+ — Growth & Scale
+## v1.2.0+ — Growth & Scale
 
 ### Publishers
-- [x] GitHub Wiki publisher
+- [x] GitHub Wiki publisher (shipped v1.1.0)
 - [ ] Obsidian vault publisher
 
 ### Integrations

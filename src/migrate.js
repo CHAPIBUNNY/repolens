@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import yaml from "js-yaml";
 import { info, warn, error as logError } from "./utils/logger.js";
 import { trackMigration } from "./utils/telemetry.js";
 
@@ -106,6 +107,78 @@ $2$3`
 }
 
 /**
+ * Find .repolens.yml config file in the target directory
+ */
+async function findConfigFile(targetDir) {
+  const candidates = [".repolens.yml", ".repolens.yaml"];
+  for (const name of candidates) {
+    const filePath = path.join(targetDir, name);
+    try {
+      await fs.access(filePath);
+      return filePath;
+    } catch {
+      // not found, try next
+    }
+  }
+  return null;
+}
+
+/**
+ * Migrate .repolens.yml config file — add configVersion: 1 if missing
+ * Returns { migrated: boolean, filePath: string|null }
+ */
+async function migrateConfigFile(targetDir, options = {}) {
+  const { dryRun = false } = options;
+
+  const configPath = await findConfigFile(targetDir);
+  if (!configPath) {
+    return { migrated: false, filePath: null, reason: "no-config" };
+  }
+
+  const filename = path.basename(configPath);
+  console.log(`\n📄 Checking config: ${filename}`);
+
+  const raw = await fs.readFile(configPath, "utf8");
+  let parsed;
+  try {
+    parsed = yaml.load(raw);
+  } catch {
+    warn(`   ⚠️  Could not parse ${filename} — skipping config migration`);
+    return { migrated: false, filePath: configPath, reason: "parse-error" };
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    warn(`   ⚠️  ${filename} is empty or not a mapping — skipping config migration`);
+    return { migrated: false, filePath: configPath, reason: "invalid-structure" };
+  }
+
+  if (parsed.configVersion != null) {
+    info("   ✅ configVersion already present");
+    return { migrated: false, filePath: configPath, reason: "already-present" };
+  }
+
+  info("   🔧 Missing configVersion — adding configVersion: 1");
+
+  // Prepend configVersion: 1 to preserve existing formatting
+  const migratedContent = `configVersion: 1\n${raw}`;
+
+  if (dryRun) {
+    info("   🔍 DRY RUN: No changes written");
+    return { migrated: true, filePath: configPath, reason: "dry-run" };
+  }
+
+  // Backup original
+  const backupPath = `${configPath}.backup`;
+  await fs.writeFile(backupPath, raw, "utf8");
+  info(`   💾 Backup saved: ${path.basename(backupPath)}`);
+
+  await fs.writeFile(configPath, migratedContent, "utf8");
+  info(`   ✅ Migrated: ${filename}`);
+
+  return { migrated: true, filePath: configPath, reason: "migrated" };
+}
+
+/**
  * Find all workflow files in .github/workflows
  */
 async function findWorkflowFiles(targetDir) {
@@ -170,17 +243,16 @@ export async function runMigrate(targetDir = process.cwd(), options = {}) {
     
     const workflowFiles = await findWorkflowFiles(targetDir);
 
+    let migratedCount = 0;
+    let skippedCount = 0;
+
     if (workflowFiles.length === 0) {
       warn("⚠️  No workflow files found in .github/workflows/");
       info("\n💡 If you haven't set up GitHub Actions yet:");
       info("   Run: repolens init");
-      return;
+    } else {
+      info(`   Found ${workflowFiles.length} workflow file(s)`);
     }
-
-    info(`   Found ${workflowFiles.length} workflow file(s)`);
-
-    let migratedCount = 0;
-    let skippedCount = 0;
 
     for (const workflowPath of workflowFiles) {
       const filename = path.basename(workflowPath);
@@ -221,6 +293,16 @@ export async function runMigrate(targetDir = process.cwd(), options = {}) {
       migratedCount++;
     }
 
+    // === Config File Migration ===
+    const configResult = await migrateConfigFile(targetDir, { dryRun });
+    let configMigrated = false;
+    if (configResult.migrated) {
+      migratedCount++;
+      configMigrated = true;
+    } else if (configResult.reason === "no-config") {
+      info("\n📄 No .repolens.yml found — skipping config migration");
+    }
+
     // Summary
     console.log("\n" + "─".repeat(60));
     console.log("📊 Migration Summary:");
@@ -248,7 +330,7 @@ export async function runMigrate(targetDir = process.cwd(), options = {}) {
     trackMigration(migratedCount, skippedCount);
     
     // Return results for telemetry tracking
-    return { migratedCount, skippedCount };
+    return { migratedCount, skippedCount, configMigrated };
 
   } catch (err) {
     logError(`Migration failed: ${err.message}`);

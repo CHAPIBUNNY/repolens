@@ -392,18 +392,24 @@ export async function publishToGitHubWiki(cfg, renderedPages) {
       git(`clone --depth 1 ${cloneUrl} .`, tmpDir);
     } catch {
       warn("Wiki repository not found — initializing. Enable the wiki tab in GitHub repo settings.");
-      git("init", tmpDir);
+      // GitHub Wiki uses 'master' as default branch; ensure compatibility
+      // regardless of the local git init.defaultBranch setting
+      git("init -b master", tmpDir);
       git(`remote add origin ${cloneUrl}`, tmpDir);
     }
 
-    const pageKeys = Object.keys(renderedPages);
+    // Only include pages that have actual content
+    const populatedPages = Object.entries(renderedPages).filter(
+      ([, markdown]) => markdown && markdown.trim().length > 0
+    );
+    const pageKeys = populatedPages.map(([key]) => key);
 
     // Write Home.md
     const home = generateHome(pageKeys, projectName, branch, repo);
     await fs.writeFile(path.join(tmpDir, "Home.md"), home, "utf8");
 
     // Write each rendered page with metadata header
-    for (const [key, markdown] of Object.entries(renderedPages)) {
+    for (const [key, markdown] of populatedPages) {
       const fileName = pageFileName(key);
       const header = pageHeader(key, branch);
       await fs.writeFile(path.join(tmpDir, fileName), header + markdown, "utf8");
@@ -438,8 +444,9 @@ export async function publishToGitHubWiki(cfg, renderedPages) {
     const commitMsg = `docs: update RepoLens documentation${branchLabel}`;
     git(`commit -m "${commitMsg}"`, tmpDir);
 
-    git("push origin HEAD", tmpDir);
-    info(`GitHub Wiki published: https://github.com/${repo}/wiki`);
+    // GitHub Wiki serves from 'master'; push explicitly to master
+    git("push origin HEAD:refs/heads/master", tmpDir);
+    info(`GitHub Wiki published (${pageKeys.length} pages): https://github.com/${repo}/wiki`);
 
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});

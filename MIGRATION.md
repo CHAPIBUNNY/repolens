@@ -2,12 +2,12 @@
 
 This guide helps you upgrade RepoLens across breaking changes and major versions.
 
-**Current Version:** 0.9.0  
-**Last Updated:** July 2025
+**Current Version:** 1.2.0  
+**Last Updated:** March 2026
 
 ---
 
-## Migrating to v0.6.x (Latest)
+## Migrating to v0.6.x
 
 ### Package Rename
 
@@ -182,7 +182,7 @@ RepoLens checks for updates automatically:
 ┌────────────────────────────────────────────────────────────┐
 │                   📦 Update Available                      │
 ├────────────────────────────────────────────────────────────┤
-│  Current: 0.5.0    → Latest: 0.9.0                        │
+│  Current: 0.5.0    → Latest: 1.2.0                        │
 │                                                            │
 │  Run one of these commands to update:                     │
 │                                                            │
@@ -218,6 +218,34 @@ npm install @chappibunny/repolens@latest
 ---
 
 ## Version History
+
+### v1.2.0 (March 2026)
+- `repolens migrate` now also patches `.repolens.yml` (adds `configVersion: 1` if missing)
+- Documentation version references updated across all files
+
+### v1.1.0 (March 2026)
+- GitHub Wiki publisher with audience-grouped Home, sidebar, and page metadata
+- Temperature bug fix for GPT-5 compatibility
+
+### v1.0.1 (March 2026)
+- GPT-5 API compatibility (`max_completion_tokens`, temperature handling)
+
+### v1.0.0 (March 2026)
+- Stable release with frozen CLI, config schema, and plugin interface
+- 180 tests across 15 files
+- Semver guarantees (see STABILITY.md)
+
+### v0.9.0
+- Plugin system for custom renderers, publishers, and lifecycle hooks
+- Plugin loader, manager, and config validation
+
+### v0.8.0
+- Extended analysis: GraphQL, TypeScript type graph, dependency graph, architecture drift
+- 15 document types (4 new extended-analysis)
+
+### v0.7.0
+- Structured context builder (three-layer architecture: scan → artifacts → AI)
+- Zero-hallucination AI pipeline
 
 ### v0.6.x (July 2025)
 - Confluence publisher, Discord notifications, metrics system

@@ -121,7 +121,7 @@ Here are real examples of what we track (sanitized):
 {
   "error": "ENOENT: no such file or directory",
   "command": "publish",
-  "version": "0.9.0",
+  "version": "1.2.0",
   "platform": "darwin",
   "nodeVersion": "v20.11.0"
 }
@@ -162,5 +162,5 @@ Here are real examples of what we track (sanitized):
 
 ---
 
-**Last updated:** July 2025  
+**Last updated:** March 2026  
 **Applies to:** RepoLens v0.4.3+

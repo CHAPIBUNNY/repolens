@@ -2,6 +2,23 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.2.0
+
+### ✨ Config Migration
+
+- **`repolens migrate` now patches `.repolens.yml`**: Automatically adds `configVersion: 1` to legacy config files that are missing it. Creates a `.repolens.yml.backup` before modifying. Supports both `.yml` and `.yaml` extensions, dry-run mode, and graceful handling of parse errors or missing configs.
+
+### � Bug Fixes
+
+- **GitHub Wiki empty pages**: Fixed branch mismatch where `git init` created a `main` branch but GitHub Wiki serves from `master`. Now explicitly initializes with `master` and pushes to `refs/heads/master`. Also added content validation to skip pages with empty content.
+
+### �📝 Documentation
+
+- Updated all documentation to reflect v1.2.0 version references
+- Updated TROUBLESHOOTING.md with `migrate` auto-fix hint for missing `configVersion`
+- Updated KNOWN_ISSUES.md planned improvements (removed shipped features)
+- Updated ROADMAP.md with v1.1.0 shipped items
+
 ## 1.1.0
 
 ### ✨ GitHub Wiki Publisher UX Enhancement

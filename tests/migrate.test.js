@@ -336,4 +336,96 @@ jobs:
     expect(migrated).toMatch(/- name: Install dependencies\s+run: npm ci/);
     expect(migrated).toMatch(/- name: Run tests\s+run: npm test/);
   });
+
+  describe("Config file migration", () => {
+    it("adds configVersion: 1 to .repolens.yml when missing", async () => {
+      const configContent = `project:
+  name: my-app
+publishers:
+  - markdown
+scan:
+  include:
+    - "src/**"
+`;
+      await fs.writeFile(path.join(tempDir, ".repolens.yml"), configContent, "utf8");
+
+      const result = await runMigrate(tempDir, { dryRun: false, force: true });
+
+      const migrated = await fs.readFile(path.join(tempDir, ".repolens.yml"), "utf8");
+      expect(migrated).toMatch(/^configVersion: 1\n/);
+      expect(migrated).toContain("project:");
+      expect(migrated).toContain("name: my-app");
+      expect(result.configMigrated).toBe(true);
+
+      // Backup created
+      const backup = await fs.readFile(path.join(tempDir, ".repolens.yml.backup"), "utf8");
+      expect(backup).toBe(configContent);
+    });
+
+    it("skips config when configVersion already present", async () => {
+      const configContent = `configVersion: 1
+project:
+  name: my-app
+publishers:
+  - markdown
+scan:
+  include:
+    - "src/**"
+`;
+      await fs.writeFile(path.join(tempDir, ".repolens.yml"), configContent, "utf8");
+
+      const result = await runMigrate(tempDir, { dryRun: false, force: true });
+
+      const after = await fs.readFile(path.join(tempDir, ".repolens.yml"), "utf8");
+      expect(after).toBe(configContent);
+      expect(result.configMigrated).toBe(false);
+
+      // No backup created
+      try {
+        await fs.access(path.join(tempDir, ".repolens.yml.backup"));
+        expect.fail("Backup should not exist when configVersion already present");
+      } catch (err) {
+        expect(err.code).toBe("ENOENT");
+      }
+    });
+
+    it("handles missing .repolens.yml gracefully", async () => {
+      const result = await runMigrate(tempDir, { dryRun: false, force: true });
+      expect(result.configMigrated).toBe(false);
+    });
+
+    it("respects dry-run for config migration", async () => {
+      const configContent = `project:
+  name: my-app
+publishers:
+  - markdown
+scan:
+  include:
+    - "src/**"
+`;
+      await fs.writeFile(path.join(tempDir, ".repolens.yml"), configContent, "utf8");
+
+      await runMigrate(tempDir, { dryRun: true, force: true });
+
+      const after = await fs.readFile(path.join(tempDir, ".repolens.yml"), "utf8");
+      expect(after).toBe(configContent);
+    });
+
+    it("handles .repolens.yaml extension", async () => {
+      const configContent = `project:
+  name: my-app
+publishers:
+  - markdown
+scan:
+  include:
+    - "src/**"
+`;
+      await fs.writeFile(path.join(tempDir, ".repolens.yaml"), configContent, "utf8");
+
+      await runMigrate(tempDir, { dryRun: false, force: true });
+
+      const migrated = await fs.readFile(path.join(tempDir, ".repolens.yaml"), "utf8");
+      expect(migrated).toMatch(/^configVersion: 1\n/);
+    });
+  });
 });

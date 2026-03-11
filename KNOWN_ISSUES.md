@@ -2,8 +2,8 @@
 
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
-**Last Updated:** July 2025  
-**Version:** 0.9.0
+**Last Updated:** March 2026  
+**Version:** 1.2.0
 
 ---
 
@@ -265,15 +265,12 @@ Do NOT use `npm ci` in GitHub Actions workflows.
 
 ## 🔮 Planned Improvements
 
-### Next Release (v0.9.0)
-- [ ] Plugin system for custom renderers
-- [ ] Additional publishers (GitHub Wiki, Obsidian)
-
 ### Future
-- [ ] Plugin system for custom renderers
-- [ ] Additional publishers (GitHub Wiki, Obsidian)
+- [ ] Obsidian vault publisher
 - [ ] Cross-repository architecture analysis
 - [ ] VS Code extension for architecture visualization
+- [ ] Slack notifications
+- [ ] Custom webhook support
 
 ---
 

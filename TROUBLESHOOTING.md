@@ -122,7 +122,7 @@ npx @chappibunny/repolens doctor
 ```
 
 Common issues:
-- Missing `configVersion: 1`
+- Missing `configVersion: 1` — run `npx @chappibunny/repolens migrate` to auto-fix
 - Empty `publishers` array
 - Empty `scan.include` patterns
 - Invalid `ai.temperature` value (must be 0–2)

@@ -15,8 +15,8 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 0.9.0  
-**Status:** Production-ready, pre-v1.0 stability guarantees  
+**Version:** 1.2.0  
+**Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
 **Author:** Charl van Zyl
@@ -402,8 +402,11 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 
 ## Future Enhancements
 
-- Additional publishers (GitHub Wiki, Obsidian)
+- Obsidian vault publisher
 - Enhanced diff visualization with visual diffs
-- Interactive configuration wizard (`repolens init --interactive`)
-- Watch mode for local development (`repolens watch`)
+- VS Code extension for architecture visualization
+- Cross-repository architecture analysis
 - ~~Plugin system for custom renderers~~ ✅ Shipped in v0.9.0
+- ~~GitHub Wiki publisher~~ ✅ Shipped in v1.1.0
+- ~~Interactive configuration wizard (`repolens init --interactive`)~~ ✅ Shipped
+- ~~Watch mode for local development (`repolens watch`)~~ ✅ Shipped
