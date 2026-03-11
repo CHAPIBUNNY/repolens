@@ -117,7 +117,7 @@ Everything below is live, tested, and available on npm.
 ## v1.1.0+ — Growth & Scale
 
 ### Publishers
-- [ ] GitHub Wiki publisher
+- [x] GitHub Wiki publisher
 - [ ] Obsidian vault publisher
 
 ### Integrations

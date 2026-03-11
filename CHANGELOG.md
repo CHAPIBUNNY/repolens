@@ -8,6 +8,16 @@ All notable changes to RepoLens will be documented in this file.
 
 RepoLens v1.0.0 marks the first stable release with a frozen public API. All CLI commands, configuration schema, and plugin interfaces are now covered by semantic versioning guarantees. See [STABILITY.md](STABILITY.md) for the full contract.
 
+### ✨ New Features
+- **GitHub Wiki Publisher**: Publish documentation directly to your repository's Wiki tab
+  - Git-based: clones wiki repo, writes pages, commits and pushes
+  - Generates `Home.md` index, `_Sidebar.md` navigation, `_Footer.md`
+  - Branch filtering via `github_wiki.branches` in `.repolens.yml`
+  - Auto-detects repository from `GITHUB_REPOSITORY` env or git remote
+  - Token sanitization in error messages (never leaks `GITHUB_TOKEN`)
+  - Config: `sidebar` and `footer` toggles
+  - 17 tests covering publishing, branch filtering, config validation, and security
+
 ### 🐛 Bug Fixes
 - **Doctor false-success**: `repolens doctor` now correctly exits with code 2 when `runDoctor()` reports failures (previously always printed "validation passed")
 - **Feedback exit code**: `repolens feedback` now exits with code 1 when feedback fails to send (previously exited 0)

@@ -113,6 +113,33 @@ export function shouldPublishToConfluence(config, currentBranch = getCurrentBran
 }
 
 /**
+ * Check if current branch should publish to GitHub Wiki
+ * Based on config.github_wiki.branches setting
+ */
+export function shouldPublishToGitHubWiki(config, currentBranch = getCurrentBranch()) {
+  if (!config.github_wiki) {
+    return true;
+  }
+
+  if (!config.github_wiki.branches || config.github_wiki.branches.length === 0) {
+    return true;
+  }
+
+  return config.github_wiki.branches.some(pattern => {
+    if (pattern === currentBranch) {
+      return true;
+    }
+
+    if (pattern.includes("*")) {
+      const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
+      return regex.test(currentBranch);
+    }
+
+    return false;
+  });
+}
+
+/**
  * Get branch-qualified page title
  */
 export function getBranchQualifiedTitle(baseTitle, branch = getCurrentBranch(), includeBranch = true) {

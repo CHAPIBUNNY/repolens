@@ -124,7 +124,7 @@ RepoLens automatically detects:
 ✅ **Deterministic Fallback** - Always generates docs even if AI unavailable  
 ✅ **Business Domain Inference** - Automatically maps code to business functions  
 ✅ **Data Flow Analysis** - Understands how information moves through your system  
-✅ **Multiple Publishers** - Output to Notion, Confluence, Markdown, or all three  
+✅ **Multiple Publishers** - Output to Notion, Confluence, GitHub Wiki, Markdown, or all four  
 ✅ **Branch-Aware** - Prevent doc conflicts across branches  
 ✅ **GitHub Actions** - Autonomous operation on every push  
 ✅ **Team Notifications** - Discord integration with rich embeds (NEW in v0.6.0)  
@@ -312,6 +312,14 @@ publishers:
   - markdown
 ```
 Maximum visibility: Notion for async collaboration, Confluence for enterprise docs, Markdown for local backups.
+
+**GitHub Wiki** (ideal for open source):
+```yaml
+publishers:
+  - github_wiki
+  - markdown
+```
+Docs live alongside your code — accessible from the repo's Wiki tab. Requires `GITHUB_TOKEN`.
 
 ### Step 3: Enable AI Features (Optional)
 
@@ -944,11 +952,14 @@ features:
 | `configVersion` | number | **Yes** | Schema version (must be `1`) |
 | `project.name` | string | Yes | Project name |
 | `project.docs_title_prefix` | string | No | Prefix for documentation titles (default: project name) |
-| `publishers` | array | Yes | Output targets: `notion`, `confluence`, `markdown` (+ plugin publishers) |
+| `publishers` | array | Yes | Output targets: `notion`, `confluence`, `github_wiki`, `markdown` (+ plugin publishers) |
 | `plugins` | array | No | Plugin paths or npm package names |
 | `notion.branches` | array | No | Branch whitelist for Notion publishing. Supports globs. |
 | `notion.includeBranchInTitle` | boolean | No | Add `[branch-name]` to titles (default: `true`) |
 | `confluence.branches` | array | No | Branch whitelist for Confluence publishing. Supports globs. |
+| `github_wiki.branches` | array | No | Branch whitelist for GitHub Wiki publishing. Supports globs. |
+| `github_wiki.sidebar` | boolean | No | Generate `_Sidebar.md` navigation (default: `true`) |
+| `github_wiki.footer` | boolean | No | Generate `_Footer.md` (default: `true`) |
 | `discord.enabled` | boolean | No | Enable Discord notifications (default: `true` if webhook set) |
 | `discord.notifyOn` | string | No | Notification policy: `always`, `significant`, `never` (default: `significant`) |
 | `discord.significantThreshold` | number | No | Change % threshold for notifications (default: `10`) |
@@ -992,6 +1003,13 @@ Optional for Discord notifications:
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DISCORD_WEBHOOK_URL` | No | Discord webhook URL for team notifications |
+
+Required for GitHub Wiki publisher:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GITHUB_TOKEN` | Yes | Personal access token or Actions `${{ secrets.GITHUB_TOKEN }}` |
+| `GITHUB_REPOSITORY` | No | `owner/repo` (auto-detected from git remote in Actions) |
 
 **Local Development:** Create `.env` file in project root  
 **GitHub Actions:** Add as repository secrets in Settings → Secrets and variables → Actions
@@ -1077,7 +1095,7 @@ npm test
 - Integration workflows
 - Doctor command validation
 
-**Coverage:** 163 tests passing across 14 test files
+**Coverage:** 180 tests passing across 15 test files
 
 ### Test Package Installation Locally
 
@@ -1137,6 +1155,7 @@ repolens/
 │   │   ├── publish.js       # Publishing pipeline
 │   │   ├── notion.js        # Notion API integration
 │   │   ├── confluence.js    # Confluence REST API integration
+│   │   ├── github-wiki.js   # GitHub Wiki publisher (git-based)
 │   │   └── markdown.js      # Local Markdown generation
 │   ├── integrations/
 │   │   └── discord.js       # Discord webhook notifications
@@ -1156,7 +1175,7 @@ repolens/
 │       ├── telemetry.js     # Opt-in error tracking + performance timers
 │       ├── errors.js        # Enhanced error messages with guidance
 │       └── update-check.js  # Version update notifications
-├── tests/                   # Vitest test suite (163 tests across 14 files)
+├── tests/                   # Vitest test suite (180 tests across 15 files)
 ├── .repolens.yml            # Dogfooding config
 ├── package.json
 ├── CHANGELOG.md
@@ -1218,7 +1237,7 @@ See [RELEASE.md](./RELEASE.md) for detailed workflow.
 - [x] CLI commands: `init`, `doctor`, `publish`, `migrate`, `watch`, `feedback`, `version`, `help`
 - [x] Config schema v1 with validation (frozen)
 - [x] Auto-discovery of `.repolens.yml`
-- [x] Publishers: Notion + Confluence + Markdown
+- [x] Publishers: Notion + Confluence + GitHub Wiki + Markdown
 - [x] Branch-aware publishing with filtering
 - [x] Smart tech stack detection from package.json
 - [x] Unicode dependency diagrams (no external deps)
@@ -1227,7 +1246,7 @@ See [RELEASE.md](./RELEASE.md) for detailed workflow.
 - [x] GitHub Actions automation (publish + release)
 - [x] PR architecture diff comments
 - [x] Performance guardrails (10k warning, 50k limit)
-- [x] Comprehensive test suite (163 tests across 14 files)
+- [x] Comprehensive test suite (180 tests across 15 files)
 - [x] Security hardening (secret detection, injection prevention, fuzzing)
 - [x] Discord notifications with rich embeds
 - [x] Documentation coverage & health scoring
@@ -1250,7 +1269,7 @@ See [RELEASE.md](./RELEASE.md) for detailed workflow.
 
 ### Future
 
-- [ ] Additional publishers (GitHub Wiki, Obsidian)
+- [ ] Additional publishers (Obsidian)
 - [ ] VS Code extension
 - [ ] GitHub App
 

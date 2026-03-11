@@ -1,7 +1,8 @@
 import { publishToNotion } from "./publish.js";
 import { publishToMarkdown } from "./markdown.js";
 import { publishToConfluence, hasConfluenceSecrets } from "./confluence.js";
-import { shouldPublishToNotion, shouldPublishToConfluence, getCurrentBranch } from "../utils/branch.js";
+import { publishToGitHubWiki, hasGitHubWikiSecrets } from "./github-wiki.js";
+import { shouldPublishToNotion, shouldPublishToConfluence, shouldPublishToGitHubWiki, getCurrentBranch } from "../utils/branch.js";
 import { info, warn } from "../utils/logger.js";
 import { trackPublishing } from "../utils/telemetry.js";
 import { collectMetrics } from "../utils/metrics.js";
@@ -77,6 +78,27 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
     } catch (err) {
       publishStatus = "failure";
       throw err;
+    }
+  }
+
+  // GitHub Wiki publishing (opt-in if secrets configured)
+  if (publishers.includes("github_wiki") || hasGitHubWikiSecrets() && publishers.includes("github_wiki")) {
+    if (!hasGitHubWikiSecrets()) {
+      info("Skipping GitHub Wiki publish: GITHUB_TOKEN not configured");
+      info("In GitHub Actions, add GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} to your env");
+    } else if (shouldPublishToGitHubWiki(cfg, currentBranch)) {
+      info(`Publishing to GitHub Wiki from branch: ${currentBranch}`);
+      try {
+        await publishToGitHubWiki(cfg, renderedPages);
+        publishedTo.push("github_wiki");
+      } catch (err) {
+        publishStatus = "failure";
+        throw err;
+      }
+    } else {
+      const allowedBranches = cfg.github_wiki?.branches?.join(", ") || "none configured";
+      warn(`Skipping GitHub Wiki publish: branch "${currentBranch}" not in allowed list (${allowedBranches})`);
+      info("To publish from this branch, add it to github_wiki.branches in .repolens.yml");
     }
   }
 

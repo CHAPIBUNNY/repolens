@@ -74,6 +74,7 @@ src/
     markdown.js           # Markdown file generation
     notion.js             # Notion API integration
     confluence.js         # Confluence REST API integration (storage format)
+    github-wiki.js        # GitHub Wiki publisher (git-based)
     publish.js            # Publishing pipeline + diagram URL validation
   renderers/
     render.js             # System overview, module catalog, API surface, route map
@@ -94,7 +95,7 @@ src/
   plugins/
     loader.js             # Plugin resolution and dynamic import
     manager.js            # Plugin registry and lifecycle orchestration
-tests/                    # Vitest test suite (163 tests across 14 files)
+tests/                    # Vitest test suite (180 tests across 15 files)
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
   config-discovery.test.js # Config auto-discovery tests
@@ -137,6 +138,7 @@ tests/                    # Vitest test suite (163 tests across 14 files)
 ### Multi-Platform Publishing
 - **Notion**: Create/update pages with branch-aware namespacing
 - **Confluence**: Atlassian Cloud REST API v1, storage format (HTML-like), Basic Auth (email + API token)
+- **GitHub Wiki**: Publish to repository wiki via git clone/push
 - **Markdown**: Write to `.repolens/` directory
 - **Discord**: Rich embed notifications via webhooks (publish metrics, coverage stats)
 
@@ -220,7 +222,7 @@ tests/                    # Vitest test suite (163 tests across 14 files)
 - Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
 - Test config discovery, validation, rendering, branch detection, migration, security fuzzing
-- **Coverage**: 163 tests passing across 14 test files
+- **Coverage**: 180 tests passing across 15 test files
 - Run: `npm test`
 
 ### Configuration
@@ -254,6 +256,7 @@ tests/                    # Vitest test suite (163 tests across 14 files)
 3. **Publish**:
    - **Notion**: Create/update pages via Notion API
    - **Confluence**: Create/update pages via REST API v1 (storage format with code block handling)
+   - **GitHub Wiki**: Clone wiki repo, write pages, commit and push
    - **Markdown**: Write to `.repolens/` directory
 4. **Notify**: Send Discord webhook with publish metrics
 5. **Deliver**: Optionally post PR comments with diffs

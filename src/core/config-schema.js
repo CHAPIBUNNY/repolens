@@ -8,7 +8,7 @@
  */
 
 const CURRENT_SCHEMA_VERSION = 1;
-const SUPPORTED_PUBLISHERS = ["notion", "markdown", "confluence"];
+const SUPPORTED_PUBLISHERS = ["notion", "markdown", "confluence", "github_wiki"];
 const SUPPORTED_PAGE_KEYS = [
   "system_overview",
   "module_catalog",
@@ -189,6 +189,31 @@ export function validateConfig(config) {
             }
           });
         }
+      }
+    }
+  }
+
+  // Validate GitHub Wiki configuration (optional)
+  if (config.github_wiki !== undefined) {
+    if (typeof config.github_wiki !== "object" || Array.isArray(config.github_wiki)) {
+      errors.push("github_wiki must be an object");
+    } else {
+      if (config.github_wiki.branches !== undefined) {
+        if (!Array.isArray(config.github_wiki.branches)) {
+          errors.push("github_wiki.branches must be an array");
+        } else {
+          config.github_wiki.branches.forEach((branch, idx) => {
+            if (typeof branch !== "string") {
+              errors.push(`github_wiki.branches[${idx}] must be a string`);
+            }
+          });
+        }
+      }
+      if (config.github_wiki.sidebar !== undefined && typeof config.github_wiki.sidebar !== "boolean") {
+        errors.push("github_wiki.sidebar must be a boolean");
+      }
+      if (config.github_wiki.footer !== undefined && typeof config.github_wiki.footer !== "boolean") {
+        errors.push("github_wiki.footer must be a boolean");
       }
     }
   }

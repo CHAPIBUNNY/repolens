@@ -94,6 +94,10 @@ outputs:
 | `notion.includeBranchInTitle` | boolean | Include branch name in page titles |
 | `confluence` | object | Confluence publisher configuration |
 | `confluence.branches` | string[] | Branch filter for Confluence publishing |
+| `github_wiki` | object | GitHub Wiki publisher configuration |
+| `github_wiki.branches` | string[] | Branch filter for GitHub Wiki publishing |
+| `github_wiki.sidebar` | boolean | Generate `_Sidebar.md` (default: `true`) |
+| `github_wiki.footer` | boolean | Generate `_Footer.md` (default: `true`) |
 | `discord` | object | Discord notification configuration |
 | `discord.enabled` | boolean | Enable/disable Discord notifications |
 | `discord.notifyOn` | string | `"always"`, `"significant"`, or `"never"` |
