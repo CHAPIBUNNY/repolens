@@ -2,7 +2,7 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 0.9.0  
+**Current Version:** 1.0.0  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** March 2026
 
@@ -81,19 +81,36 @@ Everything below is live, tested, and available on npm.
 
 ---
 
-## v1.0.0 — Stable Release
+## v1.0.0 — Stable Release ✅
 
-**Stability Guarantees:**
-- Stable CLI commands and flags
-- Stable `.repolens.yml` schema (v1) with migration tooling
-- Stable publisher interface
-- Comprehensive test suite with integration + e2e coverage
-- Semantic versioning with breaking change guarantees
+**Shipped.** Tagged and published to npm.
 
-**Additional Features:**
-- [x] Plugin system for custom renderers and publishers
-- [ ] VS Code extension for in-editor architecture visualization
-- [ ] GitHub App for automated setup and status checks
+**Stability Audit:**
+- ✅ CLI commands and flags frozen (see [STABILITY.md](STABILITY.md))
+- ✅ `.repolens.yml` schema v1 frozen with validation
+- ✅ Plugin interface frozen (`register()` → renderers, publishers, hooks)
+- ✅ Exit code contract: 0 success, 1 error, 2 validation failure
+- ✅ Semantic versioning with breaking change guarantees
+
+**Bug Fixes:**
+- ✅ Doctor false-success: now exits code 2 on failure
+- ✅ Feedback exit code: exits 1 on send failure
+- ✅ Unknown flags no longer silently run publish
+- ✅ `scan.ignore` security bypass fixed
+- ✅ Domains type mismatch aligned across validators
+- ✅ Plugin publisher errors caught instead of crashing pipeline
+
+**Config Stability:**
+- ✅ `configVersion: 1` now required
+- ✅ Confluence config section validation added
+- ✅ AI temperature range 0–2, max_tokens must be >0
+- ✅ AI config YAML values used as fallback for env vars
+
+**Improvements:**
+- ✅ Standardized exit codes (`EXIT_SUCCESS`/`ERROR`/`VALIDATION`)
+- ✅ `console.log`/`warn` replaced with logger in all prod code
+- ✅ Sentry DSN moved to `REPOLENS_SENTRY_DSN` env var
+- ✅ Default AI model migrated to `gpt-5-mini` (deprecated GPT-4 models removed)
 
 ---
 
@@ -103,14 +120,18 @@ Everything below is live, tested, and available on npm.
 - [ ] GitHub Wiki publisher
 - [ ] Obsidian vault publisher
 
+### Integrations
+- [ ] VS Code extension for in-editor architecture visualization
+- [ ] GitHub App for automated setup and status checks
+- [ ] Slack notifications
+- [ ] Custom webhook support
+
 ### Analysis
 - [ ] Cross-repository architecture analysis
 - [ ] Monorepo-aware module detection
 - [ ] Security boundary validation
 
 ### Developer Experience
-- [ ] Slack notifications
-- [ ] Custom webhook support
 - [ ] Interactive HTML documentation output
 - [ ] Architecture decision records (ADR) generation
 
