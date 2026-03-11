@@ -88,7 +88,7 @@ jobs:
           REPOLENS_AI_ENABLED: true
           REPOLENS_AI_API_KEY: ${{ secrets.REPOLENS_AI_API_KEY }}
           REPOLENS_AI_BASE_URL: https://api.openai.com/v1
-          REPOLENS_AI_MODEL: gpt-4-turbo-preview
+          REPOLENS_AI_MODEL: gpt-5-mini
           REPOLENS_AI_TEMPERATURE: 0.3
           REPOLENS_AI_MAX_TOKENS: 2000
         run: node bin/repolens.js publish

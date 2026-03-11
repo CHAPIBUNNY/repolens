@@ -24,7 +24,7 @@ export async function generateText({ system, user, temperature, maxTokens, confi
   const provider = process.env.REPOLENS_AI_PROVIDER || "openai_compatible";
   const baseUrl = process.env.REPOLENS_AI_BASE_URL;
   const apiKey = process.env.REPOLENS_AI_API_KEY;
-  const model = process.env.REPOLENS_AI_MODEL || "gpt-4-turbo-preview";
+  const model = process.env.REPOLENS_AI_MODEL || "gpt-5-mini";
   const timeoutMs = parseInt(process.env.REPOLENS_AI_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
   
   // Use config values as fallback for temperature/maxTokens
@@ -134,7 +134,7 @@ export function getAIConfig() {
   return {
     enabled: isAIEnabled(),
     provider: process.env.REPOLENS_AI_PROVIDER || "openai_compatible",
-    model: process.env.REPOLENS_AI_MODEL || "gpt-4-turbo-preview",
+    model: process.env.REPOLENS_AI_MODEL || "gpt-5-mini",
     hasApiKey: !!process.env.REPOLENS_AI_API_KEY,
     temperature: parseFloat(process.env.REPOLENS_AI_TEMPERATURE || DEFAULT_TEMPERATURE),
     maxTokens: parseInt(process.env.REPOLENS_AI_MAX_TOKENS || DEFAULT_MAX_TOKENS)

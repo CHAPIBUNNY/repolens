@@ -16,11 +16,11 @@
 
 AI-assisted documentation intelligence system that generates architecture docs for engineers AND readable system docs for stakeholders
 
-**Current Status**: v0.9.0 — Plugin System
+**Current Status**: v1.0.0 — Stable Release
 
 RepoLens automatically generates and maintains living architecture documentation by analyzing your repository structure, extracting meaningful insights from your package.json, and creating visual dependency graphs. Run it once, or let it auto-update on every push.
 
-⚠️ **Early Access Notice**: The CLI commands and configuration format may evolve until v1.0. We will provide migration guides for any breaking changes. v1.0 will guarantee stable CLI behavior and config schema.
+The CLI, configuration schema, and plugin interface are **stable** as of v1.0. See [STABILITY.md](STABILITY.md) for the full API contract and semver guarantees.
 
 ---
 
@@ -49,7 +49,7 @@ For Confluence:
 ```bash
 # Edit .env and add:
 CONFLUENCE_URL=https://your-company.atlassian.net/wiki
-CONFLUENCE_EMAIL=trades@rabitaitrades.com
+CONFLUENCE_EMAIL=your-email@example.com
 CONFLUENCE_API_TOKEN=your-token
 CONFLUENCE_SPACE_KEY=DOCS
 ```
@@ -137,6 +137,8 @@ RepoLens automatically detects:
 ✅ **TypeScript Type Graph** - Map interfaces, classes, and type relationships (NEW in v0.8.0)  
 ✅ **Dependency Graph** - Import analysis with circular dependency detection (NEW in v0.8.0)  
 ✅ **Architecture Drift** - Track structural changes against a baseline (NEW in v0.8.0)  
+✅ **Plugin System** - Extend with custom renderers, publishers, and hooks (NEW in v0.9.0)  
+✅ **Stable API** - CLI, config, and plugin interface frozen with semver guarantees (v1.0.0)  
 
 ---
 
@@ -228,7 +230,7 @@ npm link
 Install from a specific version:
 
 ```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v0.9.0/chappibunny-repolens-0.9.0.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.0.0/chappibunny-repolens-1.0.0.tgz
 ```
 </details>
 
@@ -318,7 +320,7 @@ Maximum visibility: Notion for async collaboration, Confluence for enterprise do
 **3.1: Choose an AI Provider**
 
 RepoLens works with any OpenAI-compatible API:
-- **OpenAI** (gpt-4-turbo-preview, gpt-3.5-turbo)
+- **OpenAI** (gpt-5-mini, gpt-5.4, gpt-5-nano)
 - **Anthropic Claude** (via API gateway)
 - **Azure OpenAI** (enterprise deployments)
 - **Local Models** (Ollama, LM Studio, etc.)
@@ -333,7 +335,7 @@ REPOLENS_AI_API_KEY=sk-xxxxxxxxxxxxx
 
 # Optional: Customize provider
 REPOLENS_AI_BASE_URL=https://api.openai.com/v1
-REPOLENS_AI_MODEL=gpt-4-turbo-preview
+REPOLENS_AI_MODEL=gpt-5-mini
 REPOLENS_AI_TEMPERATURE=0.3
 REPOLENS_AI_MAX_TOKENS=2000
 ```
@@ -356,7 +358,7 @@ features:
   change_impact: true        # Architecture diff with context
 ```
 
-**Cost Estimates** (with gpt-4-turbo-preview):
+**Cost Estimates** (with gpt-5-mini):
 - Small repo (<50 files): $0.10-$0.30 per run
 - Medium repo (50-200 files): $0.30-$0.80 per run
 - Large repo (200+ files): $0.80-$2.00 per run
@@ -428,7 +430,7 @@ If using the Confluence publisher:
 Create `.env` in your project root:
 ```bash
 CONFLUENCE_URL=https://your-company.atlassian.net/wiki
-CONFLUENCE_EMAIL=trades@rabitaitrades.com
+CONFLUENCE_EMAIL=your-email@example.com
 CONFLUENCE_API_TOKEN=your-api-token-here
 CONFLUENCE_SPACE_KEY=DOCS
 CONFLUENCE_PARENT_PAGE_ID=123456789  # Optional
@@ -449,7 +451,7 @@ Add as repository secrets:
 2. Click **"New repository secret"**
 3. Add:
    - Name: `CONFLUENCE_URL`, Value: `https://your-company.atlassian.net/wiki`
-   - Name: `CONFLUENCE_EMAIL`, Value: `trades@rabitaitrades.com`
+   - Name: `CONFLUENCE_EMAIL`, Value: `your-email@example.com`
    - Name: `CONFLUENCE_API_TOKEN`, Value: `your-token`
    - Name: `CONFLUENCE_SPACE_KEY`, Value: `DOCS`
    - Name: `CONFLUENCE_PARENT_PAGE_ID`, Value: `123456789` (optional)
@@ -939,10 +941,11 @@ features:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `configVersion` | number | No | Schema version (current: 1) for future migrations |
+| `configVersion` | number | **Yes** | Schema version (must be `1`) |
 | `project.name` | string | Yes | Project name |
 | `project.docs_title_prefix` | string | No | Prefix for documentation titles (default: project name) |
-| `publishers` | array | Yes | Output targets: `notion`, `confluence`, `markdown` |
+| `publishers` | array | Yes | Output targets: `notion`, `confluence`, `markdown` (+ plugin publishers) |
+| `plugins` | array | No | Plugin paths or npm package names |
 | `notion.branches` | array | No | Branch whitelist for Notion publishing. Supports globs. |
 | `notion.includeBranchInTitle` | boolean | No | Add `[branch-name]` to titles (default: `true`) |
 | `confluence.branches` | array | No | Branch whitelist for Confluence publishing. Supports globs. |
@@ -956,7 +959,11 @@ features:
 | `scan.ignore` | array | Yes | Glob patterns to exclude |
 | `module_roots` | array | No | Root directories for module detection |
 | `outputs.pages` | array | Yes | Documentation pages to generate |
-| `features` | object | No | Experimental feature flags |
+| `features` | object | No | Feature flags (boolean values) |
+| `ai.enabled` | boolean | No | Enable AI-powered documentation |
+| `ai.mode` | string | No | AI mode: `hybrid`, `full`, or `off` |
+| `ai.temperature` | number | No | Generation temperature (0\u20132) |
+| `ai.max_tokens` | number | No | Max tokens per request (>0) |
 
 ---
 
@@ -1081,7 +1088,7 @@ Simulates the full user installation experience:
 npm pack
 
 # Install globally from tarball
-npm install -g chappibunny-repolens-0.9.0.tgz
+npm install -g chappibunny-repolens-1.0.0.tgz
 
 # Verify
 repolens --version
@@ -1135,6 +1142,9 @@ repolens/
 │   │   └── discord.js       # Discord webhook notifications
 │   ├── delivery/
 │   │   └── comment.js       # PR comment delivery
+│   ├── plugins/
+│   │   ├── loader.js        # Plugin resolution and dynamic import
+│   │   └── manager.js       # Plugin registry and lifecycle orchestration
 │   └── utils/
 │       ├── logger.js        # Logging utilities
 │       ├── retry.js         # API retry logic (exponential backoff)
@@ -1150,6 +1160,7 @@ repolens/
 ├── .repolens.yml            # Dogfooding config
 ├── package.json
 ├── CHANGELOG.md
+├── STABILITY.md
 ├── RELEASE.md
 └── ROADMAP.md
 ```
@@ -1163,13 +1174,13 @@ RepoLens uses automated GitHub Actions releases.
 ### Creating a Release
 
 ```bash
-# Patch version (0.9.0 → 0.9.1) - Bug fixes
+# Patch version (1.0.0 → 1.0.1) - Bug fixes
 npm run release:patch
 
-# Minor version (0.9.0 → 0.10.0) - New features
+# Minor version (1.0.0 → 1.1.0) - New features
 npm run release:minor
 
-# Major version (0.9.0 → 1.0.0) - Breaking changes
+# Major version (1.0.0 → 2.0.0) - Breaking changes
 npm run release:major
 
 # Push the tag to trigger workflow
@@ -1189,24 +1200,23 @@ See [RELEASE.md](./RELEASE.md) for detailed workflow.
 
 ## 🤝 Contributing
 
-RepoLens is currently in early access. v1.0 will open for community contributions.
-
 **Ways to help:**
 - **Try it out**: Install and use in your projects
 - **Report issues**: Share bugs, edge cases, or UX friction
 - **Request features**: Tell us what's missing
-- **Share feedback**: What works? What doesn't?
+- **Build plugins**: Extend RepoLens with custom renderers and publishers
+- **Share feedback**: `repolens feedback`
 
 ---
 
-## 🗺️ Roadmap to v1.0
+## 🗺️ Roadmap
 
-**Current Status:** v0.9.0 — Plugin System
+**Current Status:** v1.0.0 — Stable Release
 
-### Completed ✅
+### v1.0 — Complete ✅
 
 - [x] CLI commands: `init`, `doctor`, `publish`, `migrate`, `watch`, `feedback`, `version`, `help`
-- [x] Config schema v1 with validation
+- [x] Config schema v1 with validation (frozen)
 - [x] Auto-discovery of `.repolens.yml`
 - [x] Publishers: Notion + Confluence + Markdown
 - [x] Branch-aware publishing with filtering
@@ -1235,11 +1245,14 @@ RepoLens is currently in early access. v1.0 will open for community contribution
 - [x] Dependency graph with circular dependency detection
 - [x] Architecture drift detection (baseline comparison)
 - [x] Plugin system for custom renderers and publishers
+- [x] Stability audit: CLI, config schema, and plugin interface frozen
+- [x] [STABILITY.md](STABILITY.md): Public API contract with semver guarantees
 
-### Planned for v1.0 🎯
+### Future
 
-- [ ] Stability audit: freeze CLI flags and config schema
 - [ ] Additional publishers (GitHub Wiki, Obsidian)
+- [ ] VS Code extension
+- [ ] GitHub App
 
 See [ROADMAP.md](./ROADMAP.md) for detailed planning.
 

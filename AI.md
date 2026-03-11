@@ -61,7 +61,7 @@ REPOLENS_AI_API_KEY=sk-xxx
 REPOLENS_AI_BASE_URL=https://api.openai.com/v1
 
 # Model to use
-REPOLENS_AI_MODEL=gpt-4-turbo-preview
+REPOLENS_AI_MODEL=gpt-5-mini
 ```
 
 ### 2. Configure in .repolens.yml
@@ -97,7 +97,7 @@ RepoLens supports any OpenAI-compatible API:
 ```bash
 REPOLENS_AI_BASE_URL=https://api.openai.com/v1
 REPOLENS_AI_API_KEY=sk-xxx
-REPOLENS_AI_MODEL=gpt-4-turbo-preview
+REPOLENS_AI_MODEL=gpt-5-mini
 ```
 
 ### Anthropic (via OpenAI-compatible proxy)
@@ -113,7 +113,7 @@ REPOLENS_AI_MODEL=claude-3-opus-20240229
 ```bash
 REPOLENS_AI_BASE_URL=https://your-resource.openai.azure.com/openai/deployments/your-deployment
 REPOLENS_AI_API_KEY=xxx
-REPOLENS_AI_MODEL=gpt-4
+REPOLENS_AI_MODEL=gpt-5-mini
 ```
 
 ### Local Models (Ollama, LM Studio, etc.)
@@ -190,7 +190,7 @@ documentation:
 
 ## Cost Considerations
 
-AI generation adds cost. Typical pricing (GPT-4-turbo):
+AI generation adds cost. Typical pricing (GPT-5-mini):
 
 - Small repo (~50 modules): $0.10 - $0.30 per run
 - Medium repo (~200 modules): $0.30 - $0.80 per run
@@ -198,7 +198,7 @@ AI generation adds cost. Typical pricing (GPT-4-turbo):
 
 Tips to reduce cost:
 
-1. Use `gpt-3.5-turbo` for faster, cheaper results
+1. Use `gpt-5-nano` for faster, cheaper results
 2. Disable documents you don't need in `documentation.sections`
 3. Run on main branch only (configure `notion.branches`)
 4. Use local models for free (quality varies)
@@ -281,21 +281,21 @@ Wait and retry, or reduce `temperature` and `max_tokens`
 
 ### Poor quality output
 
-- Try GPT-4 instead of GPT-3.5
+- Try `gpt-5.4` for highest quality output
 - Increase `max_tokens`
 - Adjust `temperature` (try 0.1 for more focus)
 - Add more detail to `domains` configuration
 
 ### Running costs too high
 
-- Use `gpt-3.5-turbo` instead of `gpt-4`
+- Use `gpt-5-nano` instead of `gpt-5-mini`
 - Reduce number of documents in `documentation.sections`
 - Run less frequently (only on main branch merges)
 
 ## Next Steps
 
-1. Start with default settings and `gpt-4-turbo-preview`
+1. Start with default settings and `gpt-5-mini`
 2. Review generated documentation
 3. Add business domains to improve quality
 4. Adjust `temperature` and `max_tokens` as needed
-5. Switch to `gpt-3.5-turbo` to reduce costs if quality is acceptable
+5. Switch to `gpt-5-nano` to reduce costs if quality is acceptable

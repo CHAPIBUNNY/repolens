@@ -138,7 +138,7 @@ REPOLENS_AI_API_KEY=sk-...
 - `developer_onboarding` — Getting started guide for new contributors
 - `change_impact` — Architecture diff with natural language context
 
-**Cost:** ~$0.10-$0.40 per run with gpt-4-turbo-preview
+**Cost:** ~$0.10-$0.40 per run with gpt-5-mini
 
 ### Backward Compatibility
 

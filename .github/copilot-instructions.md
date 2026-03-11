@@ -379,7 +379,7 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - `REPOLENS_AI_ENABLED` - Enable AI-powered sections (true/false)
 - `REPOLENS_AI_API_KEY` - API key for AI provider
 - `REPOLENS_AI_BASE_URL` - API base URL (default: https://api.openai.com/v1)
-- `REPOLENS_AI_MODEL` - Model name (e.g., gpt-4-turbo-preview)
+- `REPOLENS_AI_MODEL` - Model name (e.g., gpt-5-mini)
 - `REPOLENS_AI_TEMPERATURE` - Generation temperature (default: 0.3)
 - `REPOLENS_AI_MAX_TOKENS` - Max tokens per request (default: 2000)
 
