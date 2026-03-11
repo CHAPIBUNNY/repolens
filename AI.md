@@ -1,6 +1,6 @@
 # AI-Enhanced Documentation
 
-As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is available in the current version (v0.7.0).
+As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is available in the current version (v0.8.0).
 
 ## Overview
 
@@ -15,7 +15,7 @@ This approach prevents hallucination while providing rich, readable documentatio
 
 ## Document Structure
 
-RepoLens generates up to 11 documents:
+RepoLens generates up to 15 documents:
 
 ### For Non-Technical Audiences
 
@@ -36,6 +36,13 @@ RepoLens generates up to 11 documents:
 - **04-module-catalog.md** - Complete code module inventory
 - **06-api-surface.md** - Backend API documentation
 - **10-developer-onboarding.md** - Quick start for new engineers
+
+### Extended Analysis (New in v0.8.0)
+
+- **11-graphql-schema.md** - GraphQL types, queries, mutations, and resolvers
+- **12-type-graph.md** - TypeScript interfaces, classes, and type relationships
+- **13-dependency-graph.md** - Import analysis with circular dependency detection
+- **14-architecture-drift.md** - Structural changes tracked against baseline
 
 ## Enabling AI Features
 

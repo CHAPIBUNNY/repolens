@@ -4,7 +4,7 @@ This document outlines the development path for RepoLens — what's shipped, wha
 
 **Current Version:** 0.8.0  
 **npm Package:** `@chappibunny/repolens`  
-**Last Updated:** July 2025
+**Last Updated:** March 2026
 
 ---
 
@@ -46,7 +46,7 @@ Everything below is live, tested, and available on npm.
 - ✅ Exponential backoff retry logic
 - ✅ Opt-in telemetry with secret sanitization
 - ✅ CI security gates (dependency audit + secret scanning)
-- ✅ 90 tests across 11 test files (including 43 security/fuzzing tests)
+- ✅ 121 tests across 12 test files (including 43 security/fuzzing tests)
 
 ### CI/CD & npm Publishing (v0.5.0 – v0.6.4)
 - ✅ GitHub Actions: `publish-docs.yml` (every push) + `release.yml` (tag-based)

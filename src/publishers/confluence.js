@@ -136,64 +136,160 @@ async function writeCache(cache) {
 
 // Convert Markdown to Confluence Storage Format
 function markdownToConfluenceStorage(markdown) {
-  // Basic Markdown → Storage Format conversion
-  // Storage Format is Confluence's HTML-like format
-  
-  // STEP 1: Extract and convert code blocks FIRST (before escaping)
-  const codeBlocks = [];
-  let html = markdown.replace(/```(\w+)?\n([\s\S]+?)```/g, (match, lang, code) => {
-    const language = lang || "none";
-    const placeholder = `<<<CODE_BLOCK_${codeBlocks.length}>>>`;
-    codeBlocks.push(`<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">${language}</ac:parameter><ac:plain-text-body><![CDATA[${code}]]></ac:plain-text-body></ac:structured-macro>`);
-    return placeholder;
-  });
-  
-  // STEP 2: Now escape HTML entities (won't affect code blocks)
-  html = html
+  const lines = markdown.split("\n");
+  const output = [];
+
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Skip empty lines
+    if (!trimmed) {
+      i++;
+      continue;
+    }
+
+    // Code blocks (```lang ... ```)
+    if (trimmed.startsWith("```")) {
+      const language = trimmed.slice(3).trim() || "none";
+      const codeLines = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      i++; // skip closing ```
+      const code = codeLines.join("\n");
+      output.push(
+        `<ac:structured-macro ac:name="code">` +
+        `<ac:parameter ac:name="language">${escapeHtml(language)}</ac:parameter>` +
+        `<ac:plain-text-body><![CDATA[${code}]]></ac:plain-text-body>` +
+        `</ac:structured-macro>`
+      );
+      continue;
+    }
+
+    // Tables (| ... | ... |)
+    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+      const tableRows = [];
+      while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
+        const row = lines[i].trim();
+        // Skip separator rows (|---|---|)
+        if (/^\|[\s\-:|]+\|$/.test(row)) {
+          i++;
+          continue;
+        }
+        const cells = row.split("|").slice(1, -1).map(c => c.trim());
+        tableRows.push(cells);
+        i++;
+      }
+      if (tableRows.length > 0) {
+        let table = "<table><tbody>";
+        tableRows.forEach((row, idx) => {
+          const tag = idx === 0 ? "th" : "td";
+          table += "<tr>";
+          row.forEach(cell => {
+            table += `<${tag}>${inlineMarkdownToHtml(cell)}</${tag}>`;
+          });
+          table += "</tr>";
+        });
+        table += "</tbody></table>";
+        output.push(table);
+      }
+      continue;
+    }
+
+    // Horizontal rules
+    if (/^[-*_]{3,}$/.test(trimmed)) {
+      output.push("<hr />");
+      i++;
+      continue;
+    }
+
+    // Headings
+    if (trimmed.startsWith("### ")) {
+      output.push(`<h3>${inlineMarkdownToHtml(trimmed.slice(4))}</h3>`);
+      i++;
+      continue;
+    }
+    if (trimmed.startsWith("## ")) {
+      output.push(`<h2>${inlineMarkdownToHtml(trimmed.slice(3))}</h2>`);
+      i++;
+      continue;
+    }
+    if (trimmed.startsWith("# ")) {
+      output.push(`<h1>${inlineMarkdownToHtml(trimmed.slice(2))}</h1>`);
+      i++;
+      continue;
+    }
+
+    // Blockquotes (> text) → Confluence info panel
+    if (trimmed.startsWith("> ")) {
+      const quoteLines = [];
+      while (i < lines.length && lines[i].trim().startsWith("> ")) {
+        quoteLines.push(lines[i].trim().slice(2));
+        i++;
+      }
+      output.push(
+        `<ac:structured-macro ac:name="info">` +
+        `<ac:rich-text-body><p>${inlineMarkdownToHtml(quoteLines.join(" "))}</p></ac:rich-text-body>` +
+        `</ac:structured-macro>`
+      );
+      continue;
+    }
+
+    // Unordered lists (- text or * text) — collect consecutive items
+    if (/^[-*]\s/.test(trimmed)) {
+      let listHtml = "<ul>";
+      while (i < lines.length && /^[-*]\s/.test(lines[i].trim())) {
+        listHtml += `<li>${inlineMarkdownToHtml(lines[i].trim().replace(/^[-*]\s/, ""))}</li>`;
+        i++;
+      }
+      listHtml += "</ul>";
+      output.push(listHtml);
+      continue;
+    }
+
+    // Ordered lists (1. text) — collect consecutive items
+    if (/^\d+\.\s/.test(trimmed)) {
+      let listHtml = "<ol>";
+      while (i < lines.length && /^\d+\.\s/.test(lines[i].trim())) {
+        listHtml += `<li>${inlineMarkdownToHtml(lines[i].trim().replace(/^\d+\.\s/, ""))}</li>`;
+        i++;
+      }
+      listHtml += "</ol>";
+      output.push(listHtml);
+      continue;
+    }
+
+    // Regular paragraph
+    output.push(`<p>${inlineMarkdownToHtml(trimmed)}</p>`);
+    i++;
+  }
+
+  return output.join("");
+}
+
+function escapeHtml(text) {
+  return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    
-    // Headers
-    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-    .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-    
-    // Bold
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    
-    // Italic
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    
-    // Inline code
-    .replace(/`(.+?)`/g, "<code>$1</code>")
-    
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    
-    // Horizontal rules
-    .replace(/^---$/gm, "<hr />")
-    
-    // Lists - unordered
-    .replace(/^- (.+)$/gm, "<ul><li>$1</li></ul>")
-    
-    // Lists - ordered
-    .replace(/^\d+\. (.+)$/gm, "<ol><li>$1</li></ol>")
-    
-    // Paragraphs (lines followed by blank line)
-    .replace(/^([^<\n].+)$/gm, "<p>$1</p>")
-    
-    // Clean up consecutive list tags
-    .replace(/<\/ul>\s*<ul>/g, "")
-    .replace(/<\/ol>\s*<ol>/g, "")
-    
-    // Line breaks
-    .replace(/\n/g, "");
+    .replace(/"/g, "&quot;");
+}
 
-  // STEP 3: Restore code blocks
-  codeBlocks.forEach((block, index) => {
-    html = html.replace(`&lt;&lt;&lt;CODE_BLOCK_${index}&gt;&gt;&gt;`, block);
-  });
+function inlineMarkdownToHtml(text) {
+  let html = escapeHtml(text);
+
+  // Bold (**text**)
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  // Italic (*text*)
+  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  // Inline code (`text`)
+  html = html.replace(/`(.+?)`/g, "<code>$1</code>");
+  // Links [text](url)
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
 
   return html;
 }
@@ -283,7 +379,11 @@ async function publishPage(cfg, key, markdown, cache) {
     architecture_overview: "Architecture Overview",
     data_flows: "Data Flows",
     change_impact: "Change Impact",
-    developer_onboarding: "Developer Onboarding"
+    developer_onboarding: "Developer Onboarding",
+    graphql_schema: "GraphQL Schema",
+    type_graph: "Type Graph",
+    dependency_graph: "Dependency Graph",
+    architecture_drift: "Architecture Drift"
   };
 
   let title = titleMap[key] || key;

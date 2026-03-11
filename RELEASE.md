@@ -22,7 +22,7 @@ RepoLens uses semantic versioning:
 8. Push branch and tag: `git push --follow-tags`
 9. GitHub Actions `release.yml` runs automatically:
    - Security audit (dependency + secrets scanning)
-   - Test suite (90 tests)
+   - Test suite (121 tests)
    - Create GitHub Release with tarball
    - Publish to npm (`npm publish --access public`)
 10. Verify on npm: `npm view @chappibunny/repolens version`

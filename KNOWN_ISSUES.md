@@ -36,7 +36,7 @@ These bugs were discovered in production and have been fixed:
 ### Current Limitations
 
 #### Manual Review Still Recommended
-**Issue:** While migration is highly reliable (90 tests passing), edge cases may exist in complex workflows.
+**Issue:** While migration is highly reliable (121 tests passing), edge cases may exist in complex workflows.
 
 **Workaround:** 
 1. Run `repolens migrate --dry-run` first

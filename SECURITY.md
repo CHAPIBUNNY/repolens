@@ -16,9 +16,9 @@ RepoLens follows semantic versioning. Security updates are provided for:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.6.x   | :white_check_mark: |
-| 0.5.x   | :white_check_mark: |
-| < 0.5   | :x:                |
+| 0.8.x   | :white_check_mark: |
+| 0.7.x   | :white_check_mark: |
+| < 0.7   | :x:                |
 
 **Note**: Once RepoLens reaches v1.0, we will support the latest major version and one previous major version.
 
@@ -121,7 +121,7 @@ RepoLens implements defense-in-depth security:
 **Security Checks (CI/CD)**:
 1. **Dependency Audit**: Fails on critical/high vulnerabilities
 2. **Secrets Scanning**: Detects hardcoded credentials
-3. **Test Suite**: 90 tests including 43 security tests
+3. **Test Suite**: 121 tests including 43 security tests
 
 **Workflow Hardening**:
 ```yaml

@@ -8,7 +8,7 @@
                         Repository Intelligence CLI
 ```
 
-[![Tests](https://img.shields.io/badge/tests-90%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
+[![Tests](https://img.shields.io/badge/tests-121%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
 [![Security](https://img.shields.io/badge/security-hardened-blue)](SECURITY.md)
 [![Vulnerabilities](https://img.shields.io/badge/vulnerabilities-0-brightgreen)](SECURITY.md)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -1070,7 +1070,7 @@ npm test
 - Integration workflows
 - Doctor command validation
 
-**Coverage:** 90 tests passing across 11 test files
+**Coverage:** 121 tests passing across 12 test files
 
 ### Test Package Installation Locally
 

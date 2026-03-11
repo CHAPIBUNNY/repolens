@@ -6,9 +6,16 @@
 
 export function renderGraphQLSchema(graphqlResult) {
   if (!graphqlResult?.detected) {
-    return "# GraphQL Schema\n\nNo GraphQL schema detected in this repository.\n\n" +
-      "RepoLens looks for `.graphql`/`.gql` files, inline SDL (gql tagged templates), " +
-      "resolver patterns, and GraphQL libraries (Apollo, Yoga, Nexus, Pothos, etc.).\n";
+    return [
+      "# GraphQL Schema",
+      "",
+      "> No GraphQL schema was detected in this repository.",
+      "",
+      "RepoLens scans for `.graphql` and `.gql` schema files, inline SDL via tagged template literals (e.g. `gql\\`...\\``), resolver patterns, and popular GraphQL libraries including Apollo, Yoga, Nexus, Pothos, Mercurius, type-graphql, Relay, and urql.",
+      "",
+      "If your project uses GraphQL, ensure the relevant source directories are included in your `scan.include` configuration.",
+      ""
+    ].join("\n");
   }
 
   const lines = [];
@@ -19,10 +26,14 @@ export function renderGraphQLSchema(graphqlResult) {
 
   // Libraries
   if (graphqlResult.libraries.length > 0) {
-    lines.push("## Libraries & Frameworks");
+    lines.push("## Libraries and Frameworks");
     lines.push("");
+    lines.push("The following GraphQL libraries and frameworks were detected in the project dependencies:");
+    lines.push("");
+    lines.push("| Library | Status |");
+    lines.push("|---------|--------|");
     for (const lib of graphqlResult.libraries) {
-      lines.push(`- ${lib}`);
+      lines.push(`| ${lib} | Detected |`);
     }
     lines.push("");
   }
@@ -30,6 +41,8 @@ export function renderGraphQLSchema(graphqlResult) {
   // Schema files
   if (graphqlResult.schemaFiles.length > 0) {
     lines.push("## Schema Files");
+    lines.push("");
+    lines.push(`${graphqlResult.schemaFiles.length} schema file${graphqlResult.schemaFiles.length === 1 ? " was" : "s were"} found containing GraphQL type definitions:`);
     lines.push("");
     for (const file of graphqlResult.schemaFiles) {
       lines.push(`- \`${file}\``);
@@ -40,6 +53,8 @@ export function renderGraphQLSchema(graphqlResult) {
   // Queries
   if (graphqlResult.queries.length > 0) {
     lines.push("## Queries");
+    lines.push("");
+    lines.push(`The schema defines **${graphqlResult.queries.length}** read operation${graphqlResult.queries.length === 1 ? "" : "s"} for fetching data:`);
     lines.push("");
     lines.push("| Query | Return Type | Source |");
     lines.push("|-------|-------------|--------|");
@@ -53,6 +68,8 @@ export function renderGraphQLSchema(graphqlResult) {
   if (graphqlResult.mutations.length > 0) {
     lines.push("## Mutations");
     lines.push("");
+    lines.push(`The schema defines **${graphqlResult.mutations.length}** write operation${graphqlResult.mutations.length === 1 ? "" : "s"} for modifying data:`);
+    lines.push("");
     lines.push("| Mutation | Return Type | Source |");
     lines.push("|----------|-------------|--------|");
     for (const m of graphqlResult.mutations) {
@@ -65,6 +82,8 @@ export function renderGraphQLSchema(graphqlResult) {
   if (graphqlResult.subscriptions.length > 0) {
     lines.push("## Subscriptions");
     lines.push("");
+    lines.push(`**${graphqlResult.subscriptions.length}** real-time subscription${graphqlResult.subscriptions.length === 1 ? "" : "s"} for streaming data:`);
+    lines.push("");
     lines.push("| Subscription | Return Type | Source |");
     lines.push("|--------------|-------------|--------|");
     for (const s of graphqlResult.subscriptions) {
@@ -76,6 +95,8 @@ export function renderGraphQLSchema(graphqlResult) {
   // Object Types
   if (graphqlResult.types.length > 0) {
     lines.push("## Object Types");
+    lines.push("");
+    lines.push(`The schema defines **${graphqlResult.types.length}** object type${graphqlResult.types.length === 1 ? "" : "s"}, each representing a structured data entity:`);
     lines.push("");
     for (const t of graphqlResult.types) {
       const impl = t.implements?.length ? ` (implements ${t.implements.join(", ")})` : "";
@@ -96,8 +117,12 @@ export function renderGraphQLSchema(graphqlResult) {
   if (graphqlResult.enums.length > 0) {
     lines.push("## Enums");
     lines.push("");
+    lines.push("Enumeration types constrain a field to a predefined set of values:");
+    lines.push("");
+    lines.push("| Enum | Values |");
+    lines.push("|------|--------|");
     for (const e of graphqlResult.enums) {
-      lines.push(`- **${e.name}**: ${e.values.join(", ")}`);
+      lines.push(`| \`${e.name}\` | ${e.values.map(v => `\`${v}\``).join(", ")} |`);
     }
     lines.push("");
   }
@@ -105,6 +130,8 @@ export function renderGraphQLSchema(graphqlResult) {
   // Input Types
   if (graphqlResult.inputs.length > 0) {
     lines.push("## Input Types");
+    lines.push("");
+    lines.push("Input types define the shape of arguments passed to mutations and queries:");
     lines.push("");
     for (const i of graphqlResult.inputs) {
       lines.push(`### \`${i.name}\``);
@@ -124,6 +151,8 @@ export function renderGraphQLSchema(graphqlResult) {
   if (graphqlResult.interfaces.length > 0) {
     lines.push("## Interfaces");
     lines.push("");
+    lines.push("Interfaces define shared field contracts that object types must implement:");
+    lines.push("");
     for (const iface of graphqlResult.interfaces) {
       lines.push(`### \`${iface.name}\``);
       lines.push("");
@@ -140,10 +169,14 @@ export function renderGraphQLSchema(graphqlResult) {
 
   // Unions
   if (graphqlResult.unions.length > 0) {
-    lines.push("## Unions");
+    lines.push("## Union Types");
     lines.push("");
+    lines.push("Union types represent values that could be one of several object types:");
+    lines.push("");
+    lines.push("| Union | Possible Types |");
+    lines.push("|-------|---------------|");
     for (const u of graphqlResult.unions) {
-      lines.push(`- **${u.name}** = ${u.members.join(" | ")}`);
+      lines.push(`| \`${u.name}\` | ${u.members.map(m => `\`${m}\``).join(", ")} |`);
     }
     lines.push("");
   }
@@ -152,19 +185,32 @@ export function renderGraphQLSchema(graphqlResult) {
   if (graphqlResult.resolverFiles.length > 0) {
     lines.push("## Resolver Files");
     lines.push("");
+    lines.push("These files contain resolver implementations that connect schema operations to data sources:");
+    lines.push("");
     for (const file of graphqlResult.resolverFiles) {
       lines.push(`- \`${file}\``);
     }
     lines.push("");
   }
 
+  lines.push("---");
+  lines.push("");
+  lines.push("*Generated by RepoLens extended analysis. Schema detection is based on static analysis of source files and may not capture runtime-only definitions.*");
+  lines.push("");
+
   return lines.join("\n");
 }
 
 export function renderTypeGraph(tsResult) {
   if (!tsResult?.detected) {
-    return "# TypeScript Type Graph\n\nNo TypeScript type declarations detected in this repository.\n\n" +
-      "RepoLens looks for `.ts`/`.tsx` files containing interfaces, type aliases, classes, and enums.\n";
+    return [
+      "# TypeScript Type Graph",
+      "",
+      "> No TypeScript type declarations were detected in this repository.",
+      "",
+      "RepoLens analyzes `.ts` and `.tsx` files for interface declarations, type aliases, classes, and enums. Ensure your TypeScript source directories are included in the `scan.include` configuration.",
+      ""
+    ].join("\n");
   }
 
   const lines = [];
@@ -172,10 +218,14 @@ export function renderTypeGraph(tsResult) {
   lines.push("");
   lines.push(`> ${tsResult.summary}`);
   lines.push("");
+  lines.push("This document maps the type system of the project, showing how interfaces, classes, and type aliases relate to one another. Understanding these relationships helps navigate the codebase and identify coupling between modules.");
+  lines.push("");
 
   // Interfaces
   if (tsResult.interfaces.length > 0) {
     lines.push("## Interfaces");
+    lines.push("");
+    lines.push(`**${tsResult.interfaces.length}** interface${tsResult.interfaces.length === 1 ? "" : "s"} define the data contracts used across the application:`);
     lines.push("");
     lines.push("| Interface | Extends | Source |");
     lines.push("|-----------|---------|--------|");
@@ -189,6 +239,8 @@ export function renderTypeGraph(tsResult) {
   // Classes
   if (tsResult.classes.length > 0) {
     lines.push("## Classes");
+    lines.push("");
+    lines.push(`**${tsResult.classes.length}** class${tsResult.classes.length === 1 ? "" : "es"} provide concrete implementations:`);
     lines.push("");
     lines.push("| Class | Extends | Implements | Source |");
     lines.push("|-------|---------|------------|--------|");
@@ -204,6 +256,8 @@ export function renderTypeGraph(tsResult) {
   if (tsResult.typeAliases.length > 0) {
     lines.push("## Type Aliases");
     lines.push("");
+    lines.push(`**${tsResult.typeAliases.length}** type alias${tsResult.typeAliases.length === 1 ? "" : "es"} define computed or composite types:`);
+    lines.push("");
     lines.push("| Type | References | Source |");
     lines.push("|------|------------|--------|");
     for (const t of tsResult.typeAliases) {
@@ -217,6 +271,8 @@ export function renderTypeGraph(tsResult) {
   if (tsResult.enums.length > 0) {
     lines.push("## Enums");
     lines.push("");
+    lines.push(`**${tsResult.enums.length}** enum${tsResult.enums.length === 1 ? "" : "s"} define named constant sets:`);
+    lines.push("");
     lines.push("| Enum | Source |");
     lines.push("|------|--------|");
     for (const e of tsResult.enums) {
@@ -229,8 +285,9 @@ export function renderTypeGraph(tsResult) {
   if (tsResult.relationships.length > 0) {
     lines.push("## Type Relationships");
     lines.push("");
+    lines.push("The following diagram shows inheritance, implementation, and reference relationships between types:");
+    lines.push("");
     lines.push("```");
-    // Group by source type
     const byFrom = new Map();
     for (const rel of tsResult.relationships) {
       if (!byFrom.has(rel.from)) byFrom.set(rel.from, []);
@@ -250,12 +307,24 @@ export function renderTypeGraph(tsResult) {
     lines.push("");
   }
 
+  lines.push("---");
+  lines.push("");
+  lines.push("*Generated by RepoLens static analysis. Type detection uses regex-based parsing and may not capture all advanced TypeScript patterns.*");
+  lines.push("");
+
   return lines.join("\n");
 }
 
 export function renderDependencyGraph(depResult) {
   if (!depResult?.nodes?.length) {
-    return "# Dependency Graph\n\nNo code files found to analyze for dependencies.\n";
+    return [
+      "# Dependency Graph",
+      "",
+      "> No source files were found to analyze for import dependencies.",
+      "",
+      "Ensure your `scan.include` patterns cover the relevant source directories.",
+      ""
+    ].join("\n");
   }
 
   const lines = [];
@@ -263,23 +332,27 @@ export function renderDependencyGraph(depResult) {
   lines.push("");
   lines.push(`> ${depResult.summary}`);
   lines.push("");
+  lines.push("This document maps every import relationship in the codebase, identifies the most-connected modules, and flags circular dependencies that may complicate refactoring or increase build times.");
+  lines.push("");
 
   // Stats overview
+  const s = depResult.stats;
   lines.push("## Overview");
   lines.push("");
-  const s = depResult.stats;
   lines.push(`| Metric | Value |`);
   lines.push(`|--------|-------|`);
   lines.push(`| Source files | ${s.totalFiles} |`);
   lines.push(`| Import edges | ${s.totalEdges} |`);
   lines.push(`| External packages | ${s.externalDeps} |`);
   lines.push(`| Circular dependencies | ${s.cycles} |`);
-  lines.push(`| Orphan files | ${s.orphanFiles} |`);
+  lines.push(`| Orphan files (no imports or importers) | ${s.orphanFiles} |`);
   lines.push("");
 
   // Hub modules (most imported)
   if (s.hubs.length > 0) {
-    lines.push("## Hub Modules (Most Imported)");
+    lines.push("## Hub Modules");
+    lines.push("");
+    lines.push("These are the most-imported modules in the codebase. Changes to hub modules have the widest blast radius and should be reviewed carefully:");
     lines.push("");
     lines.push("| Module | Imported By |");
     lines.push("|--------|-------------|");
@@ -291,9 +364,9 @@ export function renderDependencyGraph(depResult) {
 
   // Circular dependencies
   if (depResult.cycles.length > 0) {
-    lines.push("## ⚠️ Circular Dependencies");
+    lines.push("## Circular Dependencies");
     lines.push("");
-    lines.push("The following circular dependency chains were detected:");
+    lines.push(`**${depResult.cycles.length}** circular dependency chain${depResult.cycles.length === 1 ? " was" : "s were"} detected. Circular imports can cause initialization errors, increase bundle sizes, and make modules harder to test in isolation. Consider refactoring shared logic into a separate module.`);
     lines.push("");
     for (let i = 0; i < Math.min(depResult.cycles.length, 20); i++) {
       const cycle = depResult.cycles[i];
@@ -309,13 +382,22 @@ export function renderDependencyGraph(depResult) {
   if (depResult.externalDeps.length > 0) {
     lines.push("## External Dependencies");
     lines.push("");
-    const cols = 3;
-    const perCol = Math.ceil(depResult.externalDeps.length / cols);
-    for (const dep of depResult.externalDeps) {
-      lines.push(`- \`${dep}\``);
+    lines.push(`The codebase imports **${depResult.externalDeps.length}** external package${depResult.externalDeps.length === 1 ? "" : "s"}. These are third-party modules resolved from \`node_modules\`:`);
+    lines.push("");
+    // Render as a compact table for cleaner output
+    const sorted = [...depResult.externalDeps].sort();
+    lines.push("| Package |");
+    lines.push("|---------|");
+    for (const dep of sorted) {
+      lines.push(`| \`${dep}\` |`);
     }
     lines.push("");
   }
+
+  lines.push("---");
+  lines.push("");
+  lines.push("*Generated by RepoLens import analysis. Dependency detection covers ES module imports, dynamic imports, CommonJS require, and re-exports.*");
+  lines.push("");
 
   return lines.join("\n");
 }
@@ -326,14 +408,19 @@ export function renderArchitectureDrift(driftResult) {
   lines.push("");
 
   if (!driftResult.hasBaseline) {
-    lines.push("> " + driftResult.summary);
+    lines.push(`> ${driftResult.summary}`);
     lines.push("");
-    lines.push("Once a baseline is established, this report will track structural changes including:");
-    lines.push("- New/removed modules and API endpoints");
-    lines.push("- Dependency shifts and circular dependency trends");
-    lines.push("- Framework and technology stack changes");
-    lines.push("- GraphQL schema evolution");
-    lines.push("- Overall codebase scale changes");
+    lines.push("A baseline snapshot of the current architecture has been saved. On subsequent runs, this report will track structural changes across the following dimensions:");
+    lines.push("");
+    lines.push("| Dimension | What is Tracked |");
+    lines.push("|-----------|----------------|");
+    lines.push("| Modules | New, removed, or significantly resized modules |");
+    lines.push("| API Endpoints | Added or removed backend routes |");
+    lines.push("| Dependencies | Changes to external package imports |");
+    lines.push("| Frameworks | Technology stack additions or removals |");
+    lines.push("| Circular Dependencies | Increases in dependency cycles |");
+    lines.push("| GraphQL Schema | Type additions or removals |");
+    lines.push("| Codebase Scale | Overall file count changes |");
     lines.push("");
     return lines.join("\n");
   }
@@ -344,7 +431,7 @@ export function renderArchitectureDrift(driftResult) {
   lines.push("");
 
   if (driftResult.drifts.length === 0) {
-    lines.push("✅ No architecture drift detected. The codebase structure matches the baseline.");
+    lines.push("No architecture drift detected. The codebase structure matches the stored baseline across all tracked dimensions.");
     lines.push("");
     return lines.join("\n");
   }
@@ -355,10 +442,13 @@ export function renderArchitectureDrift(driftResult) {
   const infos = driftResult.drifts.filter(d => d.severity === "info");
 
   if (critical.length > 0) {
-    lines.push("## 🔴 Critical Changes");
+    lines.push("## Critical Changes");
+    lines.push("");
+    lines.push("These changes may indicate significant architectural shifts that warrant team discussion:");
     lines.push("");
     for (const drift of critical) {
       lines.push(`### ${formatCategoryLabel(drift.category)} — ${drift.type}`);
+      lines.push("");
       for (const item of drift.items) {
         lines.push(`- ${item}`);
       }
@@ -367,10 +457,13 @@ export function renderArchitectureDrift(driftResult) {
   }
 
   if (warnings.length > 0) {
-    lines.push("## 🟡 Warnings");
+    lines.push("## Warnings");
+    lines.push("");
+    lines.push("These changes are notable and should be reviewed to ensure they are intentional:");
     lines.push("");
     for (const drift of warnings) {
       lines.push(`### ${formatCategoryLabel(drift.category)} — ${drift.type}`);
+      lines.push("");
       for (const item of drift.items) {
         lines.push(`- ${item}`);
       }
@@ -379,16 +472,24 @@ export function renderArchitectureDrift(driftResult) {
   }
 
   if (infos.length > 0) {
-    lines.push("## 🟢 Informational");
+    lines.push("## Informational");
+    lines.push("");
+    lines.push("Routine changes that reflect normal development activity:");
     lines.push("");
     for (const drift of infos) {
       lines.push(`### ${formatCategoryLabel(drift.category)} — ${drift.type}`);
+      lines.push("");
       for (const item of drift.items) {
         lines.push(`- ${item}`);
       }
       lines.push("");
     }
   }
+
+  lines.push("---");
+  lines.push("");
+  lines.push("*Generated by RepoLens drift detection. The baseline is updated automatically after each publish.*");
+  lines.push("");
 
   return lines.join("\n");
 }

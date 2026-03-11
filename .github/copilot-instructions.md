@@ -28,7 +28,7 @@ RepoLens transforms repositories into documented, understandable systems that se
 2. **Analyzing** - Framework/tool detection + domain inference + flow analysis
 3. **Context Building** - Structured artifacts for AI synthesis (no raw code)
 4. **AI Synthesis** (Optional) - Natural language explanations for non-technical readers
-5. **Rendering** - 11 audience-aware documents (technical + non-technical)
+5. **Rendering** - 15 audience-aware documents (technical + non-technical)
 6. **Publishing** - Multi-output delivery (Notion + Confluence + Markdown) with branch-aware safety
 
 ## Architecture
@@ -124,7 +124,7 @@ tests/                    # Vitest test suite (121 tests across 12 files)
 ### AI-Assisted Documentation Intelligence
 - **Philosophy**: Not a "flashy code intelligence toy" — a documentation intelligence system for engineers AND stakeholders
 - **Two Modes**: Deterministic (default, free, fast) or AI-Enhanced (optional, provider-agnostic)
-- **11 Document Types**: 3 non-technical, 4 mixed-audience, 4 technical
+- **15 Document Types**: 3 non-technical, 4 mixed-audience, 4 technical, 4 extended-analysis
 - **Zero Hallucination**: AI receives only structured JSON context, never raw code
 - **Strict Prompts**: Word limits, required sections, concrete prose, no speculation
 - **Provider Agnostic**: OpenAI, Anthropic, Azure, local models (Ollama)
@@ -207,7 +207,7 @@ tests/                    # Vitest test suite (121 tests across 12 files)
 - Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
 - Test config discovery, validation, rendering, branch detection, migration, security fuzzing
-- **Coverage**: 90 tests passing across 11 test files
+- **Coverage**: 121 tests passing across 12 test files
 - Run: `npm test`
 
 ### Configuration

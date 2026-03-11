@@ -149,7 +149,7 @@ describe("GraphQL Analyzer", () => {
 
   it("renders fallback when no GraphQL detected", () => {
     const output = renderGraphQLSchema({ detected: false });
-    expect(output).toContain("No GraphQL schema detected");
+    expect(output).toContain("No GraphQL schema");
   });
 });
 
@@ -250,7 +250,7 @@ describe("TypeScript Analyzer", () => {
 
   it("renders fallback when no TS detected", () => {
     const output = renderTypeGraph({ detected: false });
-    expect(output).toContain("No TypeScript type declarations detected");
+    expect(output).toContain("No TypeScript");
   });
 });
 
@@ -323,7 +323,7 @@ describe("Dependency Graph Analyzer", () => {
 
   it("renders empty fallback for no files", () => {
     const output = renderDependencyGraph({ nodes: [] });
-    expect(output).toContain("No code files found");
+    expect(output).toContain("No source files");
   });
 });
 

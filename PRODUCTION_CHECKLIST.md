@@ -281,7 +281,7 @@ Sentry Dashboard: https://sentry.io/organizations/YOUR_ORG/projects/
 **Validate:**
 - [ ] Pages created in correct workspace
 - [ ] Titles match expected format (`[branch]` suffix for non-main)
-- [ ] Content includes all 11 document sections
+- [ ] Content includes all 15 document sections
 - [ ] Diagrams render properly (Unicode box-drawing)
 - [ ] Updates don't create duplicates
 

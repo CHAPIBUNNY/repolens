@@ -172,6 +172,74 @@ export async function clearPage(pageId) {
   }
 }
 
+function parseInlineRichText(text) {
+  // Parse inline markdown: **bold**, *italic*, `code` into Notion rich_text annotations
+  const segments = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    // Find the earliest inline marker
+    const boldIdx = remaining.indexOf("**");
+    const codeIdx = remaining.indexOf("`");
+    const italicIdx = remaining.indexOf("*");
+
+    // Collect candidate positions (only real matches)
+    const candidates = [];
+    if (boldIdx !== -1) candidates.push({ type: "bold", idx: boldIdx });
+    if (codeIdx !== -1) candidates.push({ type: "code", idx: codeIdx });
+    if (italicIdx !== -1 && italicIdx !== boldIdx) candidates.push({ type: "italic", idx: italicIdx });
+
+    if (candidates.length === 0) {
+      // No more markers — push rest as plain text
+      if (remaining) segments.push({ type: "text", text: { content: remaining } });
+      break;
+    }
+
+    // Pick the earliest marker
+    candidates.sort((a, b) => a.idx - b.idx);
+    const first = candidates[0];
+
+    // Push any text before the marker as plain
+    if (first.idx > 0) {
+      segments.push({ type: "text", text: { content: remaining.slice(0, first.idx) } });
+    }
+
+    if (first.type === "bold") {
+      const endBold = remaining.indexOf("**", first.idx + 2);
+      if (endBold === -1) {
+        // Unmatched — treat as plain text
+        segments.push({ type: "text", text: { content: remaining.slice(first.idx) } });
+        break;
+      }
+      const inner = remaining.slice(first.idx + 2, endBold);
+      segments.push({ type: "text", text: { content: inner }, annotations: { bold: true } });
+      remaining = remaining.slice(endBold + 2);
+    } else if (first.type === "code") {
+      const endCode = remaining.indexOf("`", first.idx + 1);
+      if (endCode === -1) {
+        segments.push({ type: "text", text: { content: remaining.slice(first.idx) } });
+        break;
+      }
+      const inner = remaining.slice(first.idx + 1, endCode);
+      segments.push({ type: "text", text: { content: inner }, annotations: { code: true } });
+      remaining = remaining.slice(endCode + 1);
+    } else if (first.type === "italic") {
+      const endItalic = remaining.indexOf("*", first.idx + 1);
+      if (endItalic === -1 || remaining[first.idx + 1] === "*") {
+        // Unmatched or actually a bold marker
+        segments.push({ type: "text", text: { content: remaining.slice(first.idx, first.idx + 1) } });
+        remaining = remaining.slice(first.idx + 1);
+      } else {
+        const inner = remaining.slice(first.idx + 1, endItalic);
+        segments.push({ type: "text", text: { content: inner }, annotations: { italic: true } });
+        remaining = remaining.slice(endItalic + 1);
+      }
+    }
+  }
+
+  return segments;
+}
+
 function markdownToNotionBlocks(markdown) {
   // Safety check: handle undefined/null markdown
   if (!markdown || typeof markdown !== 'string') {
@@ -184,17 +252,18 @@ function markdownToNotionBlocks(markdown) {
   let i = 0;
 
   while (i < lines.length && blocks.length < 100) {
-    const line = lines[i].trim();
+    const line = lines[i];
+    const trimmed = line.trim();
 
     // Skip empty lines
-    if (!line) {
+    if (!trimmed) {
       i++;
       continue;
     }
 
     // Handle code blocks (```language...```)
-    if (line.startsWith("```")) {
-      const language = line.slice(3).trim() || "plain text";
+    if (trimmed.startsWith("```")) {
+      const language = trimmed.slice(3).trim() || "plain text";
       const codeLines = [];
       i++; // Move past opening ```
 
@@ -229,78 +298,148 @@ function markdownToNotionBlocks(markdown) {
       continue;
     }
 
-    // Handle headings
-    if (line.startsWith("# ")) {
+    // Handle dividers (--- or ***)
+    if (/^[-*_]{3,}$/.test(trimmed)) {
       blocks.push({
         object: "block",
-        type: "heading_1",
-        heading_1: {
-          rich_text: [
-            {
-              type: "text",
-              text: {
-                content: line.replace(/^# /, "")
+        type: "divider",
+        divider: {}
+      });
+      i++;
+      continue;
+    }
+
+    // Handle tables (| header | header |)
+    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+      const tableRows = [];
+      while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
+        const row = lines[i].trim();
+        // Skip separator rows (|---|---|)
+        if (/^\|[\s\-:|]+\|$/.test(row)) {
+          i++;
+          continue;
+        }
+        const cells = row.split("|").slice(1, -1).map(c => c.trim());
+        tableRows.push(cells);
+        i++;
+      }
+
+      if (tableRows.length > 0) {
+        const columnCount = tableRows[0].length;
+        const tableBlock = {
+          object: "block",
+          type: "table",
+          table: {
+            table_width: columnCount,
+            has_column_header: true,
+            has_row_header: false,
+            children: tableRows.map((row, rowIdx) => ({
+              object: "block",
+              type: "table_row",
+              table_row: {
+                cells: row.slice(0, columnCount).map(cell => parseInlineRichText(cell))
               }
-            }
-          ]
+            }))
+          }
+        };
+        // Pad rows that have fewer cells than the header
+        for (const child of tableBlock.table.children) {
+          while (child.table_row.cells.length < columnCount) {
+            child.table_row.cells.push([{ type: "text", text: { content: "" } }]);
+          }
+        }
+        blocks.push(tableBlock);
+      }
+      continue;
+    }
+
+    // Handle headings
+    if (trimmed.startsWith("### ")) {
+      blocks.push({
+        object: "block",
+        type: "heading_3",
+        heading_3: {
+          rich_text: parseInlineRichText(trimmed.replace(/^### /, ""))
         }
       });
       i++;
       continue;
     }
 
-    if (line.startsWith("## ")) {
+    if (trimmed.startsWith("## ")) {
       blocks.push({
         object: "block",
         type: "heading_2",
         heading_2: {
-          rich_text: [
-            {
-              type: "text",
-              text: {
-                content: line.replace(/^## /, "")
-              }
-            }
-          ]
+          rich_text: parseInlineRichText(trimmed.replace(/^## /, ""))
         }
       });
       i++;
       continue;
     }
 
-    // Handle bullet lists
-    if (line.startsWith("- ")) {
+    if (trimmed.startsWith("# ")) {
+      blocks.push({
+        object: "block",
+        type: "heading_1",
+        heading_1: {
+          rich_text: parseInlineRichText(trimmed.replace(/^# /, ""))
+        }
+      });
+      i++;
+      continue;
+    }
+
+    // Handle blockquotes (> text) → Notion callout block
+    if (trimmed.startsWith("> ")) {
+      const quoteLines = [];
+      while (i < lines.length && lines[i].trim().startsWith("> ")) {
+        quoteLines.push(lines[i].trim().replace(/^> /, ""));
+        i++;
+      }
+      blocks.push({
+        object: "block",
+        type: "callout",
+        callout: {
+          rich_text: parseInlineRichText(quoteLines.join(" ")),
+          icon: { emoji: "💡" }
+        }
+      });
+      continue;
+    }
+
+    // Handle numbered lists (1. text, 2. text, etc.)
+    if (/^\d+\.\s/.test(trimmed)) {
+      blocks.push({
+        object: "block",
+        type: "numbered_list_item",
+        numbered_list_item: {
+          rich_text: parseInlineRichText(trimmed.replace(/^\d+\.\s/, ""))
+        }
+      });
+      i++;
+      continue;
+    }
+
+    // Handle bullet lists (- text or * text)
+    if (/^[-*]\s/.test(trimmed)) {
       blocks.push({
         object: "block",
         type: "bulleted_list_item",
         bulleted_list_item: {
-          rich_text: [
-            {
-              type: "text",
-              text: {
-                content: line.replace(/^- /, "")
-              }
-            }
-          ]
+          rich_text: parseInlineRichText(trimmed.replace(/^[-*]\s/, ""))
         }
       });
       i++;
       continue;
     }
 
-    // Handle regular paragraphs
+    // Handle regular paragraphs with inline rich text
     blocks.push({
       object: "block",
       type: "paragraph",
       paragraph: {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: line
-            }
-          }
-        ]
+        rich_text: parseInlineRichText(trimmed)
       }
     });
     i++;
