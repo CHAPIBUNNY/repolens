@@ -2,6 +2,18 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.3.1
+
+### 📝 Documentation Overhaul
+
+- **README restructured for marketing & onboarding** — 942 → 270 lines. Pain-focused opening, compact feature table, scannable layout. Previously buried the value proposition under spec-sheet detail.
+- **New [ONBOARDING.md](ONBOARDING.md)** — Full step-by-step guide extracted from README (publishers, AI, Notion, Confluence, GitHub Wiki, Discord, CI/CD). Previously 350+ lines inside README.
+- **Security & Telemetry sections condensed** — ~200 lines of detail replaced with 3-line summaries linking to SECURITY.md and TELEMETRY.md.
+- **22-item feature checklist → 8-row "Why RepoLens" table** — Scannable, benefit-focused instead of spec-sheet.
+- **Unified documentation table** — All 10 supporting docs linked from one place.
+- **Fixed 11 version references** across docs (1.3.0 → 1.3.1).
+- **npm version badge** added to README header.
+
 ## 1.3.0
 
 ### ✨ New Feature: `repolens demo`
