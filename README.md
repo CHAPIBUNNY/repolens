@@ -8,7 +8,7 @@
                         Repository Intelligence CLI
 ```
 
-[![Tests](https://img.shields.io/badge/tests-163%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
+[![Tests](https://img.shields.io/badge/tests-185%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
 [![Security](https://img.shields.io/badge/security-hardened-blue)](SECURITY.md)
 [![Vulnerabilities](https://img.shields.io/badge/vulnerabilities-0-brightgreen)](SECURITY.md)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -137,22 +137,22 @@ RepoLens automatically detects:
 ✅ **Multiple Publishers** - Output to Notion, Confluence, GitHub Wiki, Markdown, or all four  
 ✅ **Branch-Aware** - Prevent doc conflicts across branches  
 ✅ **GitHub Actions** - Autonomous operation on every push  
-✅ **Team Notifications** - Discord integration with rich embeds (NEW in v0.6.0)  
+✅ **Team Notifications** - Discord integration with rich embeds  
 ✅ **Health Score Tracking** - Monitor documentation quality over time  
-✅ **Watch Mode** - Auto-regenerate docs on file changes (NEW in v0.7.0)  
-✅ **Interactive Setup** - Step-by-step configuration wizard (NEW in v0.7.0)  
-✅ **Performance Metrics** - Timing breakdown for scan/render/publish (NEW in v0.7.0)  
-✅ **Actionable Errors** - Enhanced error messages with fix guidance (NEW in v0.7.0)  
-✅ **GraphQL Schema Detection** - Discover types, queries, mutations, and resolvers (NEW in v0.8.0)  
-✅ **TypeScript Type Graph** - Map interfaces, classes, and type relationships (NEW in v0.8.0)  
-✅ **Dependency Graph** - Import analysis with circular dependency detection (NEW in v0.8.0)  
-✅ **Architecture Drift** - Track structural changes against a baseline (NEW in v0.8.0)  
-✅ **Plugin System** - Extend with custom renderers, publishers, and hooks (NEW in v0.9.0)  
+✅ **Watch Mode** - Auto-regenerate docs on file changes  
+✅ **Interactive Setup** - Step-by-step configuration wizard  
+✅ **Performance Metrics** - Timing breakdown for scan/render/publish  
+✅ **Actionable Errors** - Enhanced error messages with fix guidance  
+✅ **GraphQL Schema Detection** - Discover types, queries, mutations, and resolvers  
+✅ **TypeScript Type Graph** - Map interfaces, classes, and type relationships  
+✅ **Dependency Graph** - Import analysis with circular dependency detection  
+✅ **Architecture Drift** - Track structural changes against a baseline  
+✅ **Plugin System** - Extend with custom renderers, publishers, and hooks  
 ✅ **Stable API** - CLI, config, and plugin interface frozen with semver guarantees (v1.0.0)  
 
 ---
 
-## 👥 Team Features (New in v0.6.0)
+## 👥 Team Features
 
 ### 💬 Discord Notifications
 
@@ -202,49 +202,11 @@ Get notified when documentation changes significantly:
 
 ## 📦 Installation
 
-### Recommended: npm Registry
-
 ```bash
 npm install @chappibunny/repolens
 ```
 
-Installs from npm registry.
-
-### Alternative Methods
-
-<details>
-<summary><b>Option B: GitHub Direct Install</b></summary>
-
-Install from the latest GitHub commit:
-
-```bash
-npm install github:CHAPIBUNNY/repolens
-```
-</details>
-
-<details>
-<summary><b>Option C: Local Development</b></summary>
-
-Clone and link for development:
-
-```bash
-git clone https://github.com/CHAPIBUNNY/repolens.git
-cd repolens
-npm link
-```
-</details>
-
-<details>
-<summary><b>Option D: GitHub Release Tarball</b></summary>
-
-Install from a specific version:
-
-```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.3.0/chappibunny-repolens-1.3.0.tgz
-```
-</details>
-
-> **Having install problems?** See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for solutions to common issues like `ENOTEMPTY`, `npm ci` failures, and stale versions.
+For alternative installation methods (GitHub direct, local dev, tarball), see [INSTALLATION.md](INSTALLATION.md).
 
 ---
 
@@ -692,13 +654,13 @@ npx @chappibunny/repolens --version
 
 ```mermaid
 graph LR
-    CLI[bin/repolens<br/>1 file] --> Core[src/core<br/>3 files]
-    Publishers[src/publishers<br/>4 files] --> Core
-    Publishers --> Renderers[src/renderers<br/>3 files]
-    Publishers --> Utils[src/utils<br/>3 files]
+    CLI[bin/repolens<br/>1 file] --> Core[src/core<br/>4 files]
+    Publishers[src/publishers<br/>6 files] --> Core
+    Publishers --> Renderers[src/renderers<br/>4 files]
+    Publishers --> Utils[src/utils<br/>10 files]
     Renderers --> Core
     Delivery[src/delivery<br/>1 file] --> Publishers
-    Tests[tests<br/>8 files] -. tests .-> CLI
+    Tests[tests<br/>15 files] -. tests .-> CLI
     Tests -. tests .-> Core
     Tests -. tests .-> Publishers
     
@@ -819,9 +781,9 @@ RepoLens implements **defense-in-depth** security to protect your credentials, c
 - ✅ **npm audit**: 0 vulnerabilities in 519 dependencies
 
 **Layer 5: Comprehensive Testing**
-- ✅ **43 security tests**: Fuzzing, injection, boundary conditions
+- ✅ **185 tests across 15 files**: Functional, security fuzzing, integration, e2e
 - ✅ **Attack vectors tested**: SQL, command, path, YAML, NoSQL, LDAP, XML
-- ✅ **90 total tests**: 47 functional + 43 security (100% passing)
+- ✅ **Security fuzzing**: Injection, boundary conditions, entropy detection
 
 ### Security Validation (Automatic)
 
@@ -875,364 +837,25 @@ For complete security documentation and threat model, see [SECURITY.md](SECURITY
 
 ## ⚙️ Configuration Reference
 
-### Complete Example
-
-```yaml
-configVersion: 1  # Schema version for future migrations
-
-project:
-  name: "my-awesome-app"
-  docs_title_prefix: "MyApp"
-
-# Configure output destinations
-publishers:
-  - notion
-  - confluence
-  - markdown
-
-# Notion-specific settings (optional)
-notion:
-  branches:
-    - main              # Only main branch publishes
-    - staging           # Also staging
-    - release/*         # Glob patterns supported
-  includeBranchInTitle: false  # Clean titles without [branch-name]
-
-# Confluence-specific settings (optional)
-confluence:
-  branches:
-    - main              # Only main branch publishes to Confluence
-
-# Discord notifications (optional, new in v0.6.0)
-discord:
-  enabled: true                  # Default: true (if DISCORD_WEBHOOK_URL set)
-  notifyOn: significant          # Options: always, significant, never
-  significantThreshold: 10       # Notify if change >10% (default)
-  branches:                      # Which branches to notify (default: all)
-    - main
-    - develop
-
-# GitHub integration (optional)
-github:
-  owner: "your-username"
-  repo: "your-repo-name"
-
-# File scanning configuration
-scan:
-  include:
-    - "src/**/*.{ts,tsx,js,jsx}"
-    - "app/**/*.{ts,tsx,js,jsx}"
-    - "pages/**/*.{ts,tsx,js,jsx}"
-    - "lib/**/*.{ts,tsx,js,jsx}"
-  ignore:
-    - "node_modules/**"
-    - ".next/**"
-    - "dist/**"
-    - "build/**"
-    - "coverage/**"
-
-# Module organization
-module_roots:
-  - "src"
-  - "app"
-  - "lib"
-  - "pages"
-
-# Documentation pages to generate
-outputs:
-  pages:
-    - key: "system_overview"
-      title: "System Overview"
-      description: "High-level snapshot and tech stack"
-    - key: "module_catalog"
-      title: "Module Catalog"
-      description: "Complete module inventory"
-    - key: "api_surface"
-      title: "API Surface"
-      description: "REST endpoints and methods"
-    - key: "route_map"
-      title: "Route Map"
-      description: "Frontend routes and pages"
-    - key: "system_map"
-      title: "System Map"
-      description: "Visual dependency graph"
-
-# Feature flags (optional, experimental)
-features:
-  architecture_diff: true
-  route_map: true
-  visual_diagrams: true
-```
-
-### Configuration Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `configVersion` | number | **Yes** | Schema version (must be `1`) |
-| `project.name` | string | Yes | Project name |
-| `project.docs_title_prefix` | string | No | Prefix for documentation titles (default: project name) |
-| `publishers` | array | Yes | Output targets: `notion`, `confluence`, `github_wiki`, `markdown` (+ plugin publishers) |
-| `plugins` | array | No | Plugin paths or npm package names |
-| `notion.branches` | array | No | Branch whitelist for Notion publishing. Supports globs. |
-| `notion.includeBranchInTitle` | boolean | No | Add `[branch-name]` to titles (default: `true`) |
-| `confluence.branches` | array | No | Branch whitelist for Confluence publishing. Supports globs. |
-| `github_wiki.branches` | array | No | Branch whitelist for GitHub Wiki publishing. Supports globs. |
-| `github_wiki.sidebar` | boolean | No | Generate `_Sidebar.md` navigation (default: `true`) |
-| `github_wiki.footer` | boolean | No | Generate `_Footer.md` (default: `true`) |
-| `discord.enabled` | boolean | No | Enable Discord notifications (default: `true` if webhook set) |
-| `discord.notifyOn` | string | No | Notification policy: `always`, `significant`, `never` (default: `significant`) |
-| `discord.significantThreshold` | number | No | Change % threshold for notifications (default: `10`) |
-| `discord.branches` | array | No | Branch filter for notifications. Supports globs. (default: all) |
-| `github.owner` | string | No | GitHub org/username |
-| `github.repo` | string | No | Repository name |
-| `scan.include` | array | Yes | Glob patterns for files to scan |
-| `scan.ignore` | array | Yes | Glob patterns to exclude |
-| `module_roots` | array | No | Root directories for module detection |
-| `outputs.pages` | array | Yes | Documentation pages to generate |
-| `features` | object | No | Feature flags (boolean values) |
-| `ai.enabled` | boolean | No | Enable AI-powered documentation |
-| `ai.mode` | string | No | AI mode: `hybrid`, `full`, or `off` |
-| `ai.temperature` | number | No | Generation temperature (0–2). Not supported by all models (e.g. gpt-5-mini ignores it) |
-| `ai.max_tokens` | number | No | Max completion tokens per request (>0) |
+See [CONFIGURATION.md](CONFIGURATION.md) for the complete `.repolens.yml` schema, all fields, and a full example config.
 
 ---
 
 ## 🔐 Environment Variables
 
-Required for Notion publisher:
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NOTION_TOKEN` | Yes | Integration token from notion.so/my-integrations |
-| `NOTION_PARENT_PAGE_ID` | Yes | Page ID where docs will be created |
-| `NOTION_VERSION` | No | API version (default: `2022-06-28`) |
-
-Required for Confluence publisher:
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `CONFLUENCE_URL` | Yes | Base URL (e.g., `https://your-company.atlassian.net/wiki`) |
-| `CONFLUENCE_EMAIL` | Yes | Atlassian account email |
-| `CONFLUENCE_API_TOKEN` | Yes | API token from [Atlassian](https://id.atlassian.com/manage-profile/security/api-tokens) |
-| `CONFLUENCE_SPACE_KEY` | Yes | Target space key (e.g., `DOCS`, `ENG`) |
-| `CONFLUENCE_PARENT_PAGE_ID` | No | Parent page ID (docs created at space root if omitted) |
-
-Optional for Discord notifications:
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DISCORD_WEBHOOK_URL` | No | Discord webhook URL for team notifications |
-
-Required for GitHub Wiki publisher:
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GITHUB_TOKEN` | Yes | Personal access token or Actions `${{ secrets.GITHUB_TOKEN }}` |
-| `GITHUB_REPOSITORY` | No | `owner/repo` (auto-detected from git remote in Actions) |
-
-**Local Development:** Create `.env` file in project root  
-**GitHub Actions:** Add as repository secrets in Settings → Secrets and variables → Actions
+See [ENVIRONMENT.md](ENVIRONMENT.md) for all environment variables (Notion, Confluence, Discord, GitHub Wiki, AI, Telemetry).
 
 ---
 
 ## 🏗️ Architecture & Design
 
-### How RepoLens Works
-
-```
-1. SCAN           2. ANALYZE         3. RENDER           4. PUBLISH
-──────────────────────────────────────────────────────────────────
-Read files   →   Detect tech     →  Generate docs   →   Notion pages
-from patterns    stack patterns      with insights       + Confluence pages
-                                                         + Markdown files
-```
-
-**Scan Phase:**
-- Uses `fast-glob` to match your `scan.include` patterns
-- Filters out `scan.ignore` patterns
-- Reads package.json for framework/tool detection
-- Analyzes file paths for Next.js routes, API endpoints
-
-**Analyze Phase:**
-- Extracts frameworks (Next.js, React, Vue, Express, etc.)
-- Detects build tools (Vite, Webpack, Turbo, esbuild)
-- Identifies test frameworks (Vitest, Jest, Playwright)
-- Infers module relationships and dependencies
-
-**Render Phase:**
-- Groups files into modules based on `module_roots`
-- Generates Mermaid diagrams showing module dependencies
-- Creates technical profiles with actual stack insights
-- Renders Markdown documentation
-
-**Publish Phase:**
-- Markdown: Writes files to `.repolens/` directory
-- Notion: Creates/updates pages via API with retry logic
-- Confluence: Creates/updates pages via REST API v1 (storage format)
-
-### Module Dependency Detection
-
-RepoLens infers relationships by analyzing import patterns:
-
-```typescript
-// In src/publishers/notion.js
-import { renderSystemOverview } from "../renderers/render.js";
-// → Publishers depend on Renderers
-
-// In src/renderers/render.js  
-import { scanRepo } from "../core/scan.js";
-// → Renderers depend on Core
-
-// Result: Dependency graph shows Publishers → Renderers → Core
-```
-
----
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the pipeline diagram, module dependency detection, system map, and full project structure.
 
 ---
 
 ## 🧪 Development
 
-### Setup
-
-```bash
-git clone https://github.com/CHAPIBUNNY/repolens.git
-cd repolens
-npm install
-npm link  # Makes 'repolens' command available globally
-```
-
-### Run Tests
-
-```bash
-npm test
-```
-
-**Test Suite:**
-- Config discovery and validation
-- Branch detection (GitHub/GitLab/CircleCI)
-- Markdown publisher
-- Integration workflows
-- Doctor command validation
-
-**Coverage:** 180 tests passing across 15 test files
-
-### Test Package Installation Locally
-
-Simulates the full user installation experience:
-
-```bash
-# Pack the tarball
-npm pack
-
-# Install globally from tarball
-npm install -g chappibunny-repolens-1.3.0.tgz
-
-# Verify
-repolens --version
-```
-
-### Project Structure
-
-```
-repolens/
-├── bin/
-│   └── repolens.js          # CLI executable wrapper
-├── src/
-│   ├── cli.js               # Command orchestration + banner
-│   ├── init.js              # Scaffolding command (+ interactive wizard)
-│   ├── doctor.js            # Validation command
-│   ├── migrate.js           # Workflow migration (legacy → current)
-│   ├── watch.js             # Watch mode for local development
-│   ├── core/
-│   │   ├── config.js        # Config loading + validation
-│   │   ├── config-schema.js # Schema version tracking
-│   │   ├── diff.js          # Git diff operations
-│   │   └── scan.js          # Repository scanning + metadata extraction
-│   ├── analyzers/
-│   │   ├── domain-inference.js    # Business domain mapping
-│   │   ├── context-builder.js     # Structured AI context assembly
-│   │   ├── flow-inference.js      # Data flow detection
-│   │   ├── graphql-analyzer.js    # GraphQL schema detection
-│   │   ├── typescript-analyzer.js # TypeScript type graph analysis
-│   │   ├── dependency-graph.js    # Import graph with cycle detection
-│   │   └── drift-detector.js      # Architecture drift detection
-│   ├── ai/
-│   │   ├── provider.js          # Provider-agnostic AI generation
-│   │   ├── prompts.js           # Strict prompt templates
-│   │   ├── document-plan.js     # Document structure definition
-│   │   └── generate-sections.js # AI section generation + fallbacks
-│   ├── docs/
-│   │   ├── generate-doc-set.js  # Document generation orchestration
-│   │   └── write-doc-set.js     # Write docs to disk
-│   ├── renderers/
-│   │   ├── render.js           # System overview, catalog, API, routes
-│   │   ├── renderDiff.js       # Architecture diff rendering
-│   │   ├── renderMap.js        # Unicode dependency diagrams
-│   │   └── renderAnalysis.js   # Extended analysis renderers
-│   ├── publishers/
-│   │   ├── index.js         # Publisher orchestration + branch filtering
-│   │   ├── publish.js       # Publishing pipeline
-│   │   ├── notion.js        # Notion API integration
-│   │   ├── confluence.js    # Confluence REST API integration
-│   │   ├── github-wiki.js   # GitHub Wiki publisher (git-based)
-│   │   └── markdown.js      # Local Markdown generation
-│   ├── integrations/
-│   │   └── discord.js       # Discord webhook notifications
-│   ├── delivery/
-│   │   └── comment.js       # PR comment delivery
-│   ├── plugins/
-│   │   ├── loader.js        # Plugin resolution and dynamic import
-│   │   └── manager.js       # Plugin registry and lifecycle orchestration
-│   └── utils/
-│       ├── logger.js        # Logging utilities
-│       ├── retry.js         # API retry logic (exponential backoff)
-│       ├── branch.js        # Branch detection (multi-platform)
-│       ├── validate.js      # Configuration validation & security
-│       ├── metrics.js       # Documentation coverage & health scoring
-│       ├── rate-limit.js    # Token bucket rate limiter for APIs
-│       ├── secrets.js       # Secret detection & sanitization
-│       ├── telemetry.js     # Opt-in error tracking + performance timers
-│       ├── errors.js        # Enhanced error messages with guidance
-│       └── update-check.js  # Version update notifications
-├── tests/                   # Vitest test suite (180 tests across 15 files)
-├── .repolens.yml            # Dogfooding config
-├── package.json
-├── CHANGELOG.md
-├── STABILITY.md
-├── RELEASE.md
-└── ROADMAP.md
-```
-
----
-
-## 🚀 Release Process
-
-RepoLens uses automated GitHub Actions releases.
-
-### Creating a Release
-
-```bash
-# Patch version (1.0.0 → 1.0.1) - Bug fixes
-npm run release:patch
-
-# Minor version (1.0.0 → 1.1.0) - New features
-npm run release:minor
-
-# Major version (1.0.0 → 2.0.0) - Breaking changes
-npm run release:major
-
-# Push the tag to trigger workflow
-git push --follow-tags
-```
-
-**What happens:**
-1. ✅ Security audit runs (dependency audit + secret scanning)
-2. ✅ All tests run
-3. ✅ Package tarball created
-4. ✅ GitHub Release published with tarball attached
-5. ✅ npm package published to `@chappibunny/repolens`
-
-See [RELEASE.md](./RELEASE.md) for detailed workflow.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for setup, running tests (185 across 15 files), local package testing, and the release process.
 
 ---
 
@@ -1265,7 +888,7 @@ See [RELEASE.md](./RELEASE.md) for detailed workflow.
 - [x] GitHub Actions automation (publish + release)
 - [x] PR architecture diff comments
 - [x] Performance guardrails (10k warning, 50k limit)
-- [x] Comprehensive test suite (180 tests across 15 files)
+- [x] Comprehensive test suite (185 tests across 15 files)
 - [x] Security hardening (secret detection, injection prevention, fuzzing)
 - [x] Discord notifications with rich embeds
 - [x] Documentation coverage & health scoring

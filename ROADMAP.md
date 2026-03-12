@@ -46,7 +46,7 @@ Everything below is live, tested, and available on npm.
 - ✅ Exponential backoff retry logic
 - ✅ Opt-in telemetry with secret sanitization
 - ✅ CI security gates (dependency audit + secret scanning)
-- ✅ 163 tests across 14 test files (including 43 security/fuzzing tests)
+- ✅ 185 tests across 15 test files (including security/fuzzing tests)
 
 ### CI/CD & npm Publishing (v0.5.0 – v0.6.4)
 - ✅ GitHub Actions: `publish-docs.yml` (every push) + `release.yml` (tag-based)
@@ -68,7 +68,7 @@ Everything below is live, tested, and available on npm.
 - ✅ Dependency graph with cycle detection (ES/CJS imports, iterative DFS, hub/orphan analysis)
 - ✅ Architecture drift detection (8 categories, severity levels, baseline snapshots)
 - ✅ 4 new document types (graphql_schema, type_graph, dependency_graph, architecture_drift)
-- ✅ 163 tests across 14 test files
+- ✅ 185 tests across 15 test files
 
 ### Plugin System (v0.9.0)
 - ✅ Plugin loader: resolve local paths and npm packages
@@ -78,6 +78,7 @@ Everything below is live, tested, and available on npm.
 - ✅ Lifecycle hooks: `afterScan`, `afterRender`, `afterPublish` with chained transforms
 - ✅ Config support: `plugins` array in `.repolens.yml`
 - ✅ 163 tests across 14 test files
+- ✅ 185 tests across 15 test files (current)
 
 ---
 

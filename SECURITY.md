@@ -121,7 +121,7 @@ RepoLens implements defense-in-depth security:
 **Security Checks (CI/CD)**:
 1. **Dependency Audit**: Fails on critical/high vulnerabilities
 2. **Secrets Scanning**: Detects hardcoded credentials
-3. **Test Suite**: 163 tests including 43 security tests
+3. **Test Suite**: 185 tests across 15 test files (including security fuzzing)
 
 **Workflow Hardening**:
 ```yaml
@@ -247,7 +247,7 @@ npm audit --audit-level=moderate
 
 ## Security Testing
 
-RepoLens includes 43 security-specific tests (`tests/security-fuzzing.test.js`):
+RepoLens includes security-specific tests in `tests/security-fuzzing.test.js`:
 
 ### Test Coverage
 

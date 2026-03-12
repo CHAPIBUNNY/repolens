@@ -182,7 +182,7 @@ RepoLens checks for updates automatically:
 ┌────────────────────────────────────────────────────────────┐
 │                   📦 Update Available                      │
 ├────────────────────────────────────────────────────────────┤
-│  Current: 0.5.0    → Latest: 1.2.0                        │
+│  Current: 0.5.0    → Latest: 1.3.0                        │
 │                                                            │
 │  Run one of these commands to update:                     │
 │                                                            │
@@ -232,7 +232,7 @@ npm install @chappibunny/repolens@latest
 
 ### v1.0.0 (March 2026)
 - Stable release with frozen CLI, config schema, and plugin interface
-- 180 tests across 15 files
+- 185 tests across 15 files
 - Semver guarantees (see STABILITY.md)
 
 ### v0.9.0

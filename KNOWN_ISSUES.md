@@ -36,7 +36,7 @@ These bugs were discovered in production and have been fixed:
 ### Current Limitations
 
 #### Manual Review Still Recommended
-**Issue:** While migration is highly reliable (163 tests passing), edge cases may exist in complex workflows.
+**Issue:** While migration is highly reliable (185 tests passing), edge cases may exist in complex workflows.
 
 **Workaround:** 
 1. Run `repolens migrate --dry-run` first
@@ -298,7 +298,7 @@ Know a workaround? Found a fix? Submit a PR:
 2. Create branch: `git checkout -b fix/your-issue`
 3. Add test case to `tests/` covering the issue
 4. Implement fix
-5. Verify `npm test` passes (90+ tests)
+5. Verify `npm test` passes (185 tests)
 6. Submit PR with clear description
 
 We prioritize issues with:

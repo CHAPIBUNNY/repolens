@@ -108,6 +108,8 @@ tests/                    # Vitest test suite (185 tests across 15 files)
   security-fuzzing.test.js # Security fuzzing tests
   extended-analysis.test.js # Extended analysis tests (GraphQL, TS, deps, drift)
   plugins.test.js         # Plugin system tests (loader, manager, config)
+  github-wiki.test.js     # GitHub Wiki publisher tests
+  publisher-parsers.test.js # Publisher parser tests (Notion, Confluence)
   e2e/
     migration.test.js     # End-to-end migration tests
 ```

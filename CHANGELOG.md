@@ -124,7 +124,7 @@ RepoLens v1.0.0 marks the first stable release with a frozen public API. All CLI
   - Config schema updated: `plugins` array validated, custom publisher names accepted
 
 ### 🧪 Tests
-- Added 21 new plugin tests + 21 publisher parser tests (163 tests across 14 files)
+- Added 21 new plugin tests + 21 publisher parser tests (185 tests across 15 files)
 
 ### 🔧 Output Quality
 - **Notion Publisher**: Full table support (table blocks with `table_row` children), blockquote → callout, dividers, numbered lists, h3 headings, inline rich text (`**bold**`, `*italic*`, `` `code` ``)
