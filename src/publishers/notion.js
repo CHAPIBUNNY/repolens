@@ -326,28 +326,88 @@ function markdownToNotionBlocks(markdown) {
 
       if (tableRows.length > 0) {
         const columnCount = tableRows[0].length;
-        const tableBlock = {
-          object: "block",
-          type: "table",
-          table: {
-            table_width: columnCount,
-            has_column_header: true,
-            has_row_header: false,
-            children: tableRows.map((row) => ({
-              type: "table_row",
-              table_row: {
-                cells: row.slice(0, columnCount).map(cell => parseInlineRichText(cell))
+        const headerRow = tableRows[0];
+        const dataRows = tableRows.slice(1);
+
+        // Notion API limit: max 100 rows per table (including header)
+        // Split into chunks if needed
+        if (dataRows.length >= 100) {
+          const CHUNK_SIZE = 99; // 99 data rows + 1 header = 100 total
+
+          for (let chunkIdx = 0; chunkIdx < dataRows.length; chunkIdx += CHUNK_SIZE) {
+            const chunkRows = dataRows.slice(chunkIdx, chunkIdx + CHUNK_SIZE);
+            const allRows = [headerRow, ...chunkRows];
+
+            const tableBlock = {
+              object: "block",
+              type: "table",
+              table: {
+                table_width: columnCount,
+                has_column_header: true,
+                has_row_header: false,
+                children: allRows.map((row) => ({
+                  type: "table_row",
+                  table_row: {
+                    cells: row.slice(0, columnCount).map(cell => parseInlineRichText(cell))
+                  }
+                }))
               }
-            }))
+            };
+
+            // Pad rows that have fewer cells than the header
+            for (const child of tableBlock.table.children) {
+              while (child.table_row.cells.length < columnCount) {
+                child.table_row.cells.push([{ type: "text", text: { content: "" } }]);
+              }
+            }
+
+            blocks.push(tableBlock);
+
+            // Add continuation note between chunks
+            if (chunkIdx + CHUNK_SIZE < dataRows.length) {
+              const remaining = dataRows.length - (chunkIdx + CHUNK_SIZE);
+              blocks.push({
+                object: "block",
+                type: "paragraph",
+                paragraph: {
+                  rich_text: [{
+                    type: "text",
+                    text: {
+                      content: `📋 Table continued below (${remaining} more rows)...`
+                    },
+                    annotations: { italic: true, color: "gray" }
+                  }]
+                }
+              });
+            }
           }
-        };
-        // Pad rows that have fewer cells than the header
-        for (const child of tableBlock.table.children) {
-          while (child.table_row.cells.length < columnCount) {
-            child.table_row.cells.push([{ type: "text", text: { content: "" } }]);
+        } else {
+          // Table fits in one block
+          const tableBlock = {
+            object: "block",
+            type: "table",
+            table: {
+              table_width: columnCount,
+              has_column_header: true,
+              has_row_header: false,
+              children: tableRows.map((row) => ({
+                type: "table_row",
+                table_row: {
+                  cells: row.slice(0, columnCount).map(cell => parseInlineRichText(cell))
+                }
+              }))
+            }
+          };
+
+          // Pad rows that have fewer cells than the header
+          for (const child of tableBlock.table.children) {
+            while (child.table_row.cells.length < columnCount) {
+              child.table_row.cells.push([{ type: "text", text: { content: "" } }]);
+            }
           }
+
+          blocks.push(tableBlock);
         }
-        blocks.push(tableBlock);
       }
       continue;
     }
