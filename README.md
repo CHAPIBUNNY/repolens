@@ -9,6 +9,7 @@
 ```
 
 [![npm version](https://img.shields.io/npm/v/@chappibunny/repolens)](https://www.npmjs.com/package/@chappibunny/repolens)
+[![VS Code Extension](https://img.shields.io/visual-studio-marketplace/v/CHAPIBUNNY.repolens-architecture?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture)
 [![Tests](https://img.shields.io/badge/tests-185%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -110,6 +111,28 @@ npm install @chappibunny/repolens
 Or try instantly without installing: `npx @chappibunny/repolens demo`
 
 For alternative methods, see [INSTALLATION.md](INSTALLATION.md).
+
+---
+
+## 🎨 VS Code Extension
+
+**View your architecture directly in VS Code** — browse modules, visualize dependencies, and explore your codebase structure without leaving the editor.
+
+**Install from Marketplace:**
+```
+ext install CHAPIBUNNY.repolens-architecture
+```
+
+[**→ Get it on Visual Studio Marketplace**](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture)
+
+**Features:**
+- 🏗️ **Architecture Explorer** — Tree view of your system structure
+- 📊 **Dependency Visualizer** — Interactive dependency graphs
+- 📁 **Module Browser** — Navigate modules by domain and function
+- 🔍 **Command Palette** — Quick access to architecture insights
+- 📈 **System Metrics** — Real-time architecture health indicators
+
+The extension reads your `.repolens.yml` configuration and provides an interactive UI for exploring the documentation that RepoLens generates.
 
 ---
 
@@ -238,9 +261,11 @@ When you open a pull request, RepoLens posts:
 
 v1.0+ features complete — CLI, config schema, and plugin interface are frozen.
 
+**Completed:**
+- [x] VS Code extension ([available on Marketplace](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture))
+
 **Next:**
 - [ ] Obsidian publisher
-- [ ] VS Code extension
 - [ ] GitHub App
 
 See [ROADMAP.md](ROADMAP.md) for detailed planning.
