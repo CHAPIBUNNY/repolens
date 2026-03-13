@@ -90,15 +90,23 @@ function buildModuleGraph(modules, depGraph) {
 
 /**
  * Find which module a file belongs to.
+ * Edge keys from the dep graph are extensionless (e.g. "src/core/config")
+ * while module keys may include extensions (e.g. "src/core/config.js").
+ * We try both direct match and extension-stripped match.
  */
 function findModuleForFile(fileKey, modules) {
   const normalized = fileKey.replace(/\\/g, "/");
-  // Find the most specific (longest) matching module key
   let bestMatch = null;
   for (const mod of modules) {
-    if (normalized.startsWith(mod.key) || normalized.startsWith(mod.key + "/")) {
-      if (!bestMatch || mod.key.length > bestMatch.length) {
-        bestMatch = mod.key;
+    const modKey = mod.key;
+    // Direct match (with or without extension)
+    if (normalized === modKey || normalized === modKey.replace(/\.[^/.]+$/, "")) {
+      return modKey;
+    }
+    // Prefix match: file is inside this module
+    if (normalized.startsWith(modKey + "/") || normalized.startsWith(modKey.replace(/\.[^/.]+$/, "") + "/")) {
+      if (!bestMatch || modKey.length > bestMatch.length) {
+        bestMatch = modKey;
       }
     }
   }
@@ -107,13 +115,25 @@ function findModuleForFile(fileKey, modules) {
 
 function categorizeModule(key) {
   const normalized = key.toLowerCase();
-  if (normalized.includes("core")) return "core";
-  if (normalized.includes("publisher")) return "integration";
-  if (normalized.includes("renderer")) return "business";
-  if (normalized.includes("delivery")) return "integration";
-  if (normalized.includes("util")) return "util";
-  if (normalized.includes("test")) return "test";
-  if (normalized.includes("bin")) return "cli";
+  if (normalized.includes("test") || normalized.includes("spec")) return "test";
+  if (normalized.includes("core") || normalized.includes("kernel")) return "core";
+  if (normalized.includes("analyz") || normalized.includes("detect") || normalized.includes("inspect")) return "analyzer";
+  if (normalized.includes("render") || normalized.includes("format") || normalized.includes("template")) return "renderer";
+  if (normalized.includes("publish") || normalized.includes("output")) return "publisher";
+  if (normalized.includes("deliver") || normalized.includes("dispatch")) return "delivery";
+  if (normalized.includes("integrat") || normalized.includes("connect") || normalized.includes("adapter")) return "integration";
+  if (normalized.includes("util") || normalized.includes("helper") || normalized.includes("lib") || normalized.includes("common")) return "util";
+  if (normalized.includes("ai") || normalized.includes("llm") || normalized.includes("prompt")) return "ai";
+  if (normalized.includes("doc") || normalized.includes("generate")) return "docs";
+  if (normalized.includes("plugin") || normalized.includes("extension")) return "plugin";
+  if (normalized.includes("config") || normalized.includes("setting")) return "config";
+  if (normalized.includes("cli") || normalized.includes("bin") || normalized.includes("command")) return "cli";
+  if (normalized.includes("api") || normalized.includes("endpoint")) return "api";
+  if (normalized.includes("component") || normalized.includes("ui")) return "ui";
+  if (normalized.includes("page") || normalized.includes("route") || normalized.includes("view")) return "page";
+  if (normalized.includes("store") || normalized.includes("state")) return "state";
+  if (normalized.includes("middleware")) return "middleware";
+  if (normalized.includes("service")) return "service";
   return "other";
 }
 
@@ -122,8 +142,21 @@ function generateUnicodeArchitectureDiagram(nodes, relationships) {
   const categories = {
     cli: { icon: "🎯", label: "CLI Entry", nodes: [] },
     core: { icon: "⚙️", label: "Core Logic", nodes: [] },
-    business: { icon: "📋", label: "Business Logic", nodes: [] },
+    config: { icon: "🔧", label: "Configuration", nodes: [] },
+    analyzer: { icon: "🔍", label: "Analysis", nodes: [] },
+    ai: { icon: "🤖", label: "AI / ML", nodes: [] },
+    docs: { icon: "📝", label: "Documentation", nodes: [] },
+    renderer: { icon: "📋", label: "Rendering", nodes: [] },
+    publisher: { icon: "📤", label: "Publishing", nodes: [] },
+    delivery: { icon: "📬", label: "Delivery", nodes: [] },
     integration: { icon: "🔌", label: "Integration", nodes: [] },
+    plugin: { icon: "🧩", label: "Plugins", nodes: [] },
+    api: { icon: "🌐", label: "API Layer", nodes: [] },
+    ui: { icon: "🖼️", label: "UI Components", nodes: [] },
+    page: { icon: "📄", label: "Pages / Routes", nodes: [] },
+    state: { icon: "💾", label: "State Management", nodes: [] },
+    middleware: { icon: "🔀", label: "Middleware", nodes: [] },
+    service: { icon: "⚡", label: "Services", nodes: [] },
     util: { icon: "🛠️", label: "Utilities", nodes: [] },
     test: { icon: "✅", label: "Testing", nodes: [] },
     other: { icon: "📦", label: "Other", nodes: [] }
@@ -234,6 +267,54 @@ export function renderSystemMap(scan, config, depGraph) {
     architectureDiagram,
     ""
   ];
+
+  // Add key connections summary when we have relationships
+  if (relationships.length > 0) {
+    lines.push("---", "", "## Key Connections", "");
+
+    // Find most-depended-on modules (highest in-degree)
+    const inDegree = new Map();
+    const outDegree = new Map();
+    for (const rel of relationships) {
+      inDegree.set(rel.to, (inDegree.get(rel.to) || 0) + (rel.weight || 1));
+      outDegree.set(rel.from, (outDegree.get(rel.from) || 0) + (rel.weight || 1));
+    }
+
+    const topDeps = [...inDegree.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    if (topDeps.length > 0) {
+      lines.push("**Most depended-on modules** (highest import count):", "");
+      lines.push("| Module | Imported by |");
+      lines.push("|--------|------------|");
+      for (const [nodeId, count] of topDeps) {
+        const node = nodes.find(n => n.id === nodeId);
+        if (node) {
+          lines.push(`| \`${node.label}\` | ${count} module${count !== 1 ? "s" : ""} |`);
+        }
+      }
+      lines.push("");
+    }
+
+    // Find modules with highest out-degree (most dependencies)
+    const topConsumers = [...outDegree.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    if (topConsumers.length > 0) {
+      lines.push("**Most dependent modules** (highest dependency count):", "");
+      lines.push("| Module | Depends on |");
+      lines.push("|--------|-----------|");
+      for (const [nodeId, count] of topConsumers) {
+        const node = nodes.find(n => n.id === nodeId);
+        if (node) {
+          lines.push(`| \`${node.label}\` | ${count} module${count !== 1 ? "s" : ""} |`);
+        }
+      }
+      lines.push("");
+    }
+  }
 
   return lines.join("\n");
 }

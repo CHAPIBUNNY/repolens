@@ -736,20 +736,31 @@ function inferFlowsFromDepGraph(depGraph) {
 
 function describeRoot(root) {
   const lower = root.toLowerCase().replace(/\/$/, "");
+  // Check the last segment for nested paths like src/core, src/analyzers
+  const lastSeg = lower.split("/").pop();
   if (/^src$|^lib$/.test(lower)) return "Application source code";
-  if (/^test|^__test|^spec/.test(lower)) return "Test suites";
-  if (/^doc/.test(lower)) return "Documentation";
-  if (/^bin$|^scripts?$/.test(lower)) return "CLI entry points and scripts";
-  if (/^config/.test(lower)) return "Configuration files";
-  if (/^public$|^static$|^assets$/.test(lower)) return "Static assets";
-  if (/^dist$|^build$|^out$/.test(lower)) return "Build output";
-  if (/^\.github$/.test(lower)) return "GitHub Actions and workflows";
-  if (/^api$/.test(lower)) return "API definitions";
-  if (/^components?$/.test(lower)) return "Shared UI components";
-  if (/^pages?$|^views?$|^screens?$/.test(lower)) return "Application pages/views";
-  if (/^utils?$|^helpers?$/.test(lower)) return "Utility functions";
-  if (/^services?$/.test(lower)) return "Service layer";
-  if (/^hooks?$/.test(lower)) return "Custom hooks";
+  if (/^test|^__test|^spec/.test(lastSeg)) return "Test suites";
+  if (/^doc/.test(lastSeg)) return "Documentation";
+  if (/^bin$|^scripts?$/.test(lastSeg)) return "CLI entry points and scripts";
+  if (/^config/.test(lastSeg)) return "Configuration files";
+  if (/^public$|^static$|^assets$/.test(lastSeg)) return "Static assets";
+  if (/^dist$|^build$|^out$/.test(lastSeg)) return "Build output";
+  if (/^\.github$/.test(lastSeg)) return "GitHub Actions and workflows";
+  if (/^api$|^endpoint/.test(lastSeg)) return "API definitions";
+  if (/^components?$|^ui$/.test(lastSeg)) return "Shared UI components";
+  if (/^pages?$|^views?$|^screens?$/.test(lastSeg)) return "Application pages/views";
+  if (/^utils?$|^helpers?$/.test(lastSeg)) return "Utility functions";
+  if (/^services?$/.test(lastSeg)) return "Service layer";
+  if (/^hooks?$/.test(lastSeg)) return "Custom hooks";
+  if (/^core$|^kernel$|^engine$/.test(lastSeg)) return "Core logic and foundations";
+  if (/^analyz/.test(lastSeg)) return "Code analysis and detection";
+  if (/^render/.test(lastSeg)) return "Rendering and output formatting";
+  if (/^publish/.test(lastSeg)) return "Publishing and distribution";
+  if (/^deliver/.test(lastSeg)) return "Content delivery";
+  if (/^integrat/.test(lastSeg)) return "Third-party integrations";
+  if (/^plugin/.test(lastSeg)) return "Plugin and extension system";
+  if (/^ai$|^ml$|^llm$/.test(lastSeg)) return "AI/ML features and providers";
+  if (/^middleware/.test(lastSeg)) return "Middleware pipeline";
   return "Project files";
 }
 

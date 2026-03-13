@@ -97,12 +97,28 @@ export function buildAIContext(scanResult, config) {
 function inferModuleType(modulePath) {
   const lower = modulePath.toLowerCase();
   
-  if (lower.includes("api")) return "api";
-  if (lower.includes("component")) return "ui";
-  if (lower.includes("lib") || lower.includes("util")) return "library";
+  if (lower.includes("test") || lower.includes("spec") || lower.includes("__test")) return "test";
+  if (lower.includes("api") || lower.includes("endpoint")) return "api";
+  if (lower.includes("component") || lower.includes("widget")) return "ui";
+  if (lower.includes("lib") || lower.includes("util") || lower.includes("helper") || lower.includes("common") || lower.includes("shared")) return "library";
   if (lower.includes("hook")) return "hooks";
-  if (lower.includes("store") || lower.includes("state")) return "state";
-  if (lower.includes("page") || lower.includes("route")) return "route";
+  if (lower.includes("store") || lower.includes("state") || lower.includes("redux") || lower.includes("zustand")) return "state";
+  if (lower.includes("page") || lower.includes("route") || lower.includes("view")) return "route";
+  if (lower.includes("config") || lower.includes("setting") || lower.includes("env")) return "config";
+  if (lower.includes("core") || lower.includes("kernel") || lower.includes("foundation")) return "core";
+  if (lower.includes("render") || lower.includes("template") || lower.includes("format")) return "renderer";
+  if (lower.includes("publish") || lower.includes("output") || lower.includes("export")) return "publisher";
+  if (lower.includes("analyz") || lower.includes("inspect") || lower.includes("detect")) return "analyzer";
+  if (lower.includes("plugin") || lower.includes("extension") || lower.includes("addon")) return "plugin";
+  if (lower.includes("deliver") || lower.includes("dispatch") || lower.includes("send")) return "delivery";
+  if (lower.includes("doc") || lower.includes("generate")) return "documentation";
+  if (lower.includes("integrat") || lower.includes("connect") || lower.includes("adapter")) return "integration";
+  if (lower.includes("cli") || lower.includes("command") || lower.includes("bin")) return "cli";
+  if (lower.includes("ai") || lower.includes("ml") || lower.includes("model") || lower.includes("prompt")) return "ai";
+  if (lower.includes("auth") || lower.includes("login") || lower.includes("session")) return "auth";
+  if (lower.includes("data") || lower.includes("db") || lower.includes("model") || lower.includes("schema")) return "data";
+  if (lower.includes("middleware")) return "middleware";
+  if (lower.includes("service")) return "service";
   if (lower.includes("app")) return "app";
   
   return "other";
@@ -110,21 +126,31 @@ function inferModuleType(modulePath) {
 
 function inferArchitecturalPatterns(modules) {
   const patterns = [];
+  const keys = modules.map(m => m.key.toLowerCase());
   
-  const hasAppRouter = modules.some(m => m.key.includes("app/"));
-  const hasPagesRouter = modules.some(m => m.key.includes("pages/"));
-  const hasComponents = modules.some(m => m.key.includes("component"));
-  const hasLib = modules.some(m => m.key.includes("lib"));
-  const hasHooks = modules.some(m => m.key.includes("hook"));
-  const hasStore = modules.some(m => m.key.includes("store") || m.key.includes("state"));
-  const hasApi = modules.some(m => m.key.includes("api"));
+  const has = (keyword) => keys.some(k => k.includes(keyword));
   
-  if (hasAppRouter) patterns.push("Next.js App Router");
-  if (hasPagesRouter) patterns.push("Next.js Pages Router");
-  if (hasComponents && hasLib) patterns.push("Layered component architecture");
-  if (hasHooks) patterns.push("React hooks pattern");
-  if (hasStore) patterns.push("Centralized state management");
-  if (hasApi) patterns.push("API route pattern");
+  // Web framework patterns
+  if (has("app/")) patterns.push("Next.js App Router");
+  if (has("pages/")) patterns.push("Next.js Pages Router");
+  if (has("component") && has("lib")) patterns.push("Layered component architecture");
+  if (has("hook")) patterns.push("React hooks pattern");
+  if (has("store") || has("state") || has("redux") || has("zustand")) patterns.push("Centralized state management");
+  
+  // General patterns
+  if (has("api") || has("endpoint")) patterns.push("API route pattern");
+  if (has("core") || has("kernel")) patterns.push("Core/kernel architecture");
+  if (has("plugin") || has("extension")) patterns.push("Plugin system");
+  if (has("middleware")) patterns.push("Middleware pipeline");
+  if (has("render") || has("template")) patterns.push("Renderer pipeline");
+  if (has("publish") || has("output")) patterns.push("Multi-output publishing");
+  if (has("analyz") || has("detect") || has("inspect")) patterns.push("Analysis pipeline");
+  if (has("cli") || has("command") || has("bin")) patterns.push("CLI tool architecture");
+  if (has("util") || has("helper") || has("lib")) patterns.push("Shared utility layer");
+  if (has("integrat") || has("adapter") || has("connect")) patterns.push("Integration adapters");
+  if (has("ai") || has("prompt") || has("provider")) patterns.push("AI/LLM integration");
+  if (has("deliver") || has("dispatch")) patterns.push("Delivery pipeline");
+  if (has("test") || has("spec")) patterns.push("Dedicated test infrastructure");
   
   return patterns;
 }

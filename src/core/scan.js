@@ -29,13 +29,22 @@ function isExpressRoute(content) {
 }
 
 function isReactRouterFile(content) {
-  // Detect React Router patterns
-  return content.includes("<Route") || content.includes("createBrowserRouter") || content.includes("createRoutesFromElements");
+  // Detect React Router patterns — require import evidence, not just string mentions
+  const hasImport = /import\s+.*?from\s+['"]react-router/.test(content)
+    || /require\s*\(\s*['"]react-router/.test(content);
+  const hasJSX = /<Route\s/.test(content);
+  const hasFactory = /createBrowserRouter\s*\(/.test(content)
+    || /createRoutesFromElements\s*\(/.test(content);
+  return hasImport || hasJSX || hasFactory;
 }
 
 function isVueRouterFile(content) {
-  // Detect Vue Router patterns  
-  return (content.includes("createRouter") || content.includes("VueRouter")) && content.includes("routes");
+  // Detect Vue Router patterns — require import evidence, not just string mentions
+  const hasImport = /import\s+.*?from\s+['"]vue-router/.test(content)
+    || /require\s*\(\s*['"]vue-router/.test(content);
+  const hasConstructor = /new\s+VueRouter\s*\(/.test(content);
+  const hasFactory = /createRouter\s*\(/.test(content) && hasImport;
+  return hasImport || hasConstructor || hasFactory;
 }
 
 function isNextPage(file) {
@@ -159,6 +168,10 @@ async function extractRepoMetadata(repoRoot) {
     if (allDeps["nestjs"] || allDeps["@nestjs/core"]) metadata.frameworks.push("NestJS");
     if (allDeps["svelte"]) metadata.frameworks.push("Svelte");
     if (allDeps["solid-js"]) metadata.frameworks.push("Solid");
+    if (allDeps["hono"]) metadata.frameworks.push("Hono");
+    if (allDeps["koa"]) metadata.frameworks.push("Koa");
+    if (allDeps["hapi"] || allDeps["@hapi/hapi"]) metadata.frameworks.push("Hapi");
+    if (allDeps["electron"]) metadata.frameworks.push("Electron");
 
     // Detect test frameworks
     if (allDeps["vitest"]) metadata.testFrameworks.push("Vitest");
@@ -166,6 +179,7 @@ async function extractRepoMetadata(repoRoot) {
     if (allDeps["mocha"]) metadata.testFrameworks.push("Mocha");
     if (allDeps["playwright"]) metadata.testFrameworks.push("Playwright");
     if (allDeps["cypress"]) metadata.testFrameworks.push("Cypress");
+    if (allDeps["ava"]) metadata.testFrameworks.push("Ava");
 
     // Detect build tools
     if (allDeps["vite"]) metadata.buildTools.push("Vite");
@@ -173,9 +187,25 @@ async function extractRepoMetadata(repoRoot) {
     if (allDeps["rollup"]) metadata.buildTools.push("Rollup");
     if (allDeps["esbuild"]) metadata.buildTools.push("esbuild");
     if (allDeps["turbo"]) metadata.buildTools.push("Turborepo");
+    if (allDeps["tsup"]) metadata.buildTools.push("tsup");
+    if (allDeps["swc"] || allDeps["@swc/core"]) metadata.buildTools.push("SWC");
+    if (allDeps["parcel"]) metadata.buildTools.push("Parcel");
 
-    // Detect TypeScript
+    // Detect languages
     if (allDeps["typescript"]) metadata.languages.add("TypeScript");
+
+    // Infer JavaScript if package.json exists (any npm project uses JS/Node)
+    metadata.languages.add("JavaScript");
+
+    // Detect Node.js runtime indicators
+    const hasNodeEngines = pkg.engines && pkg.engines.node;
+    const hasBin = pkg.bin != null;
+    const hasNodeDeps = allDeps["node-fetch"] || allDeps["fs-extra"] || allDeps["dotenv"]
+      || allDeps["commander"] || allDeps["yargs"] || allDeps["chalk"]
+      || allDeps["inquirer"] || allDeps["ora"] || allDeps["execa"];
+    if (hasNodeEngines || hasBin || hasNodeDeps || pkg.type === "module") {
+      metadata.languages.add("Node.js");
+    }
   } catch {
     // No package.json or invalid JSON
   }
@@ -241,30 +271,29 @@ function extractExpressRoutes(content) {
 
 function extractReactRoutes(content, file) {
   const routes = [];
+  const lines = content.split("\n");
   
   // Match <Route path="..." />
   const routePattern = /<Route\s+[^>]*path\s*=\s*['"`]([^'"`]+)['"`][^>]*\/?>/gi;
   let match;
 
   while ((match = routePattern.exec(content)) !== null) {
-    const [, path] = match;
-    routes.push({
-      file,
-      path,
-      framework: "React Router"
-    });
+    const [, routePath] = match;
+    if (isValidRoutePath(routePath)) {
+      routes.push({ file, path: routePath, framework: "React Router" });
+    }
   }
 
-  // Match path: "..." in route objects  
-  const objectPattern = /path\s*:\s*['"`]([^'"`]+)['"`]/gi;
-  while ((match = objectPattern.exec(content)) !== null) {
-    const [, path] = match;
-    if (!routes.some(r => r.path === path)) {
-      routes.push({
-        file,
-        path,
-        framework: "React Router"
-      });
+  // Match path: "..." in route objects (skip comment lines)
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) continue;
+    const objectMatch = /path\s*:\s*['"`]([^'"`]+)['"`]/i.exec(trimmed);
+    if (objectMatch) {
+      const routePath = objectMatch[1];
+      if (isValidRoutePath(routePath) && !routes.some(r => r.path === routePath)) {
+        routes.push({ file, path: routePath, framework: "React Router" });
+      }
     }
   }
 
@@ -273,21 +302,29 @@ function extractReactRoutes(content, file) {
 
 function extractVueRoutes(content, file) {
   const routes = [];
-  
-  // Match path: '...' or path: "..." in Vue router definitions
-  const pathPattern = /path\s*:\s*['"`]([^'"`]+)['"`]/gi;
-  let match;
+  const lines = content.split("\n");
 
-  while ((match = pathPattern.exec(content)) !== null) {
-    const [, path] = match;
-    routes.push({
-      file,
-      path,
-      framework: "Vue Router"
-    });
+  // Match path: '...' or path: "..." in Vue router definitions (skip comment lines)
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) continue;
+    const match = /path\s*:\s*['"`]([^'"`]+)['"`]/i.exec(trimmed);
+    if (match) {
+      const routePath = match[1];
+      if (isValidRoutePath(routePath) && !routes.some(r => r.path === routePath)) {
+        routes.push({ file, path: routePath, framework: "Vue Router" });
+      }
+    }
   }
 
   return routes;
+}
+
+function isValidRoutePath(p) {
+  // Filter out placeholder/documentation strings and non-path values
+  if (!p || p === "..." || p === "*" || p.length > 200) return false;
+  // Must look like a URL path (starts with / or is a relative segment)
+  return p.startsWith("/") || /^[a-zA-Z0-9]/.test(p);
 }
 
 export async function scanRepo(cfg) {

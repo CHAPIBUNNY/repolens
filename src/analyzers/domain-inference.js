@@ -32,7 +32,7 @@ const DEFAULT_DOMAIN_HINTS = [
     description: "Payment processing and subscription management"
   },
   { 
-    match: ["api", "endpoint", "route", "handler", "controller", "middleware"], 
+    match: ["api", "endpoint", "handler", "controller", "middleware"], 
     domain: "API Layer",
     description: "Backend API endpoints and request handling"
   },
@@ -75,6 +75,61 @@ const DEFAULT_DOMAIN_HINTS = [
     match: ["job", "queue", "worker", "cron", "task", "scheduler", "background"],
     domain: "Background Jobs",
     description: "Background processing, job queues, and scheduled tasks"
+  },
+  {
+    match: ["core", "kernel", "foundation", "engine"],
+    domain: "Core Engine",
+    description: "Core business logic and foundational modules"
+  },
+  {
+    match: ["render", "template", "format", "output"],
+    domain: "Rendering & Output",
+    description: "Content rendering, formatting, and output generation"
+  },
+  {
+    match: ["publish", "deploy", "release", "distribute"],
+    domain: "Publishing & Delivery",
+    description: "Content and artifact publishing, deployment, and distribution"
+  },
+  {
+    match: ["analyz", "inspect", "detect", "lint", "scan", "parse"],
+    domain: "Analysis & Detection",
+    description: "Code analysis, pattern detection, and static inspection"
+  },
+  {
+    match: ["plugin", "extension", "addon", "module"],
+    domain: "Plugin System",
+    description: "Extensibility framework, plugins, and add-ons"
+  },
+  {
+    match: ["deliver", "dispatch", "send", "transport"],
+    domain: "Delivery",
+    description: "Content delivery and distribution channels"
+  },
+  {
+    match: ["doc", "generate", "markdown", "readme"],
+    domain: "Documentation",
+    description: "Documentation generation and management"
+  },
+  {
+    match: ["integrat", "connect", "adapter", "bridge", "gateway"],
+    domain: "Integrations",
+    description: "Third-party service integrations and adapters"
+  },
+  {
+    match: ["cli", "command", "bin", "terminal", "shell", "prompt"],
+    domain: "CLI & Commands",
+    description: "Command-line interface and terminal commands"
+  },
+  {
+    match: ["ai", "ml", "llm", "gpt", "openai", "anthropic", "gemini"],
+    domain: "AI & Machine Learning",
+    description: "AI/ML integration, LLM providers, and intelligent features"
+  },
+  {
+    match: ["service", "provider", "client", "sdk"],
+    domain: "Services",
+    description: "Service layer, providers, and external client SDKs"
   }
 ];
 
