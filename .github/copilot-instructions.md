@@ -40,7 +40,7 @@ bin/
   repolens.js             # CLI entry point
 src/
   cli.js                  # Main CLI orchestration + banner
-  doctor.js               # Repository validation
+  doctor.js               # Repository validation + env var checks
   init.js                 # Scaffolding for new repos (+ interactive wizard)
   migrate.js              # Workflow + config migration (legacy → current format)
   watch.js                # Watch mode for local development
@@ -59,7 +59,7 @@ src/
     drift-detector.js     # Architecture drift detection
   ai/
     provider.js           # Provider-agnostic AI text generation
-    prompts.js            # Strict prompt templates preventing hallucination
+    prompts.js            # Strict prompt templates with context size limiting (12K cap)
     document-plan.js      # Canonical document structure definition
     generate-sections.js  # AI-powered section generation with fallbacks
   docs/
@@ -77,9 +77,9 @@ src/
     github-wiki.js        # GitHub Wiki publisher (git-based)
     publish.js            # Publishing pipeline + diagram URL validation
   renderers/
-    render.js             # System overview, module catalog, API surface, route map
-    renderDiff.js         # Architecture diff rendering
-    renderMap.js          # System map (Unicode dependency diagrams)
+    render.js             # System overview, module catalog, API surface, route map (with truncation warnings)
+    renderDiff.js         # Architecture diff rendering (with truncation warnings)
+    renderMap.js          # System map (real import-based Unicode dependency diagrams)
     renderAnalysis.js     # Extended analysis renderers (GraphQL, TS, deps, drift)
   utils/
     logger.js             # Logging utilities
@@ -135,21 +135,22 @@ tests/                    # Vitest test suite (188 tests across 16 files)
 - **Two Modes**: Deterministic (default, free, fast) or AI-Enhanced (optional, provider-agnostic)
 - **15 Document Types**: 3 non-technical, 4 mixed-audience, 4 technical, 4 extended-analysis
 - **Zero Hallucination**: AI receives only structured JSON context, never raw code
+- **Context Size Limiting**: `truncateContext()` enforces 12K char cap with progressive field pruning (routes→15, domains→8, modules→10)
 - **Strict Prompts**: Word limits, required sections, concrete prose, no speculation
 - **Provider Agnostic**: OpenAI, Anthropic, Azure, local models (Ollama)
 - **Graceful Fallback**: Deterministic docs generated if AI fails or disabled
 
 ### Multi-Platform Publishing
-- **Notion**: Create/update pages with branch-aware namespacing
-- **Confluence**: Atlassian Cloud REST API v1, storage format (HTML-like), Basic Auth (email + API token)
+- **Notion**: Create/update pages with branch-aware namespacing; relative link rewriting (strips `./` and `../` links)
+- **Confluence**: Atlassian Cloud REST API v1, storage format (HTML-like), Basic Auth (email + API token); CDATA-safe code blocks; relative link rewriting
 - **GitHub Wiki**: Audience-grouped Home page, grouped sidebar, page metadata headers, `master` branch push for compatibility
-- **Markdown**: Write to `.repolens/` directory
+- **Markdown**: Write to `.repolens/` directory; all 15 document types mapped to filenames
 - **Discord**: Rich embed notifications via webhooks (publish metrics, coverage stats)
 
 ### Business Domain Inference
 - **Purpose**: Map code structure to business functions
-- **Default Domains**: Authentication, Market Data, Content, Portfolio, Payments, API Layer, UI/Hooks/State, Utilities
-- **Pattern Matching**: Folder/file names to domain keywords (e.g., "auth" → Authentication)
+- **Default Domains** (15 generic): Authentication & Identity, Analytics & Reporting, Content Management, Search & Discovery, Notifications, Payments & Billing, API Layer, UI Components, React Hooks, State Management, Shared Utilities, Data Layer, Configuration, Testing, Background Jobs
+- **Pattern Matching**: Folder/file names to domain keywords (e.g., "auth" → Authentication & Identity)
 - **Customizable**: Define domains in `.repolens.yml` with match patterns and descriptions
 - **Output**: Groups modules by domain in business-friendly documentation
 
@@ -179,6 +180,7 @@ tests/                    # Vitest test suite (188 tests across 16 files)
 
 ### Unicode Architecture Diagrams
 - **Approach**: Simple box-drawing characters with emoji icons (🎯, ⚙️, 📋, 🔌, 🛠️, ✅, 📦)
+- **Real Import Analysis**: System map uses actual import edges from dependency graph when available, falls back to heuristic inference
 - **Benefits**: Always works, no external dependencies, no URL length limits
 - **Removed**: Mermaid CLI, SVG generation, mermaid.ink fallback complexity
 - **Reliability**: 100% success rate in Notion, Confluence, and Markdown
@@ -417,3 +419,10 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - ~~GitHub Wiki publisher~~ ✅ Shipped in v1.1.0
 - ~~Interactive configuration wizard (`repolens init --interactive`)~~ ✅ Shipped
 - ~~Watch mode for local development (`repolens watch`)~~ ✅ Shipped
+- ~~Generic domain defaults (replace fintech bias)~~ ✅ Shipped in v1.4.0
+- ~~Real import-based system map~~ ✅ Shipped in v1.4.0
+- ~~AI context size limiting~~ ✅ Shipped in v1.4.0
+- ~~Doctor env var validation~~ ✅ Shipped in v1.4.0
+- ~~Renderer truncation warnings~~ ✅ Shipped in v1.4.0
+- ~~Confluence CDATA injection fix~~ ✅ Shipped in v1.4.0
+- ~~Relative link rewriting (Notion + Confluence)~~ ✅ Shipped in v1.4.0
