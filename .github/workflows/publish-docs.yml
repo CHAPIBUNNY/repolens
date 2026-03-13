@@ -23,8 +23,8 @@ jobs:
           node-version: 22
       
       - name: Install dependencies
-        run: rm -rf node_modules package-lock.json && npm install
-      
+        run: rm -rf node_modules package-lock.json && npm install --no-optional
+
       - name: Run dependency audit
         run: |
           echo "Running npm audit..."
@@ -72,7 +72,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: rm -rf node_modules package-lock.json && npm install
+        run: rm -rf node_modules package-lock.json && npm install --no-optional
 
       - name: Run tests
         run: npx vitest run --no-watch --reporter=verbose
@@ -91,8 +91,8 @@ jobs:
           node-version: 22
       
       - name: Install dependencies
-        run: rm -rf node_modules package-lock.json && npm install
-      
+        run: rm -rf node_modules package-lock.json && npm install --no-optional
+
       - name: Generate and publish documentation
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
