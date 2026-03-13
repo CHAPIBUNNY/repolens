@@ -353,3 +353,125 @@ Dependencies:
 Risks:
 [if applicable]`;
 }
+
+// --- JSON schemas for structured AI output ---
+
+export const AI_SCHEMAS = {
+  executive_summary: {
+    required: ["whatItDoes", "whoItServes", "coreCapabilities", "mainAreas", "risks"],
+    description: "Executive summary for mixed audience",
+  },
+  system_overview: {
+    required: ["snapshot", "layers", "domains", "patterns", "observations"],
+    description: "High-level system overview",
+  },
+  business_domains: {
+    required: ["domains"],
+    description: "Business domain breakdown",
+  },
+  architecture_overview: {
+    required: ["style", "layers", "strengths", "weaknesses"],
+    description: "Architecture overview for engineers",
+  },
+  data_flows: {
+    required: ["flows"],
+    description: "Data flow documentation",
+  },
+  developer_onboarding: {
+    required: ["startHere", "mainFolders", "coreFlows", "complexityHotspots"],
+    description: "Developer onboarding guide",
+  },
+};
+
+/**
+ * Render a structured JSON response into Markdown for the given document type.
+ */
+export function renderStructuredToMarkdown(key, parsed) {
+  switch (key) {
+    case "executive_summary":
+      return renderExecutiveSummaryJSON(parsed);
+    case "system_overview":
+      return renderSystemOverviewJSON(parsed);
+    case "business_domains":
+      return renderBusinessDomainsJSON(parsed);
+    case "architecture_overview":
+      return renderArchitectureOverviewJSON(parsed);
+    case "data_flows":
+      return renderDataFlowsJSON(parsed);
+    case "developer_onboarding":
+      return renderDeveloperOnboardingJSON(parsed);
+    default:
+      return null;
+  }
+}
+
+function renderExecutiveSummaryJSON(d) {
+  let md = `# Executive Summary\n\n`;
+  md += `## What This System Does\n\n${d.whatItDoes}\n\n`;
+  md += `## Who It Serves\n\n${d.whoItServes}\n\n`;
+  md += `## Core Capabilities\n\n`;
+  if (Array.isArray(d.coreCapabilities)) {
+    md += d.coreCapabilities.map(c => `- ${c}`).join("\n") + "\n\n";
+  } else {
+    md += `${d.coreCapabilities}\n\n`;
+  }
+  md += `## Main System Areas\n\n${Array.isArray(d.mainAreas) ? d.mainAreas.map(a => `- **${a.name || a}**${a.description ? `: ${a.description}` : ""}`).join("\n") : d.mainAreas}\n\n`;
+  if (d.dependencies) md += `## Key Dependencies\n\n${Array.isArray(d.dependencies) ? d.dependencies.map(dep => `- ${dep}`).join("\n") : d.dependencies}\n\n`;
+  md += `## Operational and Architectural Risks\n\n${Array.isArray(d.risks) ? d.risks.map(r => `- ${r}`).join("\n") : d.risks}\n\n`;
+  if (d.focusAreas) md += `## Recommended Focus Areas\n\n${Array.isArray(d.focusAreas) ? d.focusAreas.map(f => `- ${f}`).join("\n") : d.focusAreas}\n`;
+  return md;
+}
+
+function renderSystemOverviewJSON(d) {
+  let md = `# System Overview\n\n`;
+  md += `## Repository Snapshot\n\n${d.snapshot}\n\n`;
+  md += `## Main Architectural Layers\n\n${Array.isArray(d.layers) ? d.layers.map(l => `- **${l.name || l}**${l.description ? `: ${l.description}` : ""}`).join("\n") : d.layers}\n\n`;
+  md += `## Dominant Domains\n\n${Array.isArray(d.domains) ? d.domains.map(dom => `- ${dom}`).join("\n") : d.domains}\n\n`;
+  md += `## Main Technology Patterns\n\n${Array.isArray(d.patterns) ? d.patterns.map(p => `- ${p}`).join("\n") : d.patterns}\n\n`;
+  md += `## Key Observations\n\n${Array.isArray(d.observations) ? d.observations.map(o => `- ${o}`).join("\n") : d.observations}\n`;
+  return md;
+}
+
+function renderBusinessDomainsJSON(d) {
+  let md = `# Business Domains\n\n`;
+  if (!Array.isArray(d.domains)) return md + d.domains;
+  for (const dom of d.domains) {
+    md += `## ${dom.name}\n\n${dom.description || ""}\n\n`;
+    if (dom.modules) md += `**Key modules:** ${Array.isArray(dom.modules) ? dom.modules.join(", ") : dom.modules}\n\n`;
+    if (dom.userFunctionality) md += `**User-visible functionality:** ${dom.userFunctionality}\n\n`;
+    if (dom.dependencies) md += `**Dependencies:** ${Array.isArray(dom.dependencies) ? dom.dependencies.join(", ") : dom.dependencies}\n\n`;
+  }
+  return md;
+}
+
+function renderArchitectureOverviewJSON(d) {
+  let md = `# Architecture Overview\n\n`;
+  md += `## Architecture Style\n\n${d.style}\n\n`;
+  md += `## Layers\n\n${Array.isArray(d.layers) ? d.layers.map(l => `### ${l.name || l}\n\n${l.description || ""}`).join("\n\n") : d.layers}\n\n`;
+  md += `## Architectural Strengths\n\n${Array.isArray(d.strengths) ? d.strengths.map(s => `- ${s}`).join("\n") : d.strengths}\n\n`;
+  md += `## Architectural Weaknesses\n\n${Array.isArray(d.weaknesses) ? d.weaknesses.map(w => `- ${w}`).join("\n") : d.weaknesses}\n`;
+  return md;
+}
+
+function renderDataFlowsJSON(d) {
+  let md = `# Data Flows\n\n`;
+  if (!Array.isArray(d.flows)) return md + d.flows;
+  for (const flow of d.flows) {
+    md += `## ${flow.name}\n\n${flow.description || ""}\n\n`;
+    if (flow.steps) md += `**Steps:**\n${Array.isArray(flow.steps) ? flow.steps.map((s, i) => `${i + 1}. ${s}`).join("\n") : flow.steps}\n\n`;
+    if (flow.modules) md += `**Involved modules:** ${Array.isArray(flow.modules) ? flow.modules.join(", ") : flow.modules}\n\n`;
+    if (flow.criticalDependencies) md += `**Critical dependencies:** ${flow.criticalDependencies}\n\n`;
+  }
+  return md;
+}
+
+function renderDeveloperOnboardingJSON(d) {
+  let md = `# Developer Onboarding\n\n`;
+  md += `## Start Here\n\n${d.startHere}\n\n`;
+  md += `## Main Folders\n\n${Array.isArray(d.mainFolders) ? d.mainFolders.map(f => `- **${f.name || f}**${f.description ? `: ${f.description}` : ""}`).join("\n") : d.mainFolders}\n\n`;
+  md += `## Core Product Flows\n\n${Array.isArray(d.coreFlows) ? d.coreFlows.map(f => `- ${f}`).join("\n") : d.coreFlows}\n\n`;
+  if (d.importantRoutes) md += `## Important Routes\n\n${Array.isArray(d.importantRoutes) ? d.importantRoutes.map(r => `- ${r}`).join("\n") : d.importantRoutes}\n\n`;
+  if (d.sharedLibraries) md += `## Important Shared Libraries\n\n${Array.isArray(d.sharedLibraries) ? d.sharedLibraries.map(l => `- ${l}`).join("\n") : d.sharedLibraries}\n\n`;
+  md += `## Known Complexity Hotspots\n\n${Array.isArray(d.complexityHotspots) ? d.complexityHotspots.map(h => `- ${h}`).join("\n") : d.complexityHotspots}\n`;
+  return md;
+}

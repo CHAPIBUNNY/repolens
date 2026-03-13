@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { info, warn } from "../utils/logger.js";
 import { trackScan } from "../utils/telemetry.js";
+import { detectMonorepo } from "../analyzers/monorepo-detector.js";
 
 const norm = (p) => p.replace(/\\/g, "/");
 
@@ -403,6 +404,9 @@ export async function scanRepo(cfg) {
   // Detect external API integrations
   const externalApis = await detectExternalApis(files, repoRoot);
 
+  // Detect monorepo workspaces
+  const monorepo = await detectMonorepo(repoRoot);
+
   const scanResult = {
     filesCount: files.length,
     modules,
@@ -410,6 +414,7 @@ export async function scanRepo(cfg) {
     pages,
     metadata,
     externalApis,
+    monorepo,
     _files: files
   };
   

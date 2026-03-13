@@ -33,7 +33,7 @@ Simulates the full user installation experience:
 npm pack
 
 # Install globally from tarball
-npm install -g chappibunny-repolens-1.4.0.tgz
+npm install -g chappibunny-repolens-1.5.0.tgz
 
 # Verify
 repolens --version

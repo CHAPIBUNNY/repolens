@@ -80,7 +80,17 @@ export function buildAIContext(scanResult, config) {
     
     patterns,
     
-    repoRoots: config.module_roots || []
+    repoRoots: config.module_roots || [],
+
+    // Monorepo workspace metadata (if detected)
+    monorepo: scanResult.monorepo?.isMonorepo ? {
+      tool: scanResult.monorepo.tool,
+      packageCount: scanResult.monorepo.packages.length,
+      packages: scanResult.monorepo.packages.slice(0, 20).map(p => ({
+        name: p.name,
+        path: p.path,
+      })),
+    } : undefined,
   };
 }
 

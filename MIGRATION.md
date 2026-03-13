@@ -2,7 +2,7 @@
 
 This guide helps you upgrade RepoLens across breaking changes and major versions.
 
-**Current Version:** 1.4.0  
+**Current Version:** 1.5.0  
 **Last Updated:** March 2026
 
 ---
@@ -182,7 +182,7 @@ RepoLens checks for updates automatically:
 ┌────────────────────────────────────────────────────────────┐
 │                   📦 Update Available                      │
 ├────────────────────────────────────────────────────────────┤
-│  Current: 0.5.0    → Latest: 1.4.0                        │
+│  Current: 0.5.0    → Latest: 1.5.0                        │
 │                                                            │
 │  Run one of these commands to update:                     │
 │                                                            │

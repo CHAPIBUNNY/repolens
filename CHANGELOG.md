@@ -2,6 +2,21 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.5.0
+
+### 🚀 New Features (Tier 3 — Differentiation)
+
+- **Document caching**: Hash-based caching skips redundant API calls for unchanged documents. Notion, Confluence, and GitHub Wiki publishers now receive only changed pages; Markdown always gets the full set. Cache persists in `.repolens/doc-hashes.json`.
+- **Structured AI output**: AI sections now request JSON-mode responses with schema validation. If JSON parsing or schema validation fails, a single re-prompt is attempted before falling back to plain-text AI, then deterministic generation. All 6 AI document types have JSON schemas and Markdown renderers.
+- **Multi-provider AI**: Added native adapters for Anthropic (Messages API) and Google Gemini alongside existing OpenAI-compatible support. Set `REPOLENS_AI_PROVIDER` to `anthropic`, `google`, or `openai_compatible` (default). Azure OpenAI uses the OpenAI-compatible adapter.
+- **Monorepo awareness**: Automatic detection of npm/yarn workspaces, pnpm workspaces, and Lerna configurations. Scan results include workspace metadata. System Overview renderer shows package inventory table. AI context includes monorepo structure.
+- **CODEOWNERS integration**: Parses `CODEOWNERS` / `.github/CODEOWNERS` / `docs/CODEOWNERS` files. Maps file ownership to modules via last-match-wins pattern matching. Module Catalog now displays an "Owners" column when CODEOWNERS is present. Ownership data is included in artifacts.
+
+### 📊 Test Coverage
+
+- **219 tests** passing across **17 test files** (up from 188/16).
+- New `tests/tier3.test.js` with 31 tests covering caching, monorepo detection, CODEOWNERS parsing, multi-provider AI config, and structured output rendering.
+
 ## 1.4.0
 
 ### 🐛 Bug Fixes (Tier 1 — Production)

@@ -6,6 +6,7 @@ import { analyzeGraphQL } from "../analyzers/graphql-analyzer.js";
 import { analyzeTypeScript } from "../analyzers/typescript-analyzer.js";
 import { analyzeDependencyGraph } from "../analyzers/dependency-graph.js";
 import { buildSnapshot, loadBaseline, saveBaseline, detectDrift } from "../analyzers/drift-detector.js";
+import { parseCodeowners, buildOwnershipMap } from "../analyzers/codeowners.js";
 import { getActiveDocuments } from "../ai/document-plan.js";
 import {
   generateExecutiveSummary,
@@ -53,6 +54,12 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
   const driftResult = detectDrift(baseline, snapshot);
   // Save current snapshot as new baseline
   await saveBaseline(snapshot, outputDir);
+
+  // CODEOWNERS integration
+  const codeowners = await parseCodeowners(repoRoot);
+  const ownershipMap = codeowners.found
+    ? buildOwnershipMap(scanResult.modules, scanFiles, codeowners.rules)
+    : {};
   
   // Get active documents based on config
   const activeDocuments = getActiveDocuments(config);
@@ -68,6 +75,8 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
     typescript: tsResult.detected ? tsResult : undefined,
     dependencyGraph: depGraph.stats,
     drift: driftResult,
+    codeowners: codeowners.found ? { file: codeowners.file, ruleCount: codeowners.rules.length } : undefined,
+    ownershipMap: Object.keys(ownershipMap).length > 0 ? ownershipMap : undefined,
   };
   
   // Run afterScan hook
@@ -92,6 +101,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
         tsResult,
         depGraph,
         driftResult,
+        ownershipMap,
         pluginManager,
       });
       
@@ -162,7 +172,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
 
 async function generateDocument(docPlan, context) {
   const { key } = docPlan;
-  const { scanResult, config, aiContext, moduleContext, flows, diffData, graphqlResult, tsResult, depGraph, driftResult, pluginManager } = context;
+  const { scanResult, config, aiContext, moduleContext, flows, diffData, graphqlResult, tsResult, depGraph, driftResult, ownershipMap, pluginManager } = context;
   
   switch (key) {
     case "executive_summary":
@@ -178,8 +188,8 @@ async function generateDocument(docPlan, context) {
       return await generateArchitectureOverview(aiContext);
       
     case "module_catalog":
-      // Hybrid: deterministic skeleton + AI enhancement (for now, just deterministic)
-      return renderModuleCatalogOriginal(config, scanResult);
+      // Hybrid: deterministic skeleton + ownership info
+      return renderModuleCatalogOriginal(config, scanResult, ownershipMap);
       
     case "route_map":
       // Hybrid: deterministic skeleton + AI enhancement (for now, just deterministic)

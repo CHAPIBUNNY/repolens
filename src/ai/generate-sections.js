@@ -11,129 +11,109 @@ import {
   createDeveloperOnboardingPrompt,
   createModuleSummaryPrompt,
   createRouteSummaryPrompt,
-  createAPIDocumentationPrompt
+  createAPIDocumentationPrompt,
+  AI_SCHEMAS,
+  renderStructuredToMarkdown,
 } from "./prompts.js";
 import { info, warn } from "../utils/logger.js";
 
-export async function generateExecutiveSummary(context) {
-  if (!isAIEnabled()) {
-    return getFallbackExecutiveSummary(context);
+/**
+ * Try structured JSON mode first, fall back to plain-text AI, then deterministic.
+ */
+async function generateWithStructuredFallback(key, promptText, maxTokens, fallbackFn) {
+  if (!isAIEnabled()) return fallbackFn();
+
+  const schema = AI_SCHEMAS[key];
+
+  // Try structured JSON mode
+  if (schema) {
+    info(`Generating ${key} with structured AI...`);
+    const jsonPrompt = promptText + `\n\nRespond ONLY with a JSON object matching this schema: ${JSON.stringify({ required: schema.required })}. No markdown, no explanation — just the JSON object.`;
+
+    const result = await generateText({
+      system: SYSTEM_PROMPT,
+      user: jsonPrompt,
+      maxTokens,
+      jsonMode: true,
+      jsonSchema: schema,
+    });
+
+    if (result.success && result.parsed) {
+      const md = renderStructuredToMarkdown(key, result.parsed);
+      if (md) return md;
+    }
+    // If structured mode failed, fall through to plain-text
+    warn(`Structured AI failed for ${key}, trying plain-text mode...`);
   }
-  
-  info("Generating executive summary with AI...");
-  
+
+  // Plain-text AI fallback
+  info(`Generating ${key} with AI...`);
   const result = await generateText({
     system: SYSTEM_PROMPT,
-    user: createExecutiveSummaryPrompt(context),
-    maxTokens: 1500
+    user: promptText,
+    maxTokens,
   });
-  
+
   if (!result.success) {
     warn("AI generation failed, using fallback");
-    return getFallbackExecutiveSummary(context);
+    return fallbackFn();
   }
-  
+
   return result.text;
+}
+
+export async function generateExecutiveSummary(context) {
+  return generateWithStructuredFallback(
+    "executive_summary",
+    createExecutiveSummaryPrompt(context),
+    1500,
+    () => getFallbackExecutiveSummary(context),
+  );
 }
 
 export async function generateSystemOverview(context) {
-  if (!isAIEnabled()) {
-    return getFallbackSystemOverview(context);
-  }
-  
-  info("Generating system overview with AI...");
-  
-  const result = await generateText({
-    system: SYSTEM_PROMPT,
-    user: createSystemOverviewPrompt(context),
-    maxTokens: 1200
-  });
-  
-  if (!result.success) {
-    return getFallbackSystemOverview(context);
-  }
-  
-  return result.text;
+  return generateWithStructuredFallback(
+    "system_overview",
+    createSystemOverviewPrompt(context),
+    1200,
+    () => getFallbackSystemOverview(context),
+  );
 }
 
 export async function generateBusinessDomains(context) {
-  if (!isAIEnabled()) {
-    return getFallbackBusinessDomains(context);
-  }
-  
-  info("Generating business domains with AI...");
-  
-  const result = await generateText({
-    system: SYSTEM_PROMPT,
-    user: createBusinessDomainsPrompt(context),
-    maxTokens: 2000
-  });
-  
-  if (!result.success) {
-    return getFallbackBusinessDomains(context);
-  }
-  
-  return result.text;
+  return generateWithStructuredFallback(
+    "business_domains",
+    createBusinessDomainsPrompt(context),
+    2000,
+    () => getFallbackBusinessDomains(context),
+  );
 }
 
 export async function generateArchitectureOverview(context) {
-  if (!isAIEnabled()) {
-    return getFallbackArchitectureOverview(context);
-  }
-  
-  info("Generating architecture overview with AI...");
-  
-  const result = await generateText({
-    system: SYSTEM_PROMPT,
-    user: createArchitectureOverviewPrompt(context),
-    maxTokens: 1800
-  });
-  
-  if (!result.success) {
-    return getFallbackArchitectureOverview(context);
-  }
-  
-  return result.text;
+  return generateWithStructuredFallback(
+    "architecture_overview",
+    createArchitectureOverviewPrompt(context),
+    1800,
+    () => getFallbackArchitectureOverview(context),
+  );
 }
 
 export async function generateDataFlows(flows, context) {
-  if (!isAIEnabled()) {
-    return getFallbackDataFlows(flows);
-  }
-  
-  info("Generating data flows with AI...");
-  
-  const result = await generateText({
-    system: SYSTEM_PROMPT,
-    user: createDataFlowsPrompt(flows, context),
-    maxTokens: 1800
-  });
-  
-  if (!result.success) {
-    return getFallbackDataFlows(flows);
-  }
-  
-  return result.text;
+  return generateWithStructuredFallback(
+    "data_flows",
+    createDataFlowsPrompt(flows, context),
+    1800,
+    () => getFallbackDataFlows(flows),
+  );
 }
 
 export async function generateDeveloperOnboarding(context) {
-  if (!isAIEnabled()) {
-    return getFallbackDeveloperOnboarding(context);
-  }
-  
-  info("Generating developer onboarding with AI...");
-  
-  const result = await generateText({
-    system: SYSTEM_PROMPT,
-    user: createDeveloperOnboardingPrompt(context),
-    maxTokens: 2200
-  });
-  
-  if (!result.success) {
-    return getFallbackDeveloperOnboarding(context);
-  }
-  
-  return result.text;
+  return generateWithStructuredFallback(
+    "developer_onboarding",
+    createDeveloperOnboardingPrompt(context),
+    2200,
+    () => getFallbackDeveloperOnboarding(context),
+  );
 }
 
 // Fallback generators (deterministic, no AI)

@@ -2,7 +2,7 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.4.0  
+**Current Version:** 1.5.0  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** March 2026
 

@@ -6,6 +6,7 @@ import { shouldPublishToNotion, shouldPublishToConfluence, shouldPublishToGitHub
 import { info, warn } from "../utils/logger.js";
 import { trackPublishing } from "../utils/telemetry.js";
 import { collectMetrics } from "../utils/metrics.js";
+import { loadDocCache, saveDocCache, filterChangedDocs, logCacheStats } from "../utils/doc-cache.js";
 import {
   sendDiscordNotification,
   buildDocUpdateNotification,
@@ -24,6 +25,15 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
   let publishStatus = "success";
   let notionUrl = null;
 
+  // --- Hash-based caching: skip unchanged documents ---
+  const cacheDir = path.join(process.cwd(), cfg.documentation?.output_dir || ".repolens");
+  const previousCache = await loadDocCache(cacheDir);
+  const { changedPages, unchangedKeys, newCache } = filterChangedDocs(renderedPages, previousCache);
+  logCacheStats(Object.keys(changedPages).length, unchangedKeys.length);
+
+  // Use changedPages for API publishers (Notion / Confluence / Wiki), full set for Markdown
+  const pagesForAPIs = Object.keys(changedPages).length > 0 ? changedPages : renderedPages;
+
   // Always try Notion publishing if secrets are configured
   if (publishers.includes("notion") || hasNotionSecrets()) {
     if (!hasNotionSecrets()) {
@@ -32,7 +42,7 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
     } else if (shouldPublishToNotion(cfg, currentBranch)) {
       info(`Publishing to Notion from branch: ${currentBranch}`);
       try {
-        await publishToNotion(cfg, renderedPages);
+        await publishToNotion(cfg, pagesForAPIs);
         publishedTo.push("notion");
         // Build Notion URL if published
         if (process.env.NOTION_PARENT_PAGE_ID) {
@@ -57,7 +67,7 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
     } else if (shouldPublishToConfluence(cfg, currentBranch)) {
       info(`Publishing to Confluence from branch: ${currentBranch}`);
       try {
-        await publishToConfluence(cfg, renderedPages);
+        await publishToConfluence(cfg, pagesForAPIs);
         publishedTo.push("confluence");
       } catch (err) {
         publishStatus = "failure";
@@ -89,7 +99,7 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
     } else if (shouldPublishToGitHubWiki(cfg, currentBranch)) {
       info(`Publishing to GitHub Wiki from branch: ${currentBranch}`);
       try {
-        await publishToGitHubWiki(cfg, renderedPages);
+        await publishToGitHubWiki(cfg, pagesForAPIs);
         publishedTo.push("github_wiki");
       } catch (err) {
         publishStatus = "failure";
@@ -118,6 +128,9 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
       }
     }
   }
+
+  // Save document hash cache for next run
+  await saveDocCache(cacheDir, newCache);
 
   // Collect metrics and send Discord notification
   try {

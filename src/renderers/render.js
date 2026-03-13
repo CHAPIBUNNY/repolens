@@ -76,6 +76,25 @@ export function renderSystemOverview(cfg, scan) {
     lines.push(``);
   }
 
+  // Monorepo workspace info
+  if (scan.monorepo?.isMonorepo && scan.monorepo.packages.length > 0) {
+    lines.push(
+      `## Monorepo Workspaces`,
+      ``,
+      `This repository is organized as a **monorepo** using **${scan.monorepo.tool}** with **${scan.monorepo.packages.length} packages**.`,
+      ``,
+      `| Package | Path | Version |`,
+      `|---------|------|---------|`
+    );
+    for (const pkg of scan.monorepo.packages.slice(0, 20)) {
+      lines.push(`| ${pkg.name} | \`${pkg.path}\` | ${pkg.version || "—"} |`);
+    }
+    if (scan.monorepo.packages.length > 20) {
+      lines.push(`| ... | *${scan.monorepo.packages.length - 20} more packages* | |`);
+    }
+    lines.push(``);
+  }
+
   lines.push(
     `---`,
     ``,
@@ -114,7 +133,8 @@ function describeModule(key) {
   return "Application module";
 }
 
-export function renderModuleCatalog(cfg, scan) {
+export function renderModuleCatalog(cfg, scan, ownershipMap = {}) {
+  const hasOwnership = Object.keys(ownershipMap).length > 0;
   const lines = [
     `# Module Catalog`,
     ``,
@@ -136,14 +156,29 @@ export function renderModuleCatalog(cfg, scan) {
 
   lines.push(
     `## Module Inventory`,
-    ``,
-    `| Module | Files | Role |`,
-    `|--------|-------|------|`
+    ``
   );
+
+  if (hasOwnership) {
+    lines.push(
+      `| Module | Files | Role | Owners |`,
+      `|--------|-------|------|--------|`
+    );
+  } else {
+    lines.push(
+      `| Module | Files | Role |`,
+      `|--------|-------|------|`
+    );
+  }
 
   for (const module of scan.modules.slice(0, 100)) {
     const desc = describeModule(module.key);
-    lines.push(`| \`${module.key}\` | ${module.fileCount} | ${desc} |`);
+    const owners = ownershipMap[module.key];
+    if (hasOwnership) {
+      lines.push(`| \`${module.key}\` | ${module.fileCount} | ${desc} | ${owners ? owners.join(", ") : "—"} |`);
+    } else {
+      lines.push(`| \`${module.key}\` | ${module.fileCount} | ${desc} |`);
+    }
   }
 
   if (scan.modules.length > 100) {

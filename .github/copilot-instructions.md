@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.4.0  
+**Version:** 1.5.0  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -57,11 +57,13 @@ src/
     typescript-analyzer.js # TypeScript type graph analysis
     dependency-graph.js   # Import graph with cycle detection
     drift-detector.js     # Architecture drift detection
+    monorepo-detector.js  # Monorepo workspace detection (npm/yarn/pnpm/Lerna)
+    codeowners.js         # CODEOWNERS file parser + ownership mapping
   ai/
-    provider.js           # Provider-agnostic AI text generation
-    prompts.js            # Strict prompt templates with context size limiting (12K cap)
+    provider.js           # Multi-provider AI text generation (OpenAI, Anthropic, Google)
+    prompts.js            # Strict prompt templates + JSON schemas + structured renderers
     document-plan.js      # Canonical document structure definition
-    generate-sections.js  # AI-powered section generation with fallbacks
+    generate-sections.js  # AI-powered section generation with structured output + fallbacks
   docs/
     generate-doc-set.js   # Document generation orchestration
     write-doc-set.js      # Write documentation set to disk
@@ -92,10 +94,11 @@ src/
     rate-limit.js         # Token bucket rate limiter for APIs
     secrets.js            # Secret detection & sanitization
     telemetry.js          # Opt-in error tracking + performance timers
+    doc-cache.js          # Hash-based document cache for skip-unchanged publishing
   plugins/
     loader.js             # Plugin resolution and dynamic import
     manager.js            # Plugin registry and lifecycle orchestration
-tests/                    # Vitest test suite (188 tests across 16 files)
+tests/                    # Vitest test suite (219 tests across 17 files)
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
   config-discovery.test.js # Config auto-discovery tests
@@ -111,6 +114,7 @@ tests/                    # Vitest test suite (188 tests across 16 files)
   github-wiki.test.js     # GitHub Wiki publisher tests
   publisher-parsers.test.js # Publisher parser tests (Notion, Confluence)
   watch.test.js           # Watch mode tests (watchers, debounce, node_modules filter)
+  tier3.test.js           # T3 feature tests (cache, monorepo, codeowners, AI providers, structured output)
   e2e/
     migration.test.js     # End-to-end migration tests
 ```
@@ -137,8 +141,9 @@ tests/                    # Vitest test suite (188 tests across 16 files)
 - **Zero Hallucination**: AI receives only structured JSON context, never raw code
 - **Context Size Limiting**: `truncateContext()` enforces 12K char cap with progressive field pruning (routes→15, domains→8, modules→10)
 - **Strict Prompts**: Word limits, required sections, concrete prose, no speculation
-- **Provider Agnostic**: OpenAI, Anthropic, Azure, local models (Ollama)
-- **Graceful Fallback**: Deterministic docs generated if AI fails or disabled
+- **Multi-Provider**: Native adapters for OpenAI (+ compatible), Anthropic (Messages API), Google Gemini; Azure uses OpenAI adapter
+- **Structured Output**: JSON mode with schema validation per document type, one re-prompt on failure, then graceful fallback
+- **Graceful Fallback**: Structured JSON → plain-text AI → deterministic docs (three-tier cascade)
 
 ### Multi-Platform Publishing
 - **Notion**: Create/update pages with branch-aware namespacing; relative link rewriting (strips `./` and `../` links)
@@ -228,7 +233,7 @@ tests/                    # Vitest test suite (188 tests across 16 files)
 - Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
 - Test config discovery, validation, rendering, branch detection, migration, security fuzzing
-- **Coverage**: 188 tests passing across 16 test files
+- **Coverage**: 219 tests passing across 17 test files
 - Run: `npm test`
 
 ### Configuration
@@ -389,6 +394,7 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 
 ### AI Enhancement (optional)
 - `REPOLENS_AI_ENABLED` - Enable AI-powered sections (true/false)
+- `REPOLENS_AI_PROVIDER` - AI provider: `openai_compatible` (default), `anthropic`, `google`
 - `REPOLENS_AI_API_KEY` - API key for AI provider
 - `REPOLENS_AI_BASE_URL` - API base URL (default: https://api.openai.com/v1)
 - `REPOLENS_AI_MODEL` - Model name (e.g., gpt-5-mini)
@@ -426,3 +432,8 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - ~~Renderer truncation warnings~~ ✅ Shipped in v1.4.0
 - ~~Confluence CDATA injection fix~~ ✅ Shipped in v1.4.0
 - ~~Relative link rewriting (Notion + Confluence)~~ ✅ Shipped in v1.4.0
+- ~~Document caching (skip-unchanged publishing)~~ ✅ Shipped in v1.5.0
+- ~~Structured AI output (JSON mode + schema validation)~~ ✅ Shipped in v1.5.0
+- ~~Multi-provider AI (Anthropic, Google Gemini)~~ ✅ Shipped in v1.5.0
+- ~~Monorepo workspace detection~~ ✅ Shipped in v1.5.0
+- ~~CODEOWNERS integration~~ ✅ Shipped in v1.5.0
