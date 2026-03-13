@@ -25,7 +25,7 @@ RepoLens scans your repository, generates living architecture documentation, and
 
 > **Try it now** — no installation required. Run `npx @chappibunny/repolens demo` on any repo for an instant local preview.
 
-[![RepoLens Demo](https://img.youtube.com/vi/hNd7xim_rTE/maxresdefault.jpg)](https://youtu.be/hNd7xim_rTE)
+[![RepoLens Demo](https://img.youtube.com/vi/Lpyg0dGsiws/maxresdefault.jpg)](https://youtu.be/Lpyg0dGsiws)
 
 ▶️ *Click to watch on YouTube*
 
