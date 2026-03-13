@@ -2,6 +2,29 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.4.0
+
+### 🐛 Bug Fixes (Tier 1 — Production)
+
+- **Confluence CDATA injection**: Code blocks containing `]]>` no longer break Confluence XML storage format. Applied standard CDATA escape pattern (`]]]]><![CDATA[>`).
+- **Discord branding**: Replaced 3 leftover "RABITAI" references with "RepoLens" in Discord webhook embeds (title, footer, error title).
+- **CLI branding**: Updated 2 remaining "RABITAI" banner strings to "RepoLens" in CLI output and help text.
+- **Markdown publisher missing mappings**: Added 9 missing document-type filename mappings (`executive_summary`, `business_domains`, `architecture_overview`, `data_flows`, `developer_onboarding`, `graphql_schema`, `type_graph`, `dependency_graph`, `architecture_drift`). All 15 document plan keys now map to output filenames.
+- **Relative link rewriting**: Notion and Confluence publishers now strip relative markdown links (`./path.md`, `../path.md`) that can't resolve in external platforms. Links are replaced with their display text.
+
+### 🔧 Improvements (Tier 2 — Robustness)
+
+- **Generic domain defaults**: Replaced 12 fintech-specific domain hints with 15 universally applicable domains (Authentication, Analytics, Content Management, Search, Notifications, Payments, API Layer, UI Components, Hooks, State, Utilities, Data Layer, Config, Testing, Background Jobs). Domain inference no longer maps "chart" to "Market Data" in non-finance apps.
+- **Real import-based system map**: `renderSystemMap()` now uses actual import edges from the dependency graph analyzer when available, instead of heuristic guessing. Diagram labels indicate whether relationships are from "Real import analysis" or "Heuristic inference".
+- **AI context size limiting**: Added `truncateContext()` function to AI prompts with a 12K character cap. Progressive pruning: routes/pages to 15, domains to 8, top modules to 10, then hard-truncate. Prevents token overflow on large codebases.
+- **Doctor env var validation**: `repolens doctor` now checks for publisher-specific environment variables (NOTION_TOKEN, CONFLUENCE_URL/EMAIL/API_TOKEN, GITHUB_TOKEN, REPOLENS_AI_API_KEY) and warns when required vars are missing for configured publishers.
+- **Truncation warnings**: Renderers now display notes when output is truncated — modules >100 in catalog, routes >200 in route map, files/routes >25 and modules >40 in architecture diff.
+- **Watch mode tests**: Added 3 new tests for `src/watch.js` covering no-directory handling, watcher setup, and node_modules filtering.
+
+### 📊 Test Coverage
+
+- **188 tests** passing across **16 test files** (up from 185/15).
+
 ## 1.3.1
 
 ### 📝 Documentation Overhaul

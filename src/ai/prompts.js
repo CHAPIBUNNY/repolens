@@ -1,5 +1,48 @@
 // Strict prompt templates for AI-generated documentation sections
 
+const MAX_CONTEXT_CHARS = 12000; // ~3000 tokens, safe for all models
+
+/**
+ * Truncate a context object to fit within token limits.
+ * Prunes large arrays (routes, modules, domains) to keep context compact.
+ */
+function truncateContext(context) {
+  let json = JSON.stringify(context, null, 2);
+  if (json.length <= MAX_CONTEXT_CHARS) return json;
+
+  // Progressively shrink: reduce array sizes
+  const trimmed = { ...context };
+
+  // Trim routes
+  if (trimmed.routes) {
+    if (trimmed.routes.pages && trimmed.routes.pages.length > 15) {
+      trimmed.routes = { ...trimmed.routes, pages: trimmed.routes.pages.slice(0, 15) };
+    }
+    if (trimmed.routes.apis && trimmed.routes.apis.length > 15) {
+      trimmed.routes = { ...trimmed.routes, apis: trimmed.routes.apis.slice(0, 15) };
+    }
+  }
+
+  // Trim domains
+  if (Array.isArray(trimmed.domains) && trimmed.domains.length > 8) {
+    trimmed.domains = trimmed.domains.slice(0, 8);
+  }
+
+  // Trim top modules
+  if (Array.isArray(trimmed.topModules) && trimmed.topModules.length > 10) {
+    trimmed.topModules = trimmed.topModules.slice(0, 10);
+  }
+
+  json = JSON.stringify(trimmed, null, 2);
+
+  // Final hard truncation if still over limit
+  if (json.length > MAX_CONTEXT_CHARS) {
+    json = json.slice(0, MAX_CONTEXT_CHARS) + "\n... (context truncated for token limit)";
+  }
+
+  return json;
+}
+
 export const SYSTEM_PROMPT = `You are a senior software architect and technical writer.
 Your job is to turn structured repository analysis into clear documentation.
 
@@ -20,7 +63,7 @@ export function createExecutiveSummaryPrompt(context) {
   return `Write an executive summary for a mixed audience of technical and non-technical readers.
 
 Use this context:
-${JSON.stringify(context, null, 2)}
+${truncateContext(context)}
 
 Requirements:
 - Explain what the system appears to do based on the modules and routes.
@@ -53,7 +96,7 @@ export function createSystemOverviewPrompt(context) {
   return `Write a system overview for a mixed audience.
 
 Use this context:
-${JSON.stringify(context, null, 2)}
+${truncateContext(context)}
 
 Requirements:
 - Provide a concise, high-level orientation to the codebase.
@@ -81,7 +124,7 @@ export function createBusinessDomainsPrompt(context) {
   return `Write business domain documentation for a mixed audience, especially non-technical readers.
 
 Use this context:
-${JSON.stringify(context, null, 2)}
+${truncateContext(context)}
 
 Requirements:
 - Translate codebase structure into business language.
@@ -113,7 +156,7 @@ export function createArchitectureOverviewPrompt(context) {
   return `Write an architecture overview for engineers, architects, and technical PMs.
 
 Use this context:
-${JSON.stringify(context, null, 2)}
+${truncateContext(context)}
 
 Requirements:
 - Explain the layered architecture based on observable patterns.
@@ -147,10 +190,10 @@ export function createDataFlowsPrompt(flows, context) {
   return `Write data flow documentation for a mixed audience.
 
 Use this flow information:
-${JSON.stringify(flows, null, 2)}
+${truncateContext(flows)}
 
 And this context:
-${JSON.stringify(context, null, 2)}
+${truncateContext(context)}
 
 Requirements:
 - Explain major information flows in plain language.
@@ -179,7 +222,7 @@ export function createDeveloperOnboardingPrompt(context) {
   return `Write developer onboarding documentation to help new engineers get productive quickly.
 
 Use this context:
-${JSON.stringify(context, null, 2)}
+${truncateContext(context)}
 
 Requirements:
 - Guide new developers through the codebase structure.
@@ -218,7 +261,7 @@ Type: ${module.type}
 Domain: ${module.domain}
 
 Additional context:
-${JSON.stringify(context, null, 2)}
+${truncateContext(context)}
 
 Requirements:
 - Explain the module's likely purpose.
@@ -252,7 +295,7 @@ File: ${route.file}
 Type: ${route.type}
 
 Additional context:
-${JSON.stringify(context, null, 2)}
+${truncateContext(context)}
 
 Requirements:
 - Explain the user purpose of this route.
@@ -283,7 +326,7 @@ API: ${api.methods.join(", ")} ${api.path}
 File: ${api.file}
 
 Additional context:
-${JSON.stringify(context, null, 2)}
+${truncateContext(context)}
 
 Requirements:
 - Explain the purpose in plain language and technical language.

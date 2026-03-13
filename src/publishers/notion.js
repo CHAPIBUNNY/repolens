@@ -172,6 +172,18 @@ export async function clearPage(pageId) {
   }
 }
 
+/**
+ * Rewrite relative file links that cannot resolve in external publishers.
+ * Converts [text](./path.md) and [text](../path.md) to just "text",
+ * while preserving absolute URLs like [text](https://example.com).
+ */
+function rewriteRelativeLinks(markdown) {
+  return markdown.replace(
+    /\[([^\]]+)\]\(\.{1,2}\/[^)]+\)/g,
+    "$1"
+  );
+}
+
 function parseInlineRichText(text) {
   // Parse inline markdown: **bold**, *italic*, `code` into Notion rich_text annotations
   const segments = [];
@@ -246,8 +258,11 @@ function markdownToNotionBlocks(markdown) {
     warn(`markdownToNotionBlocks received invalid markdown: ${typeof markdown}`);
     return [];
   }
+
+  // Rewrite relative file links that can't resolve in Notion
+  const rewritten = rewriteRelativeLinks(markdown);
   
-  const lines = markdown.split("\n");
+  const lines = rewritten.split("\n");
   const blocks = [];
   let i = 0;
 
@@ -508,7 +523,7 @@ function markdownToNotionBlocks(markdown) {
 }
 
 // Exported for testing
-export { markdownToNotionBlocks, parseInlineRichText };
+export { markdownToNotionBlocks, parseInlineRichText, rewriteRelativeLinks };
 
 export async function replacePageContent(pageId, markdown) {
   // Ensure page is unarchived before editing

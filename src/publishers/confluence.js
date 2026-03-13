@@ -136,7 +136,12 @@ async function writeCache(cache) {
 
 // Convert Markdown to Confluence Storage Format
 function markdownToConfluenceStorage(markdown) {
-  const lines = markdown.split("\n");
+  // Rewrite relative file links that can't resolve in Confluence
+  const rewritten = markdown.replace(
+    /\[([^\]]+)\]\(\.{1,2}\/[^)]+\)/g,
+    "$1"
+  );
+  const lines = rewritten.split("\n");
   const output = [];
 
   let i = 0;
@@ -161,10 +166,12 @@ function markdownToConfluenceStorage(markdown) {
       }
       i++; // skip closing ```
       const code = codeLines.join("\n");
+      // Escape ]]> inside code to prevent CDATA injection
+      const safeCode = code.replace(/]]>/g, "]]]]><![CDATA[>");
       output.push(
         `<ac:structured-macro ac:name="code">` +
         `<ac:parameter ac:name="language">${escapeHtml(language)}</ac:parameter>` +
-        `<ac:plain-text-body><![CDATA[${code}]]></ac:plain-text-body>` +
+        `<ac:plain-text-body><![CDATA[${safeCode}]]></ac:plain-text-body>` +
         `</ac:structured-macro>`
       );
       continue;

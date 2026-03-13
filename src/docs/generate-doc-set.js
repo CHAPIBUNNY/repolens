@@ -200,7 +200,7 @@ async function generateDocument(docPlan, context) {
       
     case "system_map":
       // Hybrid: deterministic diagram + AI explanation (for now, just diagram)
-      return renderSystemMap(scanResult, config);
+      return renderSystemMap(scanResult, config, depGraph);
       
     case "developer_onboarding":
       return await generateDeveloperOnboarding(aiContext);

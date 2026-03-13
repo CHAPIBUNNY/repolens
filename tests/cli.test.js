@@ -23,12 +23,12 @@ function runNode(args = []) {
 describe("cli", () => {
   it("prints version", async () => {
     const { stdout } = await runNode(["--version"]);
-    expect(stdout.trim()).toBe("1.3.1");
+    expect(stdout.trim()).toBe("1.4.0");
   });
 
   it("prints help", async () => {
     const { stdout } = await runNode(["--help"]);
-    expect(stdout).toContain("RepoLens — Repository Intelligence CLI by RABITAI");
+    expect(stdout).toContain("RepoLens — Repository Intelligence CLI");
     expect(stdout).toContain("init");
     expect(stdout).toContain("doctor");
     expect(stdout).toContain("publish");

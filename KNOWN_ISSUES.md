@@ -2,8 +2,8 @@
 
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
-**Last Updated:** March 2026  
-**Version:** 1.3.1
+**Last Updated:** June 2025  
+**Version:** 1.4.0
 
 ---
 
@@ -140,6 +140,8 @@ AZURE_OPENAI_DEPLOYMENT_NAME=your-deployment
 
 #### AI Context Boundaries
 **Issue:** Even with structured context, AI may occasionally make logical leaps.
+
+**Status:** Mitigated in v1.4.0 — `truncateContext()` enforces a 12K character cap with progressive field pruning.
 
 **Mitigation:** 
 - Prompts enforce word limits and require evidence-based reasoning

@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.3.1  
+**Version:** 1.4.0  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -95,7 +95,7 @@ src/
   plugins/
     loader.js             # Plugin resolution and dynamic import
     manager.js            # Plugin registry and lifecycle orchestration
-tests/                    # Vitest test suite (185 tests across 15 files)
+tests/                    # Vitest test suite (188 tests across 16 files)
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
   config-discovery.test.js # Config auto-discovery tests
@@ -110,6 +110,7 @@ tests/                    # Vitest test suite (185 tests across 15 files)
   plugins.test.js         # Plugin system tests (loader, manager, config)
   github-wiki.test.js     # GitHub Wiki publisher tests
   publisher-parsers.test.js # Publisher parser tests (Notion, Confluence)
+  watch.test.js           # Watch mode tests (watchers, debounce, node_modules filter)
   e2e/
     migration.test.js     # End-to-end migration tests
 ```
@@ -225,7 +226,7 @@ tests/                    # Vitest test suite (185 tests across 15 files)
 - Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
 - Test config discovery, validation, rendering, branch detection, migration, security fuzzing
-- **Coverage**: 185 tests passing across 15 test files
+- **Coverage**: 188 tests passing across 16 test files
 - Run: `npm test`
 
 ### Configuration

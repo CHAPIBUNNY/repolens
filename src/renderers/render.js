@@ -266,6 +266,10 @@ export function renderRouteMap(cfg, scan) {
       lines.push(`| \`${page.path}\` | \`${page.file}\` |`);
     }
 
+    if (scan.pages.length > 200) {
+      lines.push(``, `> **Note:** Showing 200 of ${scan.pages.length} pages. Configure \`scan.include\` to narrow scope.`);
+    }
+
     lines.push(``);
   }
 
@@ -281,6 +285,10 @@ export function renderRouteMap(cfg, scan) {
 
     for (const route of scan.api.slice(0, 200)) {
       lines.push(`| ${route.methods.join(", ")} | \`${route.path}\` | \`${route.file}\` |`);
+    }
+
+    if (scan.api.length > 200) {
+      lines.push(``, `> **Note:** Showing 200 of ${scan.api.length} API endpoints.`);
     }
 
     lines.push(``);

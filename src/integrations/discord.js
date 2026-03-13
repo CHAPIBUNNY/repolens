@@ -71,7 +71,7 @@ function buildEmbed(payload) {
   };
 
   return {
-    title: title || "RABITAI Documentation Updated",
+    title: title || "RepoLens Documentation Updated",
     description: description || "Documentation has been regenerated",
     color: typeof color === "string" ? colorMap[color] || colorMap.info : color || colorMap.info,
     fields: fields.map((field) => ({
@@ -82,7 +82,7 @@ function buildEmbed(payload) {
     timestamp,
     footer: footer
       ? { text: footer }
-      : { text: "RABITAI 🐰" },
+      : { text: "RepoLens 🔍" },
     url: url || undefined,
   };
 }
@@ -237,7 +237,7 @@ export function buildErrorNotification(options) {
   }
 
   return {
-    title: "🚨 RABITAI Error",
+    title: "🚨 RepoLens Error",
     description: "Documentation generation failed",
     color: "error",
     fields,

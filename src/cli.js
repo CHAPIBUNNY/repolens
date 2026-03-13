@@ -89,7 +89,7 @@ async function printBanner() {
 ██╔══██╗██╔══╝  ██╔═══╝ ██║   ██║██║     ██╔══╝  ██║╚██╗██║╚════██║
 ██║  ██║███████╗██║     ╚██████╔╝███████╗███████╗██║ ╚████║███████║
 ╚═╝  ╚═╝╚══════╝╚═╝      ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═══╝╚══════╝
-          🔍 Repository Intelligence by RABITAI 🐰
+          🔍 Repository Intelligence by RepoLens
           v${version}
 `);
   console.log("─".repeat(70));
@@ -133,7 +133,7 @@ async function findConfig(startDir = process.cwd()) {
 
 function printHelp() {
   console.log(`
-RepoLens — Repository Intelligence CLI by RABITAI 🐰
+RepoLens — Repository Intelligence CLI
 
 Usage:
   repolens <command> [options]

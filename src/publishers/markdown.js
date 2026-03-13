@@ -8,12 +8,21 @@ function outputDir(cfg) {
 
 function pageFileName(key) {
   const mapping = {
+    executive_summary: "executive_summary.md",
     system_overview: "system_overview.md",
+    business_domains: "business_domains.md",
+    architecture_overview: "architecture_overview.md",
     module_catalog: "module_catalog.md",
     api_surface: "api_surface.md",
+    data_flows: "data_flows.md",
     arch_diff: "architecture_diff.md",
     route_map: "route_map.md",
-    system_map: "system_map.md"
+    system_map: "system_map.md",
+    developer_onboarding: "developer_onboarding.md",
+    graphql_schema: "graphql_schema.md",
+    type_graph: "type_graph.md",
+    dependency_graph: "dependency_graph.md",
+    architecture_drift: "architecture_drift.md"
   };
 
   return mapping[key] || `${key}.md`;

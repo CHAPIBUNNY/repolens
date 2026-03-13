@@ -38,7 +38,7 @@ npm link
 Install from a specific version:
 
 ```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.3.1/chappibunny-repolens-1.3.1.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.4.0/chappibunny-repolens-1.4.0.tgz
 ```
 </details>
 

@@ -2,42 +2,42 @@
 
 const DEFAULT_DOMAIN_HINTS = [
   { 
-    match: ["auth", "login", "signup", "session", "user", "account"], 
-    domain: "Authentication",
-    description: "User authentication and identity flows"
+    match: ["auth", "login", "signup", "session", "user", "account", "oauth", "sso"], 
+    domain: "Authentication & Identity",
+    description: "User authentication, authorization, and identity management"
   },
   { 
-    match: ["stock", "chart", "price", "market", "watchlist", "ticker", "quote"], 
-    domain: "Market Data & Analysis",
-    description: "Market data retrieval, analysis, and visualization"
+    match: ["dashboard", "analytics", "chart", "report", "metric", "stat", "insight"], 
+    domain: "Analytics & Reporting",
+    description: "Data visualization, reporting, and analytics dashboards"
   },
   { 
-    match: ["article", "newsletter", "news", "research", "content", "blog", "post"], 
-    domain: "Content & Research",
-    description: "Content publishing, research, and insight delivery"
+    match: ["article", "newsletter", "news", "research", "content", "blog", "post", "cms"], 
+    domain: "Content Management",
+    description: "Content publishing, management, and delivery"
   },
   { 
-    match: ["portfolio", "positions", "holdings", "trades", "orders"], 
-    domain: "Portfolio Management",
-    description: "Portfolio tracking and trading functionality"
+    match: ["search", "filter", "query", "index", "catalog", "browse"], 
+    domain: "Search & Discovery",
+    description: "Search functionality, filtering, and content discovery"
   },
   { 
-    match: ["alert", "notification", "email", "sms", "webhook"], 
-    domain: "Alerts & Notifications",
-    description: "User notification and alerting system"
+    match: ["alert", "notification", "email", "sms", "webhook", "push", "message"], 
+    domain: "Notifications",
+    description: "User notifications and messaging system"
   },
   { 
-    match: ["payment", "subscription", "billing", "stripe", "checkout"], 
+    match: ["payment", "subscription", "billing", "stripe", "checkout", "invoice"], 
     domain: "Payments & Billing",
     description: "Payment processing and subscription management"
   },
   { 
-    match: ["api", "endpoint", "route", "handler"], 
+    match: ["api", "endpoint", "route", "handler", "controller", "middleware"], 
     domain: "API Layer",
     description: "Backend API endpoints and request handling"
   },
   { 
-    match: ["component", "ui", "button", "form", "modal", "dialog"], 
+    match: ["component", "ui", "button", "form", "modal", "dialog", "layout", "widget"], 
     domain: "UI Components",
     description: "Reusable user interface components"
   },
@@ -47,19 +47,34 @@ const DEFAULT_DOMAIN_HINTS = [
     description: "Custom React hooks for state and behavior"
   },
   { 
-    match: ["store", "state", "redux", "zustand", "context"], 
+    match: ["store", "state", "redux", "zustand", "context", "atom"], 
     domain: "State Management",
     description: "Application state management"
   },
   { 
-    match: ["lib", "util", "helper", "common", "shared"], 
+    match: ["lib", "util", "helper", "common", "shared", "tool"], 
     domain: "Shared Utilities",
     description: "Common utilities and helper functions"
   },
   { 
-    match: ["data", "database", "db", "prisma", "sql"], 
+    match: ["data", "database", "db", "prisma", "sql", "model", "schema", "migration", "seed"], 
     domain: "Data Layer",
-    description: "Database access and data persistence"
+    description: "Database access, models, and data persistence"
+  },
+  {
+    match: ["config", "setting", "env", "constant"],
+    domain: "Configuration",
+    description: "Application configuration and environment settings"
+  },
+  {
+    match: ["test", "spec", "fixture", "mock", "stub", "e2e", "cypress", "playwright"],
+    domain: "Testing",
+    description: "Test suites, fixtures, and testing utilities"
+  },
+  {
+    match: ["job", "queue", "worker", "cron", "task", "scheduler", "background"],
+    domain: "Background Jobs",
+    description: "Background processing, job queues, and scheduled tasks"
   }
 ];
 

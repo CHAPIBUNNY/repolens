@@ -151,6 +151,57 @@ export async function runDoctor(targetDir = process.cwd()) {
     }
   }
 
+  // Validate environment variables for configured publishers
+  if (cfg && Array.isArray(cfg.publishers)) {
+    info("Environment:");
+    info("");
+
+    const envChecks = [];
+
+    if (cfg.publishers.includes("notion")) {
+      envChecks.push(
+        { key: "NOTION_TOKEN", required: true, publisher: "Notion" },
+        { key: "NOTION_PARENT_PAGE_ID", required: true, publisher: "Notion" },
+      );
+    }
+
+    if (cfg.publishers.includes("confluence")) {
+      envChecks.push(
+        { key: "CONFLUENCE_URL", required: true, publisher: "Confluence" },
+        { key: "CONFLUENCE_EMAIL", required: true, publisher: "Confluence" },
+        { key: "CONFLUENCE_API_TOKEN", required: true, publisher: "Confluence" },
+        { key: "CONFLUENCE_SPACE_KEY", required: true, publisher: "Confluence" },
+        { key: "CONFLUENCE_PARENT_PAGE_ID", required: true, publisher: "Confluence" },
+      );
+    }
+
+    if (cfg.publishers.includes("github_wiki")) {
+      envChecks.push(
+        { key: "GITHUB_TOKEN", required: true, publisher: "GitHub Wiki" },
+      );
+    }
+
+    if (cfg.ai?.enabled || process.env.REPOLENS_AI_ENABLED === "true") {
+      envChecks.push(
+        { key: "REPOLENS_AI_API_KEY", required: true, publisher: "AI" },
+      );
+    }
+
+    if (envChecks.length === 0) {
+      ok("No publisher-specific env vars required (Markdown only)");
+    }
+
+    for (const check of envChecks) {
+      if (process.env[check.key]) {
+        ok(`${check.key} is set (${check.publisher})`);
+      } else {
+        warn(`${check.key} is not set — required for ${check.publisher} publishing`);
+      }
+    }
+
+    info("");
+  }
+
   info("");
 
   const detectedRoots = await detectRepoRoots(repoRoot);

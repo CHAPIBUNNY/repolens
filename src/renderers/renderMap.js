@@ -10,7 +10,7 @@ function normalizeLabel(value) {
     .replace(/\/+/g, "/");
 }
 
-function buildModuleGraph(modules) {
+function buildModuleGraph(modules, depGraph) {
   // Create nodes with module details
   const nodes = modules.map(mod => ({
     id: sanitizeNodeId(mod.key),
@@ -20,80 +20,89 @@ function buildModuleGraph(modules) {
     category: categorizeModule(mod.key)
   }));
 
-  // Infer relationships based on common patterns
   const relationships = [];
 
-  for (const source of nodes) {
-    for (const target of nodes) {
-      if (source.id === target.id) continue;
+  // Use real import edges from dependency graph when available
+  if (depGraph && depGraph.edges && depGraph.edges.length > 0) {
+    // Map file-level edges to module-level edges
+    const moduleEdges = new Map(); // "sourceModule->targetModule" → count
 
-      // CLI imports from core, publishers, renderers, utils
-      if (source.label === "bin" || source.label.startsWith("bin/")) {
-        if (target.label.startsWith("src/")) {
-          relationships.push({
-            from: source.id,
-            to: target.id,
-            type: "uses"
-          });
-        }
+    for (const edge of depGraph.edges) {
+      const sourceModule = findModuleForFile(edge.from, modules);
+      const targetModule = findModuleForFile(edge.to, modules);
+
+      if (sourceModule && targetModule && sourceModule !== targetModule) {
+        const edgeKey = `${sanitizeNodeId(sourceModule)}:${sanitizeNodeId(targetModule)}`;
+        moduleEdges.set(edgeKey, (moduleEdges.get(edgeKey) || 0) + 1);
       }
+    }
 
-      // Core modules are foundational - others depend on them
-      if (target.label.startsWith("src/core")) {
-        if (source.label.startsWith("src/publishers") || 
-            source.label.startsWith("src/renderers") ||
-            source.label.startsWith("src/delivery")) {
-          relationships.push({
-            from: source.id,
-            to: target.id,
-            type: "depends-on"
-          });
-        }
-      }
-
-      // Publishers use renderers
-      if (source.label.startsWith("src/publishers") && target.label.startsWith("src/renderers")) {
+    for (const [edgeKey, count] of moduleEdges) {
+      const [fromId, toId] = edgeKey.split(":");
+      const sourceNode = nodes.find(n => n.id === fromId);
+      const targetNode = nodes.find(n => n.id === toId);
+      if (sourceNode && targetNode) {
         relationships.push({
-          from: source.id,
-          to: target.id,
-          type: "renders"
+          from: fromId,
+          to: toId,
+          type: targetNode.category === "test" ? "tests" : "imports",
+          weight: count
         });
       }
+    }
+  } else {
+    // Fallback: infer relationships based on common patterns
+    for (const source of nodes) {
+      for (const target of nodes) {
+        if (source.id === target.id) continue;
 
-      // Everything uses utils
-      if (target.label.startsWith("src/utils")) {
-        if (source.label.startsWith("src/") && source.label !== target.label) {
-          relationships.push({
-            from: source.id,
-            to: target.id,
-            type: "uses"
-          });
+        if (source.label === "bin" || source.label.startsWith("bin/")) {
+          if (target.label.startsWith("src/")) {
+            relationships.push({ from: source.id, to: target.id, type: "uses" });
+          }
         }
-      }
 
-      // Delivery uses publishers
-      if (source.label.startsWith("src/delivery") && target.label.startsWith("src/publishers")) {
-        relationships.push({
-          from: source.id,
-            to: target.id,
-          type: "publishes-via"
-        });
-      }
+        if (target.label.startsWith("src/core")) {
+          if (source.label.startsWith("src/publishers") || 
+              source.label.startsWith("src/renderers") ||
+              source.label.startsWith("src/delivery")) {
+            relationships.push({ from: source.id, to: target.id, type: "depends-on" });
+          }
+        }
 
-      // Tests test everything
-      if (source.label.startsWith("tests/") || source.label.startsWith("test/")) {
-        if (!target.label.startsWith("tests/") && !target.label.startsWith("test/")) {
-          relationships.push({
-            from: source.id,
-            to: target.id,
-            type: "tests"
-          });
+        if (target.label.startsWith("src/utils")) {
+          if (source.label.startsWith("src/") && source.label !== target.label) {
+            relationships.push({ from: source.id, to: target.id, type: "uses" });
+          }
+        }
+
+        if (source.label.startsWith("tests/") || source.label.startsWith("test/")) {
+          if (!target.label.startsWith("tests/") && !target.label.startsWith("test/")) {
+            relationships.push({ from: source.id, to: target.id, type: "tests" });
+          }
         }
       }
     }
   }
 
   return { nodes, relationships };
+}
+
+/**
+ * Find which module a file belongs to.
+ */
+function findModuleForFile(fileKey, modules) {
+  const normalized = fileKey.replace(/\\/g, "/");
+  // Find the most specific (longest) matching module key
+  let bestMatch = null;
+  for (const mod of modules) {
+    if (normalized.startsWith(mod.key) || normalized.startsWith(mod.key + "/")) {
+      if (!bestMatch || mod.key.length > bestMatch.length) {
+        bestMatch = mod.key;
+      }
+    }
+  }
+  return bestMatch;
 }
 
 function categorizeModule(key) {
@@ -180,14 +189,14 @@ function generateUnicodeArchitectureDiagram(nodes, relationships) {
 
   lines.push("");
   lines.push("Legend:");
-  lines.push("  →  depends on / uses");
+  lines.push("  →  imports / depends on");
   lines.push("  ╌→ tests");
   lines.push("```");
   
   return lines.join("\n");
 }
 
-export function renderSystemMap(scan) {
+export function renderSystemMap(scan, config, depGraph) {
   const modules = (scan.modules || []).slice(0, 30); // Limit for readability
   
   if (modules.length === 0) {
@@ -201,8 +210,12 @@ export function renderSystemMap(scan) {
     ].join("\n");
   }
 
-  const { nodes, relationships } = buildModuleGraph(modules);
+  const { nodes, relationships } = buildModuleGraph(modules, depGraph);
   const architectureDiagram = generateUnicodeArchitectureDiagram(nodes, relationships);
+
+  const sourceLabel = depGraph && depGraph.edges && depGraph.edges.length > 0
+    ? "**Source:** Real import analysis"
+    : "**Source:** Heuristic inference (run full publish for import-based analysis)";
 
   // Build markdown output
   const lines = [
@@ -211,6 +224,8 @@ export function renderSystemMap(scan) {
     "> What is this? This visual diagram shows how different parts of your codebase connect to each other. Arrows indicate dependencies (which modules use which).",
     "",
     `Showing: ${nodes.length} modules and ${relationships.length} relationships`,
+    "",
+    sourceLabel,
     "",
     "---",
     "",

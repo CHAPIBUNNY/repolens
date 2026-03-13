@@ -1,6 +1,6 @@
 # AI-Enhanced Documentation
 
-As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is available in the current version (v1.3.1).
+As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is available in the current version (v1.4.0).
 
 ## Overview
 

@@ -88,6 +88,9 @@ export function renderArchitectureDiff(diff) {
     for (const route of data.addedRoutes.slice(0, 25)) {
       lines.push(`- \`${route}\``);
     }
+    if (data.addedRoutes.length > 25) {
+      lines.push(``, `> Showing 25 of ${data.addedRoutes.length} added routes.`);
+    }
     lines.push("");
   }
 
@@ -95,6 +98,9 @@ export function renderArchitectureDiff(diff) {
     lines.push("## Removed Routes", "");
     for (const route of data.removedRoutes.slice(0, 25)) {
       lines.push(`- \`${route}\``);
+    }
+    if (data.removedRoutes.length > 25) {
+      lines.push(``, `> Showing 25 of ${data.removedRoutes.length} removed routes.`);
     }
     lines.push("");
   }
@@ -104,6 +110,9 @@ export function renderArchitectureDiff(diff) {
     for (const module of data.impactedModules.slice(0, 40)) {
       lines.push(`- \`${module}\``);
     }
+    if (data.impactedModules.length > 40) {
+      lines.push(``, `> Showing 40 of ${data.impactedModules.length} impacted modules.`);
+    }
     lines.push("");
   }
 
@@ -111,6 +120,9 @@ export function renderArchitectureDiff(diff) {
     lines.push("## Added Files", "");
     for (const file of data.added.slice(0, 25)) {
       lines.push(`- \`${file}\``);
+    }
+    if (data.added.length > 25) {
+      lines.push(``, `> Showing 25 of ${data.added.length} added files.`);
     }
     lines.push("");
   }
@@ -120,6 +132,9 @@ export function renderArchitectureDiff(diff) {
     for (const file of data.removed.slice(0, 25)) {
       lines.push(`- \`${file}\``);
     }
+    if (data.removed.length > 25) {
+      lines.push(``, `> Showing 25 of ${data.removed.length} removed files.`);
+    }
     lines.push("");
   }
 
@@ -127,6 +142,9 @@ export function renderArchitectureDiff(diff) {
     lines.push("## Modified Files", "");
     for (const file of data.modified.slice(0, 25)) {
       lines.push(`- \`${file}\``);
+    }
+    if (data.modified.length > 25) {
+      lines.push(``, `> Showing 25 of ${data.modified.length} modified files.`);
     }
     lines.push("");
   }
