@@ -1,22 +1,24 @@
+/**
+ * Watch Module Tests — Real Filesystem Events
+ * 
+ * Uses real temp directories and real fs.watch (no fake timers).
+ * Pipeline modules (config, scan, render, write) remain mocked since
+ * we're testing the watch/debounce/filter behaviour, not the pipeline.
+ */
+
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
 
+// ── Pipeline mocks (these don't need real implementations) ──────────
 vi.mock("../src/core/config.js", () => ({
-  loadConfig: vi.fn().mockResolvedValue({
-    __repoRoot: "/fake/repo",
-    module_roots: ["src", "lib"],
-    scan: { include: ["**/*.js"] },
-    publishers: ["markdown"],
-  }),
+  loadConfig: vi.fn(),
 }));
 
 vi.mock("../src/core/scan.js", () => ({
   scanRepo: vi.fn().mockResolvedValue({
-    filesCount: 10,
-    modules: [],
-    api: [],
-    pages: [],
-    metadata: {},
+    filesCount: 10, modules: [], api: [], pages: [], metadata: {},
   }),
 }));
 
@@ -38,93 +40,121 @@ vi.mock("../src/utils/logger.js", () => ({
   error: vi.fn(),
 }));
 
-describe("watch module", () => {
-  let accessSyncSpy;
-  let watchSpy;
+// ── Helpers ─────────────────────────────────────────────────────────
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+describe("watch module — real filesystem events", () => {
+  let tmpDir;
+  let liveWatchers;
 
   beforeEach(() => {
-    vi.useFakeTimers();
-    accessSyncSpy = vi.spyOn(fs, "accessSync");
-    watchSpy = vi.spyOn(fs, "watch");
+    vi.resetModules();
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "rl-watch-"));
+    liveWatchers = [];
+
+    // Wrap fs.watch so we can close watchers in cleanup
+    const realWatch = fs.watch.bind(fs);
+    vi.spyOn(fs, "watch").mockImplementation((...args) => {
+      const watcher = realWatch(...args);
+      liveWatchers.push(watcher);
+      return watcher;
+    });
   });
 
   afterEach(() => {
+    for (const w of liveWatchers) {
+      try { w.close(); } catch { /* already closed */ }
+    }
     vi.restoreAllMocks();
-    vi.useRealTimers();
+    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ok */ }
   });
 
-  it("should warn and return when no watchable directories exist", async () => {
-    const { warn } = await import("../src/utils/logger.js");
-
-    // All directories fail access check
-    accessSyncSpy.mockImplementation(() => {
-      throw new Error("ENOENT");
+  // ── Helpers per-test ──────────────────────────────────────────────
+  async function configureAndImport(moduleRoots) {
+    const { loadConfig } = await import("../src/core/config.js");
+    loadConfig.mockResolvedValue({
+      __repoRoot: tmpDir,
+      module_roots: moduleRoots,
+      scan: { include: ["**/*.js"] },
+      publishers: ["markdown"],
     });
+    return {
+      loadConfig,
+      ...(await import("../src/utils/logger.js")),
+      ...(await import("../src/core/scan.js")),
+      ...(await import("../src/watch.js")),
+    };
+  }
 
-    const mockWatcher = { close: vi.fn() };
-    watchSpy.mockReturnValue(mockWatcher);
+  // ────────────────────────────────────────────────────────────────────
+  it("warns and returns when no watchable directories exist", async () => {
+    // tmpDir has no subdirectories matching module_roots
+    const { runWatch, warn } = await configureAndImport(["nonexistent"]);
 
-    const { runWatch } = await import("../src/watch.js");
-
-    // runWatch should resolve (not hang) when no dirs found
-    const promise = runWatch("/fake/config.yml");
-    await vi.advanceTimersByTimeAsync(100);
+    // runWatch should resolve (not hang) when no dirs exist
+    await runWatch(path.join(tmpDir, ".repolens.yml"));
 
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("No directories to watch")
+      expect.stringContaining("No directories to watch"),
     );
   });
 
-  it("should set up watchers for existing directories", async () => {
-    const { info } = await import("../src/utils/logger.js");
+  it("sets up watchers for existing directories", async () => {
+    fs.mkdirSync(path.join(tmpDir, "src"));
 
-    // "src" exists, "lib" does not
-    accessSyncSpy.mockImplementation((dirPath) => {
-      if (dirPath.includes("src")) return;
-      throw new Error("ENOENT");
-    });
+    const { runWatch, info } = await configureAndImport(["src", "nonexistent"]);
 
-    const mockWatcher = { close: vi.fn() };
-    watchSpy.mockReturnValue(mockWatcher);
+    // Don't await — hangs on `await new Promise(() => {})`
+    runWatch(path.join(tmpDir, ".repolens.yml"));
+    await wait(400);
 
-    const { runWatch } = await import("../src/watch.js");
-
-    runWatch("/fake/config.yml");
-    await vi.advanceTimersByTimeAsync(100);
-
-    expect(watchSpy).toHaveBeenCalled();
+    expect(fs.watch).toHaveBeenCalled();
     expect(info).toHaveBeenCalledWith(expect.stringContaining("Watching"));
+    // Only "src" should have a watcher (nonexistent is skipped)
+    expect(liveWatchers.length).toBe(1);
   });
 
-  it("should ignore node_modules changes", async () => {
-    accessSyncSpy.mockImplementation(() => {});
+  it("triggers rebuild when a real file is written", async () => {
+    const srcDir = path.join(tmpDir, "src");
+    fs.mkdirSync(srcDir);
 
-    let watchCallback;
-    const mockWatcher = { close: vi.fn() };
-    watchSpy.mockImplementation((dir, opts, cb) => {
-      watchCallback = cb;
-      return mockWatcher;
-    });
+    const { runWatch, scanRepo } = await configureAndImport(["src"]);
 
-    const { info } = await import("../src/utils/logger.js");
-    const { runWatch } = await import("../src/watch.js");
+    runWatch(path.join(tmpDir, ".repolens.yml"));
+    await wait(400); // initial build + watcher setup
+    scanRepo.mockClear(); // clear initial-build call
 
-    runWatch("/fake/config.yml");
-    await vi.advanceTimersByTimeAsync(100);
+    // Write a real file — triggers the native fs watcher
+    fs.writeFileSync(path.join(srcDir, "trigger.js"), "// changed");
 
-    // Clear info calls from setup
+    // Wait for debounce (500 ms) + OS filesystem event latency
+    await wait(1500);
+
+    expect(scanRepo).toHaveBeenCalled();
+  }, 10_000);
+
+  it("ignores node_modules changes in real filesystem", async () => {
+    const srcDir = path.join(tmpDir, "src");
+    fs.mkdirSync(srcDir);
+    const nmDir = path.join(srcDir, "node_modules");
+    fs.mkdirSync(nmDir);
+
+    const { runWatch, scanRepo, info } = await configureAndImport(["src"]);
+
+    runWatch(path.join(tmpDir, ".repolens.yml"));
+    await wait(400);
+    scanRepo.mockClear();
     info.mockClear();
 
-    // Trigger a change in node_modules — should be ignored
-    if (watchCallback) {
-      watchCallback("change", "node_modules/package/index.js");
-    }
+    // Write inside node_modules — watcher should filter it out
+    fs.writeFileSync(path.join(nmDir, "pkg.js"), "// nm change");
 
-    await vi.advanceTimersByTimeAsync(1000);
+    await wait(1500);
 
     const changeDetectedCalls = info.mock.calls.filter(
-      (call) => typeof call[0] === "string" && call[0].includes("Change detected")
+      (c) => typeof c[0] === "string" && c[0].includes("Change detected"),
     );
     expect(changeDetectedCalls.length).toBe(0);
-  });
+    expect(scanRepo).not.toHaveBeenCalled();
+  }, 10_000);
 });

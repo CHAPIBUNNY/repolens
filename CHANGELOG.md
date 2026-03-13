@@ -2,6 +2,19 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.5.2
+
+### 🐛 Bug Fixes
+
+- **retry-after: 0 honoured**: Fixed falsy-zero bug in `fetchWithRetry` where `retry-after: 0` header was ignored (fell through to `baseDelayMs`). Now properly honours the server's hint, even when it's zero.
+
+### 🧪 Test Quality
+
+- **Mock HTTP server integration tests** (`tests/http-integration.test.js`): 17 tests exercising `fetchWithRetry` against a real local HTTP server — retry on 429/500, timeout handling, header validation, Notion/Confluence block/format generation.
+- **Rate-limit concurrent stress tests** (`tests/rate-limit-stress.test.js`): 9 tests firing 20–50 parallel requests through the token bucket to verify throttling, deadlock freedom, burst behaviour, and `batchRequests` concurrency control.
+- **Watch mode test refactor** (`tests/watch.test.js`): Replaced fake timers with real temp directories and real `fs.watch` events. Tests now create actual files, observe filesystem watcher callbacks, and verify debounced rebuilds without `vi.useFakeTimers()`.
+- **278 tests** passing across **20 test files** (up from 251/18).
+
 ## 1.5.1
 
 ### 🐛 Bug Fixes

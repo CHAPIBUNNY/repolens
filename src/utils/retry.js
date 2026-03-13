@@ -38,11 +38,11 @@ export async function fetchWithRetry(url, options = {}, config = {}) {
       }
 
       const retryAfterHeader = response.headers.get("retry-after");
-      const retryAfterMs = retryAfterHeader
+      const retryAfterMs = retryAfterHeader != null
         ? Number(retryAfterHeader) * 1000
         : null;
 
-      const delay = retryAfterMs || Math.min(baseDelayMs * 2 ** attempt, maxDelayMs);
+      const delay = retryAfterMs != null ? retryAfterMs : Math.min(baseDelayMs * 2 ** attempt, maxDelayMs);
 
       warn(`${label} failed with retryable status ${response.status}. Retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`);
       await sleep(delay);
