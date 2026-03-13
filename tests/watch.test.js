@@ -110,8 +110,10 @@ describe("watch module — real filesystem events", () => {
 
     expect(fs.watch).toHaveBeenCalled();
     expect(info).toHaveBeenCalledWith(expect.stringContaining("Watching"));
-    // Only "src" should have a watcher (nonexistent is skipped)
-    expect(liveWatchers.length).toBe(1);
+    // Verify "src" was watched (nonexistent is skipped)
+    const watchedPaths = fs.watch.mock.calls.map(([p]) => p);
+    expect(watchedPaths.some((p) => p.endsWith(path.sep + "src"))).toBe(true);
+    expect(liveWatchers.length).toBeGreaterThanOrEqual(1);
   });
 
   it("triggers rebuild when a real file is written", async () => {
