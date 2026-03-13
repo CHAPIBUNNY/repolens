@@ -59,8 +59,26 @@ jobs:
           
           echo "✅ No secrets detected"
 
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a  # v4.2.0
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: rm -rf node_modules package-lock.json && npm install
+
+      - name: Run tests
+        run: npx vitest run --no-watch --reporter=verbose
+
   publish:
-    needs: security
+    needs: [security, test]
     runs-on: ubuntu-latest
     
     steps:

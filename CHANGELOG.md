@@ -2,6 +2,17 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.5.3
+
+### 🔧 Improvements
+
+- **CI test gate**: Publish workflow now runs the full Vitest suite before publishing. The `publish` job requires both `security` and `test` jobs to pass.
+
+### 🧪 Test Coverage
+
+- **Renderer unit tests** (`tests/renderers.test.js`): 33 tests covering all four `render.js` exports (`renderSystemOverview`, `renderModuleCatalog`, `renderApiSurface`, `renderRouteMap`), `renderSystemMap` (with/without depGraph, categories, limits), and `renderDiff.js` (`buildArchitectureDiffData` route detection, `renderArchitectureDiff` truncation).
+- **311 tests** passing across **21 test files** (up from 278/20).
+
 ## 1.5.2
 
 ### 🐛 Bug Fixes
