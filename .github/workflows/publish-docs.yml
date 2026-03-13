@@ -23,7 +23,7 @@ jobs:
           node-version: 22
       
       - name: Install dependencies
-        run: rm -rf node_modules package-lock.json && npm install --no-optional
+        run: rm -rf node_modules package-lock.json && npm install
 
       - name: Run dependency audit
         run: |
@@ -72,7 +72,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: rm -rf node_modules package-lock.json && npm install --no-optional
+        run: rm -rf node_modules package-lock.json && npm install
 
       - name: Run tests
         run: npx vitest run --no-watch --reporter=verbose
@@ -91,7 +91,7 @@ jobs:
           node-version: 22
       
       - name: Install dependencies
-        run: rm -rf node_modules package-lock.json && npm install --no-optional
+        run: rm -rf node_modules package-lock.json && npm install
 
       - name: Generate and publish documentation
         env:
