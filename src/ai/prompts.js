@@ -405,73 +405,166 @@ export function renderStructuredToMarkdown(key, parsed) {
   }
 }
 
+/**
+ * Safely convert any AI response value to a readable string.
+ * Handles: strings, arrays (of strings or objects), plain objects, and other types.
+ */
+function safeStr(val) {
+  if (val == null) return "";
+  if (typeof val === "string") return val;
+  if (Array.isArray(val)) return val.map(safeStr).join(", ");
+  if (typeof val === "object") {
+    // Try common field patterns the AI might use
+    if (val.name) return val.description ? `${val.name}: ${val.description}` : val.name;
+    if (val.title) return val.description ? `${val.title}: ${val.description}` : val.title;
+    // Fallback: render object key/value pairs
+    return Object.entries(val).map(([k, v]) => `${k}: ${typeof v === "string" ? v : safeStr(v)}`).join("; ");
+  }
+  return String(val);
+}
+
+/**
+ * Convert a value to a bullet list.
+ * Handles strings, arrays of strings, arrays of objects, and plain objects.
+ */
+function toBulletList(val) {
+  if (val == null) return "";
+  if (typeof val === "string") return val;
+  if (Array.isArray(val)) {
+    return val.map(item => {
+      if (typeof item === "string") return `- ${item}`;
+      if (typeof item === "object" && item !== null) {
+        const label = item.name || item.title || Object.keys(item)[0] || "";
+        const desc = item.description || item[Object.keys(item)[0]];
+        if (label && desc && label !== desc) return `- **${label}**: ${desc}`;
+        return `- ${safeStr(item)}`;
+      }
+      return `- ${String(item)}`;
+    }).join("\n");
+  }
+  if (typeof val === "object") {
+    // Object with key/value pairs → render as list
+    return Object.entries(val).map(([k, v]) => `- **${k}**: ${typeof v === "string" ? v : safeStr(v)}`).join("\n");
+  }
+  return String(val);
+}
+
+/**
+ * Convert a value to a heading-based section list (### heading per item).
+ */
+function toHeadingSections(val) {
+  if (val == null) return "";
+  if (typeof val === "string") return val;
+  if (Array.isArray(val)) {
+    return val.map(item => {
+      if (typeof item === "string") return `### ${item}`;
+      if (typeof item === "object" && item !== null) {
+        const label = item.name || item.title || Object.keys(item)[0] || "Section";
+        const desc = item.description || item[Object.keys(item)[0]] || "";
+        return `### ${label}\n\n${typeof desc === "string" ? desc : safeStr(desc)}`;
+      }
+      return `### ${String(item)}`;
+    }).join("\n\n");
+  }
+  if (typeof val === "object") {
+    return Object.entries(val).map(([k, v]) => `### ${k}\n\n${typeof v === "string" ? v : safeStr(v)}`).join("\n\n");
+  }
+  return String(val);
+}
+
 function renderExecutiveSummaryJSON(d) {
   let md = `# Executive Summary\n\n`;
-  md += `## What This System Does\n\n${d.whatItDoes}\n\n`;
-  md += `## Who It Serves\n\n${d.whoItServes}\n\n`;
-  md += `## Core Capabilities\n\n`;
-  if (Array.isArray(d.coreCapabilities)) {
-    md += d.coreCapabilities.map(c => `- ${c}`).join("\n") + "\n\n";
-  } else {
-    md += `${d.coreCapabilities}\n\n`;
-  }
-  md += `## Main System Areas\n\n${Array.isArray(d.mainAreas) ? d.mainAreas.map(a => `- **${a.name || a}**${a.description ? `: ${a.description}` : ""}`).join("\n") : d.mainAreas}\n\n`;
-  if (d.dependencies) md += `## Key Dependencies\n\n${Array.isArray(d.dependencies) ? d.dependencies.map(dep => `- ${dep}`).join("\n") : d.dependencies}\n\n`;
-  md += `## Operational and Architectural Risks\n\n${Array.isArray(d.risks) ? d.risks.map(r => `- ${r}`).join("\n") : d.risks}\n\n`;
-  if (d.focusAreas) md += `## Recommended Focus Areas\n\n${Array.isArray(d.focusAreas) ? d.focusAreas.map(f => `- ${f}`).join("\n") : d.focusAreas}\n`;
+  md += `## What This System Does\n\n${safeStr(d.whatItDoes)}\n\n`;
+  md += `## Who It Serves\n\n${safeStr(d.whoItServes)}\n\n`;
+  md += `## Core Capabilities\n\n${toBulletList(d.coreCapabilities)}\n\n`;
+  md += `## Main System Areas\n\n${toBulletList(d.mainAreas)}\n\n`;
+  if (d.dependencies) md += `## Key Dependencies\n\n${toBulletList(d.dependencies)}\n\n`;
+  md += `## Operational and Architectural Risks\n\n${toBulletList(d.risks)}\n\n`;
+  if (d.focusAreas) md += `## Recommended Focus Areas\n\n${toBulletList(d.focusAreas)}\n`;
   return md;
 }
 
 function renderSystemOverviewJSON(d) {
   let md = `# System Overview\n\n`;
-  md += `## Repository Snapshot\n\n${d.snapshot}\n\n`;
-  md += `## Main Architectural Layers\n\n${Array.isArray(d.layers) ? d.layers.map(l => `- **${l.name || l}**${l.description ? `: ${l.description}` : ""}`).join("\n") : d.layers}\n\n`;
-  md += `## Dominant Domains\n\n${Array.isArray(d.domains) ? d.domains.map(dom => `- ${dom}`).join("\n") : d.domains}\n\n`;
-  md += `## Main Technology Patterns\n\n${Array.isArray(d.patterns) ? d.patterns.map(p => `- ${p}`).join("\n") : d.patterns}\n\n`;
-  md += `## Key Observations\n\n${Array.isArray(d.observations) ? d.observations.map(o => `- ${o}`).join("\n") : d.observations}\n`;
+  md += `## Repository Snapshot\n\n${safeStr(d.snapshot)}\n\n`;
+  md += `## Main Architectural Layers\n\n${toBulletList(d.layers)}\n\n`;
+  md += `## Dominant Domains\n\n${toBulletList(d.domains)}\n\n`;
+  md += `## Main Technology Patterns\n\n${toBulletList(d.patterns)}\n\n`;
+  md += `## Key Observations\n\n${toBulletList(d.observations)}\n`;
   return md;
 }
 
 function renderBusinessDomainsJSON(d) {
   let md = `# Business Domains\n\n`;
-  if (!Array.isArray(d.domains)) return md + d.domains;
+  if (!Array.isArray(d.domains)) {
+    // Handle object-style domains: { "Auth": { description: "..." }, ... }
+    if (typeof d.domains === "object" && d.domains !== null) {
+      for (const [name, info] of Object.entries(d.domains)) {
+        const desc = typeof info === "string" ? info : info?.description || safeStr(info);
+        md += `## ${name}\n\n${desc}\n\n`;
+        if (info?.modules) md += `**Key modules:** ${safeStr(info.modules)}\n\n`;
+        if (info?.userFunctionality) md += `**User-visible functionality:** ${info.userFunctionality}\n\n`;
+        if (info?.dependencies) md += `**Dependencies:** ${safeStr(info.dependencies)}\n\n`;
+      }
+      return md;
+    }
+    return md + safeStr(d.domains);
+  }
   for (const dom of d.domains) {
-    md += `## ${dom.name}\n\n${dom.description || ""}\n\n`;
-    if (dom.modules) md += `**Key modules:** ${Array.isArray(dom.modules) ? dom.modules.join(", ") : dom.modules}\n\n`;
+    const name = dom.name || dom.title || safeStr(dom);
+    md += `## ${name}\n\n${dom.description || ""}\n\n`;
+    if (dom.modules) md += `**Key modules:** ${safeStr(dom.modules)}\n\n`;
     if (dom.userFunctionality) md += `**User-visible functionality:** ${dom.userFunctionality}\n\n`;
-    if (dom.dependencies) md += `**Dependencies:** ${Array.isArray(dom.dependencies) ? dom.dependencies.join(", ") : dom.dependencies}\n\n`;
+    if (dom.dependencies) md += `**Dependencies:** ${safeStr(dom.dependencies)}\n\n`;
   }
   return md;
 }
 
 function renderArchitectureOverviewJSON(d) {
   let md = `# Architecture Overview\n\n`;
-  md += `## Architecture Style\n\n${d.style}\n\n`;
-  md += `## Layers\n\n${Array.isArray(d.layers) ? d.layers.map(l => `### ${l.name || l}\n\n${l.description || ""}`).join("\n\n") : d.layers}\n\n`;
-  md += `## Architectural Strengths\n\n${Array.isArray(d.strengths) ? d.strengths.map(s => `- ${s}`).join("\n") : d.strengths}\n\n`;
-  md += `## Architectural Weaknesses\n\n${Array.isArray(d.weaknesses) ? d.weaknesses.map(w => `- ${w}`).join("\n") : d.weaknesses}\n`;
+  md += `## Architecture Style\n\n${safeStr(d.style)}\n\n`;
+  md += `## Layers\n\n${toHeadingSections(d.layers)}\n\n`;
+  md += `## Architectural Strengths\n\n${toBulletList(d.strengths)}\n\n`;
+  md += `## Architectural Weaknesses\n\n${toBulletList(d.weaknesses)}\n`;
   return md;
 }
 
 function renderDataFlowsJSON(d) {
   let md = `# Data Flows\n\n`;
-  if (!Array.isArray(d.flows)) return md + d.flows;
+  if (!Array.isArray(d.flows)) {
+    if (typeof d.flows === "object" && d.flows !== null) {
+      for (const [name, info] of Object.entries(d.flows)) {
+        const desc = typeof info === "string" ? info : info?.description || safeStr(info);
+        md += `## ${name}\n\n${desc}\n\n`;
+        if (info?.steps) md += `**Steps:**\n${toBulletList(info.steps)}\n\n`;
+        if (info?.modules) md += `**Involved modules:** ${safeStr(info.modules)}\n\n`;
+      }
+      return md;
+    }
+    return md + safeStr(d.flows);
+  }
   for (const flow of d.flows) {
-    md += `## ${flow.name}\n\n${flow.description || ""}\n\n`;
-    if (flow.steps) md += `**Steps:**\n${Array.isArray(flow.steps) ? flow.steps.map((s, i) => `${i + 1}. ${s}`).join("\n") : flow.steps}\n\n`;
-    if (flow.modules) md += `**Involved modules:** ${Array.isArray(flow.modules) ? flow.modules.join(", ") : flow.modules}\n\n`;
-    if (flow.criticalDependencies) md += `**Critical dependencies:** ${flow.criticalDependencies}\n\n`;
+    const name = flow.name || flow.title || safeStr(flow);
+    md += `## ${name}\n\n${flow.description || ""}\n\n`;
+    if (flow.steps) {
+      const steps = Array.isArray(flow.steps)
+        ? flow.steps.map((s, i) => `${i + 1}. ${safeStr(s)}`).join("\n")
+        : safeStr(flow.steps);
+      md += `**Steps:**\n${steps}\n\n`;
+    }
+    if (flow.modules) md += `**Involved modules:** ${safeStr(flow.modules)}\n\n`;
+    if (flow.criticalDependencies) md += `**Critical dependencies:** ${safeStr(flow.criticalDependencies)}\n\n`;
   }
   return md;
 }
 
 function renderDeveloperOnboardingJSON(d) {
   let md = `# Developer Onboarding\n\n`;
-  md += `## Start Here\n\n${d.startHere}\n\n`;
-  md += `## Main Folders\n\n${Array.isArray(d.mainFolders) ? d.mainFolders.map(f => `- **${f.name || f}**${f.description ? `: ${f.description}` : ""}`).join("\n") : d.mainFolders}\n\n`;
-  md += `## Core Product Flows\n\n${Array.isArray(d.coreFlows) ? d.coreFlows.map(f => `- ${f}`).join("\n") : d.coreFlows}\n\n`;
-  if (d.importantRoutes) md += `## Important Routes\n\n${Array.isArray(d.importantRoutes) ? d.importantRoutes.map(r => `- ${r}`).join("\n") : d.importantRoutes}\n\n`;
-  if (d.sharedLibraries) md += `## Important Shared Libraries\n\n${Array.isArray(d.sharedLibraries) ? d.sharedLibraries.map(l => `- ${l}`).join("\n") : d.sharedLibraries}\n\n`;
-  md += `## Known Complexity Hotspots\n\n${Array.isArray(d.complexityHotspots) ? d.complexityHotspots.map(h => `- ${h}`).join("\n") : d.complexityHotspots}\n`;
+  md += `## Start Here\n\n${safeStr(d.startHere)}\n\n`;
+  md += `## Main Folders\n\n${toBulletList(d.mainFolders)}\n\n`;
+  md += `## Core Product Flows\n\n${toBulletList(d.coreFlows)}\n\n`;
+  if (d.importantRoutes) md += `## Important Routes\n\n${toBulletList(d.importantRoutes)}\n\n`;
+  if (d.sharedLibraries) md += `## Important Shared Libraries\n\n${toBulletList(d.sharedLibraries)}\n\n`;
+  md += `## Known Complexity Hotspots\n\n${toBulletList(d.complexityHotspots)}\n`;
   return md;
 }

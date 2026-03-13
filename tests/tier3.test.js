@@ -423,4 +423,65 @@ describe("Structured AI Output", () => {
   it("returns null for unknown key", () => {
     expect(renderStructuredToMarkdown("unknown_key", {})).toBeNull();
   });
+
+  it("handles object-style layers in architecture overview (no [object Object])", () => {
+    const parsed = {
+      style: "Modular CLI",
+      layers: { "Application Layer": "Handles business logic", "Infrastructure": "File system and APIs" },
+      strengths: ["Good separation of concerns", "Clear module boundaries"],
+      weaknesses: ["Limited error recovery"],
+    };
+    const md = renderStructuredToMarkdown("architecture_overview", parsed);
+    expect(md).toContain("# Architecture Overview");
+    expect(md).toContain("Application Layer");
+    expect(md).toContain("Handles business logic");
+    expect(md).not.toContain("[object Object]");
+  });
+
+  it("handles object-style mainAreas in executive summary (no [object Object])", () => {
+    const parsed = {
+      whatItDoes: "Docs tool",
+      whoItServes: "Engineers",
+      coreCapabilities: ["Scan", "Publish"],
+      mainAreas: { "Core Engine": "Scanning and analysis", "Publishers": "Output targets" },
+      risks: { "Scaling": "May hit file limits" },
+    };
+    const md = renderStructuredToMarkdown("executive_summary", parsed);
+    expect(md).toContain("Core Engine");
+    expect(md).toContain("Scanning and analysis");
+    expect(md).not.toContain("[object Object]");
+  });
+
+  it("handles object-style domains in business domains (no [object Object])", () => {
+    const parsed = {
+      domains: { "Authentication": { description: "Login flow", modules: ["src/auth"] } },
+    };
+    const md = renderStructuredToMarkdown("business_domains", parsed);
+    expect(md).toContain("Authentication");
+    expect(md).toContain("Login flow");
+    expect(md).not.toContain("[object Object]");
+  });
+
+  it("handles object-style flows in data flows (no [object Object])", () => {
+    const parsed = {
+      flows: { "Auth Flow": { description: "Handles login", steps: ["Enter creds", "Validate"] } },
+    };
+    const md = renderStructuredToMarkdown("data_flows", parsed);
+    expect(md).toContain("Auth Flow");
+    expect(md).toContain("Handles login");
+    expect(md).not.toContain("[object Object]");
+  });
+
+  it("handles arrays of objects without name property (no [object Object])", () => {
+    const parsed = {
+      style: "Layered",
+      layers: [{ title: "API", description: "REST layer" }, { title: "DB", description: "Postgres" }],
+      strengths: ["Fast"],
+      weaknesses: ["Complex"],
+    };
+    const md = renderStructuredToMarkdown("architecture_overview", parsed);
+    expect(md).toContain("API");
+    expect(md).toContain("REST layer");
+    expect(md).not.toContain("[object Object]");
+  });
 });
