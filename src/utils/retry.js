@@ -13,7 +13,8 @@ export async function fetchWithRetry(url, options = {}, config = {}) {
     retries = 3,
     baseDelayMs = 500,
     maxDelayMs = 4000,
-    label = "request"
+    label = "request",
+    timeoutMs = 30000
   } = config;
 
   let attempt = 0;
@@ -21,7 +22,16 @@ export async function fetchWithRetry(url, options = {}, config = {}) {
 
   while (attempt <= retries) {
     try {
-      const response = await fetch(url, options);
+      // Apply timeout via AbortController
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const fetchOpts = { ...options, signal: controller.signal };
+      let response;
+      try {
+        response = await fetch(url, fetchOpts);
+      } finally {
+        clearTimeout(timer);
+      }
 
       if (!isRetryableStatus(response.status)) {
         return response;
@@ -39,8 +49,13 @@ export async function fetchWithRetry(url, options = {}, config = {}) {
     } catch (error) {
       lastError = error;
 
+      // Convert AbortError to a friendlier timeout message
+      if (error.name === "AbortError") {
+        lastError = new Error(`${label} timed out after ${timeoutMs}ms`);
+      }
+
       const delay = Math.min(baseDelayMs * 2 ** attempt, maxDelayMs);
-      warn(`${label} threw error: ${error.message}. Retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`);
+      warn(`${label} threw error: ${lastError.message}. Retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`);
       await sleep(delay);
     }
 

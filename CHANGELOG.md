@@ -2,6 +2,23 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.5.1
+
+### 🐛 Bug Fixes
+
+- **[object Object] rendering fix**: All 6 structured AI renderers now use safe coercion helpers (`safeStr`, `toBulletList`, `toHeadingSections`) that handle strings, arrays, objects, and null values robustly. Prevents `[object Object]` from appearing in Notion/Confluence/Markdown output when AI returns unexpected shapes.
+
+### 🔧 Improvements — Robustness
+
+- **Fetch timeout**: All HTTP requests via `fetchWithRetry` now enforce a 30-second timeout (configurable via `timeoutMs`). Prevents publishers from hanging indefinitely on stalled connections. `AbortError` is converted to a friendly timeout message.
+- **Per-document error isolation**: Extended analysis (GraphQL, TypeScript, dependency graph, drift detection) now wraps each phase in try/catch. A failing analyzer no longer blocks the entire doc generation pipeline.
+- **Partial-success publishing**: Publisher orchestration no longer throws on the first failure. If Notion fails but Confluence/Markdown succeed, all remaining publishers still run. Failures are logged as warnings. Only throws if *all* publishers fail.
+
+### 📊 Test Coverage
+
+- **251 tests** passing across **18 test files** (up from 224/17).
+- New `tests/robustness.test.js` with 27 tests covering: rate limiter, context builder, flow inference, Discord integration, PR comment module, telemetry, write-doc-set file I/O, fetch timeout, doc generation error isolation, and partial-success publishing.
+
 ## 1.5.0
 
 ### 🚀 New Features (Tier 3 — Differentiation)

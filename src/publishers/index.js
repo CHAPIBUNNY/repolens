@@ -22,6 +22,7 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
   const publishers = cfg.publishers || ["markdown", "notion"];
   const currentBranch = getCurrentBranch();
   const publishedTo = [];
+  const publishErrors = [];
   let publishStatus = "success";
   let notionUrl = null;
 
@@ -49,8 +50,9 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
           notionUrl = `https://notion.so/${process.env.NOTION_PARENT_PAGE_ID}`;
         }
       } catch (err) {
-        publishStatus = "failure";
-        throw err;
+        warn(`Notion publish failed: ${err.message}`);
+        publishErrors.push({ publisher: "notion", error: err });
+        publishStatus = "partial";
       }
     } else {
       const allowedBranches = cfg.notion?.branches?.join(", ") || "none configured";
@@ -70,8 +72,9 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
         await publishToConfluence(cfg, pagesForAPIs);
         publishedTo.push("confluence");
       } catch (err) {
-        publishStatus = "failure";
-        throw err;
+        warn(`Confluence publish failed: ${err.message}`);
+        publishErrors.push({ publisher: "confluence", error: err });
+        publishStatus = "partial";
       }
     } else {
       const allowedBranches = cfg.confluence?.branches?.join(", ") || "none configured";
@@ -86,8 +89,9 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
       await publishToMarkdown(cfg, renderedPages);
       publishedTo.push("markdown");
     } catch (err) {
-      publishStatus = "failure";
-      throw err;
+      warn(`Markdown publish failed: ${err.message}`);
+      publishErrors.push({ publisher: "markdown", error: err });
+      publishStatus = "partial";
     }
   }
 
@@ -102,8 +106,9 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
         await publishToGitHubWiki(cfg, pagesForAPIs);
         publishedTo.push("github_wiki");
       } catch (err) {
-        publishStatus = "failure";
-        throw err;
+        warn(`GitHub Wiki publish failed: ${err.message}`);
+        publishErrors.push({ publisher: "github_wiki", error: err });
+        publishStatus = "partial";
       }
     } else {
       const allowedBranches = cfg.github_wiki?.branches?.join(", ") || "none configured";
@@ -194,5 +199,16 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
   // Run afterPublish hook
   if (pluginManager) {
     await pluginManager.runHook("afterPublish", { publishedTo, publishStatus });
+  }
+
+  // Report partial failures
+  if (publishErrors.length > 0) {
+    const failedNames = publishErrors.map(e => e.publisher).join(", ");
+    if (publishedTo.length > 0) {
+      warn(`Partial publish: succeeded for [${publishedTo.join(", ")}], failed for [${failedNames}]`);
+    } else {
+      // All publishers failed — throw the first error
+      throw publishErrors[0].error;
+    }
   }
 }

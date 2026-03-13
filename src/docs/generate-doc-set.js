@@ -27,7 +27,7 @@ import {
   renderDependencyGraph,
   renderArchitectureDrift as renderDriftReport
 } from "../renderers/renderAnalysis.js";
-import { info } from "../utils/logger.js";
+import { info, warn } from "../utils/logger.js";
 import path from "node:path";
 
 export async function generateDocumentSet(scanResult, config, diffData = null, pluginManager = null) {
@@ -43,17 +43,25 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
   const scanFiles = scanResult._files || [];
   
   info("Running extended analysis...");
-  const graphqlResult = await analyzeGraphQL(scanFiles, repoRoot);
-  const tsResult = await analyzeTypeScript(scanFiles, repoRoot);
-  const depGraph = await analyzeDependencyGraph(scanFiles, repoRoot);
+  let graphqlResult = { detected: false };
+  let tsResult = { detected: false };
+  let depGraph = { stats: {}, graph: {} };
+  try { graphqlResult = await analyzeGraphQL(scanFiles, repoRoot); } catch (e) { warn(`GraphQL analysis failed: ${e.message}`); }
+  try { tsResult = await analyzeTypeScript(scanFiles, repoRoot); } catch (e) { warn(`TypeScript analysis failed: ${e.message}`); }
+  try { depGraph = await analyzeDependencyGraph(scanFiles, repoRoot); } catch (e) { warn(`Dependency graph analysis failed: ${e.message}`); }
   
   // Architecture drift detection
   const outputDir = path.join(repoRoot, ".repolens");
-  const baseline = await loadBaseline(outputDir);
-  const snapshot = buildSnapshot(scanResult, depGraph, graphqlResult, tsResult);
-  const driftResult = detectDrift(baseline, snapshot);
-  // Save current snapshot as new baseline
-  await saveBaseline(snapshot, outputDir);
+  let baseline = null;
+  let snapshot = null;
+  let driftResult = { drifts: [], summary: "No drift data available" };
+  try {
+    baseline = await loadBaseline(outputDir);
+    snapshot = buildSnapshot(scanResult, depGraph, graphqlResult, tsResult);
+    driftResult = detectDrift(baseline, snapshot);
+    // Save current snapshot as new baseline
+    await saveBaseline(snapshot, outputDir);
+  } catch (e) { warn(`Drift detection failed: ${e.message}`); }
 
   // CODEOWNERS integration
   const codeowners = await parseCodeowners(repoRoot);
