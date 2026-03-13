@@ -208,7 +208,7 @@ async function generateDocument(docPlan, context) {
       return renderApiSurfaceOriginal(config, scanResult);
       
     case "data_flows":
-      return await generateDataFlows(flows, aiContext, { depGraph, scanResult: hookScanResult });
+      return await generateDataFlows(flows, aiContext, { depGraph, scanResult });
       
     case "arch_diff":
       if (!diffData) {
