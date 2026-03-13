@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.5.3  
+**Version:** 1.6.0  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -98,7 +98,7 @@ src/
   plugins/
     loader.js             # Plugin resolution and dynamic import
     manager.js            # Plugin registry and lifecycle orchestration
-tests/                    # Vitest test suite (311 tests across 21 files)
+tests/                    # Vitest test suite (347 tests across 22 files)
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
   config-discovery.test.js # Config auto-discovery tests
@@ -117,6 +117,7 @@ tests/                    # Vitest test suite (311 tests across 21 files)
   http-integration.test.js # Mock HTTP server integration tests (retry, timeout, headers, publishers)
   rate-limit-stress.test.js # Concurrent rate-limit stress tests (token bucket, batch, deadlock)
   renderers.test.js         # Renderer unit tests (render.js, renderMap.js, renderDiff.js)
+  deterministic-enrichment.test.js # Enriched deterministic fallback tests (all 6 AI-enhanced doc types)
   tier3.test.js           # T3 feature tests (cache, monorepo, codeowners, AI providers, structured output)
   robustness.test.js      # Robustness tests (rate-limit, context-builder, flow-inference, discord, telemetry, timeout, partial-publish)
   e2e/
@@ -148,6 +149,7 @@ tests/                    # Vitest test suite (311 tests across 21 files)
 - **Multi-Provider**: Native adapters for OpenAI (+ compatible), Anthropic (Messages API), Google Gemini; Azure uses OpenAI adapter
 - **Structured Output**: JSON mode with schema validation per document type, one re-prompt on failure, then graceful fallback
 - **Graceful Fallback**: Structured JSON → plain-text AI → deterministic docs (three-tier cascade)
+- **Enriched Deterministic Mode**: Even without AI, fallbacks produce rich output using dep graph stats, data flows, routes, monorepo info, drift results, and module type classifications
 
 ### Multi-Platform Publishing
 - **Notion**: Create/update pages with branch-aware namespacing; relative link rewriting (strips `./` and `../` links)
@@ -237,7 +239,7 @@ tests/                    # Vitest test suite (311 tests across 21 files)
 - Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
 - Test config discovery, validation, rendering, branch detection, migration, security fuzzing
-- **Coverage**: 311 tests passing across 21 test files
+- **Coverage**: 347 tests passing across 22 test files
 - Run: `npm test`
 
 ### Configuration

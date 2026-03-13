@@ -184,16 +184,16 @@ async function generateDocument(docPlan, context) {
   
   switch (key) {
     case "executive_summary":
-      return await generateExecutiveSummary(aiContext);
+      return await generateExecutiveSummary(aiContext, { depGraph, flows });
       
     case "system_overview":
-      return await generateSystemOverview(aiContext);
+      return await generateSystemOverview(aiContext, { depGraph });
       
     case "business_domains":
-      return await generateBusinessDomains(aiContext);
+      return await generateBusinessDomains(aiContext, { depGraph });
       
     case "architecture_overview":
-      return await generateArchitectureOverview(aiContext);
+      return await generateArchitectureOverview(aiContext, { depGraph, driftResult });
       
     case "module_catalog":
       // Hybrid: deterministic skeleton + ownership info
@@ -208,7 +208,7 @@ async function generateDocument(docPlan, context) {
       return renderApiSurfaceOriginal(config, scanResult);
       
     case "data_flows":
-      return await generateDataFlows(flows, aiContext);
+      return await generateDataFlows(flows, aiContext, { depGraph, scanResult: hookScanResult });
       
     case "arch_diff":
       if (!diffData) {
@@ -221,7 +221,7 @@ async function generateDocument(docPlan, context) {
       return renderSystemMap(scanResult, config, depGraph);
       
     case "developer_onboarding":
-      return await generateDeveloperOnboarding(aiContext);
+      return await generateDeveloperOnboarding(aiContext, { flows, depGraph });
       
     case "graphql_schema":
       return renderGraphQLSchema(graphqlResult);

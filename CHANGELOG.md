@@ -2,6 +2,24 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.6.0
+
+### ✨ Features
+
+- **Deterministic enrichment**: All 6 AI-enhanced document types now produce significantly richer output when running without AI integration. Fallback generators receive dependency graph stats, data flows, monorepo info, routes, drift results, and module type classifications.
+- **Executive Summary**: Now includes module composition breakdown, monorepo structure, codebase health metrics (cycles, orphans, hubs), data flow summaries, and test framework info.
+- **System Overview**: Now includes module architecture by type, route summary (pages + APIs), dependency graph stats with hub modules, and monorepo info.
+- **Business Domains**: Now maps routes to domains and shows cross-domain dependency hubs.
+- **Architecture Overview**: Now includes module layers by type, dependency health with strengths/concerns heuristics, hub modules, architecture drift summary, and monorepo architecture.
+- **Data Flows**: Now generates additional flows from dependency graph hub chains when heuristic flows are sparse, shows shared library and external service dependencies per flow, and includes import network summary.
+- **Developer Onboarding**: Now includes monorepo navigation, key routes to explore, data flow overview, integration point warnings, module type classification in the module table, and test framework quickstart.
+- **Activated dead code**: `identifyFlowDependencies()` from `flow-inference.js` is now imported and used in the data flows fallback to enrich each flow with shared library and external dependency context.
+
+### 🧪 Test Coverage
+
+- **Deterministic enrichment tests** (`tests/deterministic-enrichment.test.js`): 36 tests covering all 6 enriched fallback generators — module composition, monorepo sections, dependency health, route summaries, data flow generation from dep graph, backward compatibility.
+- **347 tests** passing across **22 test files** (up from 311/21).
+
 ## 1.5.3
 
 ### 🔧 Improvements
