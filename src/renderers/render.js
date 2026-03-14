@@ -1,4 +1,6 @@
-export function renderSystemOverview(cfg, scan) {
+import { computeModuleLevelMetrics, describeModuleDepRole } from "../analyzers/context-builder.js";
+
+export function renderSystemOverview(cfg, scan, depGraph = null) {
   const projectName = cfg.project?.name || "Project";
   const date = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
@@ -17,8 +19,8 @@ export function renderSystemOverview(cfg, scan) {
     `|--------|-------|`,
     `| Files scanned | ${scan.filesCount} |`,
     `| Modules detected | ${scan.modules.length} |`,
-    `| Application pages | ${scan.pages?.length || 0} |`,
-    `| API endpoints | ${scan.api.length} |`,
+    ...(scan.pages?.length ? [`| Application pages | ${scan.pages.length} |`] : []),
+    ...(scan.api.length ? [`| API endpoints | ${scan.api.length} |`] : []),
     ``
   ];
 
@@ -35,9 +37,9 @@ export function renderSystemOverview(cfg, scan) {
       `| Category | Technologies |`,
       `|----------|-------------|`
     );
-    if (frameworks.length) lines.push(`| Frameworks | ${frameworks.join(", ")} |`);
+    lines.push(`| Frameworks | ${frameworks.join(", ") || 'N/A'} |`);
     if (languages.length) lines.push(`| Languages | ${languages.join(", ")} |`);
-    if (buildTools.length) lines.push(`| Build Tools | ${buildTools.join(", ")} |`);
+    lines.push(`| Build Tools | ${buildTools.join(", ") || 'N/A'} |`);
     if (testFrameworks.length) lines.push(`| Testing | ${testFrameworks.join(", ")} |`);
     lines.push(``);
   }
@@ -53,8 +55,8 @@ export function renderSystemOverview(cfg, scan) {
       `## Architecture Summary`,
       ``,
       `The repository is organized as ${sizeDesc} with **${scan.modules.length} modules** spanning **${scan.filesCount} files**. `
-      + (scan.api.length > 0 ? `It exposes **${scan.api.length} API endpoint${scan.api.length === 1 ? "" : "s"}** ` : "")
-      + (scan.pages?.length > 0 ? `and serves **${scan.pages.length} application page${scan.pages.length === 1 ? "" : "s"}**. ` : ". ")
+      + (scan.api.length > 0 ? `It exposes **${scan.api.length} API endpoint${scan.api.length === 1 ? "" : "s"}**. ` : "")
+      + (scan.pages?.length > 0 ? `It serves **${scan.pages.length} application page${scan.pages.length === 1 ? "" : "s"}**. ` : "")
       + `The largest modules are listed below, ranked by file count.`,
       ``
     );
@@ -62,6 +64,7 @@ export function renderSystemOverview(cfg, scan) {
 
   // Largest modules as a table instead of bullets
   const topModules = scan.modules.slice(0, 10);
+  const moduleMetrics = computeModuleLevelMetrics(depGraph, scan.modules);
   if (topModules.length > 0) {
     lines.push(
       `## Largest Modules`,
@@ -70,7 +73,8 @@ export function renderSystemOverview(cfg, scan) {
       `|--------|-------|-------------|`
     );
     for (const m of topModules) {
-      const desc = describeModule(m.key);
+      const depRole = describeModuleDepRole(m.key, moduleMetrics);
+      const desc = describeModule(m.key, depRole);
       lines.push(`| \`${m.key}\` | ${m.fileCount} | ${desc} |`);
     }
     lines.push(``);
@@ -105,36 +109,50 @@ export function renderSystemOverview(cfg, scan) {
   return lines.join("\n");
 }
 
-function describeModule(key) {
+function describeModule(key, depRole = null) {
   const normalized = key.toLowerCase();
-  if (normalized.includes("core")) return "Core business logic and shared foundations";
-  if (normalized.includes("util")) return "Shared utilities and helper functions";
-  if (normalized.includes("api")) return "API route handlers and endpoint definitions";
-  if (normalized.includes("component")) return "Reusable UI components";
-  if (normalized.includes("hook")) return "Custom React hooks";
-  if (normalized.includes("page")) return "Application page components";
-  if (normalized.includes("lib")) return "Library code and third-party integrations";
-  if (normalized.includes("service")) return "Service layer and external integrations";
-  if (normalized.includes("model")) return "Data models and schema definitions";
-  if (normalized.includes("store") || normalized.includes("state")) return "State management";
-  if (normalized.includes("config")) return "Configuration and settings";
-  if (normalized.includes("test")) return "Test suites and fixtures";
-  if (normalized.includes("style") || normalized.includes("css")) return "Styling and design tokens";
-  if (normalized.includes("type")) return "Type definitions and interfaces";
-  if (normalized.includes("middleware")) return "Request middleware and interceptors";
-  if (normalized.includes("auth")) return "Authentication and authorization";
-  if (normalized.includes("render")) return "Rendering logic and output formatters";
-  if (normalized.includes("publish")) return "Publishing and delivery integrations";
-  if (normalized.includes("analyz")) return "Code analysis and intelligence";
-  if (normalized.includes("delivery")) return "Content delivery and distribution";
-  if (normalized.includes("integrat")) return "Third-party service integrations";
-  if (normalized.includes("doc")) return "Documentation generation";
-  if (normalized.includes("bin") || normalized.includes("cli")) return "CLI entry point and commands";
-  return "Application module";
+  // Base description from path keywords
+  let base;
+  if (normalized.includes("core")) base = "Core business logic and shared foundations";
+  else if (normalized.includes("util")) base = "Shared utilities and helper functions";
+  else if (normalized.includes("api")) base = "API route handlers and endpoint definitions";
+  else if (normalized.includes("component")) base = "Reusable UI components";
+  else if (normalized.includes("hook")) base = "Custom React hooks";
+  else if (normalized.includes("page")) base = "Application page components";
+  else if (normalized.includes("lib")) base = "Library code and third-party integrations";
+  else if (normalized.includes("service")) base = "Service layer and external integrations";
+  else if (normalized.includes("model")) base = "Data models and schema definitions";
+  else if (normalized.includes("store") || normalized.includes("state")) base = "State management";
+  else if (normalized.includes("config")) base = "Configuration and settings";
+  else if (normalized.includes("test")) base = "Test suites and fixtures";
+  else if (normalized.includes("style") || normalized.includes("css")) base = "Styling and design tokens";
+  else if (normalized.includes("type")) base = "Type definitions and interfaces";
+  else if (normalized.includes("middleware")) base = "Request middleware and interceptors";
+  else if (normalized.includes("auth")) base = "Authentication and authorization";
+  else if (normalized.includes("render")) base = "Rendering logic and output formatters";
+  else if (normalized.includes("publish")) base = "Publishing and delivery integrations";
+  else if (normalized.includes("analyz")) base = "Code analysis and intelligence";
+  else if (normalized.includes("delivery")) base = "Content delivery and distribution";
+  else if (normalized.includes("integrat")) base = "Third-party service integrations";
+  else if (normalized.includes("doc")) base = "Documentation generation";
+  else if (normalized.includes("bin") || normalized.includes("cli")) base = "CLI entry point and commands";
+  else if (normalized.includes("plugin") || normalized.includes("extension")) base = "Plugin system and extensions";
+  else if (normalized.includes("prompt")) base = "Prompt engineering and templates";
+  else if (normalized.includes("provider")) base = "Service provider adapters";
+  else if (normalized.includes("generate") || normalized.includes("section")) base = "Content generation pipeline";
+  else if (normalized.includes("ai") || normalized.includes("ml")) base = "AI and machine learning integration";
+  else base = "Application module";
+
+  // Enrich with dependency role if available
+  if (depRole) {
+    return `${base} · ${depRole}`;
+  }
+  return base;
 }
 
-export function renderModuleCatalog(cfg, scan, ownershipMap = {}) {
+export function renderModuleCatalog(cfg, scan, ownershipMap = {}, depGraph = null) {
   const hasOwnership = Object.keys(ownershipMap).length > 0;
+  const moduleMetrics = computeModuleLevelMetrics(depGraph, scan.modules);
   const lines = [
     `# Module Catalog`,
     ``,
@@ -172,7 +190,8 @@ export function renderModuleCatalog(cfg, scan, ownershipMap = {}) {
   }
 
   for (const module of scan.modules.slice(0, 100)) {
-    const desc = describeModule(module.key);
+    const depRole = describeModuleDepRole(module.key, moduleMetrics);
+    const desc = describeModule(module.key, depRole);
     const owners = ownershipMap[module.key];
     if (hasOwnership) {
       lines.push(`| \`${module.key}\` | ${module.fileCount} | ${desc} | ${owners ? owners.join(", ") : "—"} |`);
@@ -277,7 +296,7 @@ export function renderApiSurface(cfg, scan) {
   return lines.join("\n");
 }
 
-export function renderRouteMap(cfg, scan) {
+export function renderRouteMap(cfg, scan, aiContext = null) {
   const lines = [
     `# Route Map`,
     ``,
@@ -330,30 +349,61 @@ export function renderRouteMap(cfg, scan) {
   }
 
   if (!scan.pages?.length && !scan.api?.length) {
+    // Determine project type for context-aware messaging
+    const patterns = aiContext?.patterns || [];
+    const isCLI = patterns.some(p => p.toLowerCase().includes("cli"));
+    const isLibrary = patterns.some(p => p.toLowerCase().includes("library") || p.toLowerCase().includes("shared"));
+    const techStack = aiContext?.techStack || {};
+    const hasWebFramework = (techStack.frameworks || []).some(f =>
+      /next|react|vue|angular|express|fastify|hono|koa|django|flask|rails|spring/i.test(f)
+    );
+
     lines.push(
       `## Route Detection`,
+      ``
+    );
+
+    if (isCLI) {
+      lines.push(
+        `This project is a **CLI tool** — it does not expose HTTP routes or serve web pages. This is expected behavior, not a detection failure.`,
+        ``,
+        `CLI tools interact through terminal commands rather than URLs. See the **System Overview** or **Developer Onboarding** documents for command documentation.`,
+        ``
+      );
+    } else if (isLibrary && !hasWebFramework) {
+      lines.push(
+        `This project is a **library/package** — it does not define its own routes or pages. Libraries are consumed by other applications that define their own routing.`,
+        ``
+      );
+    } else {
+      lines.push(
+        `No routes were auto-detected in this scan. RepoLens currently supports:`,
+        ``,
+        `| Framework | Pattern | Status |`,
+        `|-----------|---------|--------|`,
+        `| Next.js | \`pages/\` and \`app/\` directories | Supported |`,
+        `| Next.js API | \`pages/api/\` and App Router | Supported |`,
+        `| Express.js | \`app.get\`, \`router.post\`, etc. | Supported |`,
+        `| Fastify | \`fastify.get\`, \`fastify.post\`, etc. | Supported |`,
+        `| Hono | \`app.get\`, \`app.post\`, etc. | Supported |`,
+        `| React Router | \`<Route>\` components | Supported |`,
+        `| Vue Router | \`routes\` array definitions | Supported |`,
+        ``,
+        `If your project uses a different routing framework, open an issue at [github.com/CHAPIBUNNY/repolens](https://github.com/CHAPIBUNNY/repolens/issues) to request support.`,
+        ``
+      );
+    }
+  }
+
+  // Only add the route hint footer for projects that actually have routes
+  if (scan.pages?.length || scan.api?.length) {
+    lines.push(
+      `---`,
       ``,
-      `No routes were auto-detected in this scan. RepoLens currently supports:`,
-      ``,
-      `| Framework | Pattern | Status |`,
-      `|-----------|---------|--------|`,
-      `| Next.js | \`pages/\` and \`app/\` directories | Supported |`,
-      `| Next.js API | \`pages/api/\` and App Router | Supported |`,
-      `| Express.js | \`app.get\`, \`router.post\`, etc. | Supported |`,
-      `| React Router | \`<Route>\` components | Supported |`,
-      `| Vue Router | \`routes\` array definitions | Supported |`,
-      ``,
-      `If your project uses a different routing framework, open an issue at [github.com/CHAPIBUNNY/repolens](https://github.com/CHAPIBUNNY/repolens/issues) to request support.`,
+      `*Paths starting with \`/api/\` are backend endpoints; all others are user-facing pages.*`,
       ``
     );
   }
-
-  lines.push(
-    `---`,
-    ``,
-    `*Paths starting with \`/api/\` are backend endpoints; all others are user-facing pages.*`,
-    ``
-  );
 
   return lines.join("\n");
 }

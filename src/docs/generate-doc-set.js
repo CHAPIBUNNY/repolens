@@ -33,10 +33,10 @@ import path from "node:path";
 export async function generateDocumentSet(scanResult, config, diffData = null, pluginManager = null) {
   info("Building structured context for AI...");
   
-  // Build AI context from scan results
-  const aiContext = buildAIContext(scanResult, config);
-  const moduleContext = buildModuleContext(scanResult.modules, config);
-  const flows = inferDataFlows(scanResult, config);
+  // Build AI context from scan results (dep graph computed later, patched in after)
+  let aiContext = buildAIContext(scanResult, config);
+  let moduleContext = buildModuleContext(scanResult.modules, config);
+  let flows = inferDataFlows(scanResult, config);
   
   // Run extended analysis (v0.8.0)
   const repoRoot = config.__repoRoot || process.cwd();
@@ -62,6 +62,11 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
     // Save current snapshot as new baseline
     await saveBaseline(snapshot, outputDir);
   } catch (e) { warn(`Drift detection failed: ${e.message}`); }
+
+  // Rebuild AI context with dep graph for enriched module roles and pattern verification
+  aiContext = buildAIContext(scanResult, config, depGraph);
+  moduleContext = buildModuleContext(scanResult.modules, config, depGraph);
+  flows = inferDataFlows(scanResult, config, depGraph);
 
   // CODEOWNERS integration
   const codeowners = await parseCodeowners(repoRoot);
@@ -196,19 +201,19 @@ async function generateDocument(docPlan, context) {
       return await generateArchitectureOverview(aiContext, { depGraph, driftResult });
       
     case "module_catalog":
-      // Hybrid: deterministic skeleton + ownership info
-      return renderModuleCatalogOriginal(config, scanResult, ownershipMap);
+      // Hybrid: deterministic skeleton + ownership info + dep-graph roles
+      return renderModuleCatalogOriginal(config, scanResult, ownershipMap, depGraph);
       
     case "route_map":
-      // Hybrid: deterministic skeleton + AI enhancement (for now, just deterministic)
-      return renderRouteMapOriginal(config, scanResult);
+      // Hybrid: deterministic skeleton + context-aware messaging
+      return renderRouteMapOriginal(config, scanResult, aiContext);
       
     case "api_surface":
       // Hybrid: deterministic skeleton + AI enhancement (for now, just deterministic)
       return renderApiSurfaceOriginal(config, scanResult);
       
     case "data_flows":
-      return await generateDataFlows(flows, aiContext, { depGraph, scanResult });
+      return await generateDataFlows(flows, aiContext, { depGraph, scanResult, moduleContext });
       
     case "arch_diff":
       if (!diffData) {

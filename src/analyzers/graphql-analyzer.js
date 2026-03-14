@@ -31,7 +31,7 @@ const SCHEMA_LIBRARY_PATTERNS = [
   { name: "Apollo Server", pattern: /ApolloServer|@apollo\/server|apollo-server/ },
   { name: "GraphQL Yoga", pattern: /graphql-yoga|createYoga/ },
   { name: "Mercurius", pattern: /mercurius/ },
-  { name: "graphql-js", pattern: /graphql\b.*buildSchema|GraphQLSchema|GraphQLObjectType/ },
+  { name: "graphql-js", pattern: /graphql\b.*\bbuildSchema\b|\bGraphQLSchema\b|\bGraphQLObjectType\b/ },
   { name: "type-graphql", pattern: /type-graphql|@Resolver|@Query|@Mutation/ },
   { name: "Nexus", pattern: /nexus|makeSchema|objectType\(/ },
   { name: "Pothos", pattern: /pothos|SchemaBuilder/ },
@@ -84,8 +84,13 @@ export async function analyzeGraphQL(files, repoRoot) {
   const schemaFiles = files.filter(f => GRAPHQL_EXTENSIONS.some(ext => f.endsWith(ext)));
 
   // Phase 2: Find JS/TS files with inline schema or resolvers
+  // Exclude test files and our own analysis/rendering files (they reference library names as strings, not usage)
+  const testPattern = /(?:^|\/)(?:tests?|__tests?__|spec|__spec__)\/|\.(test|spec)\.[jt]sx?$/i;
+  const selfPatterns = ["graphql-analyzer.js", "renderAnalysis.js"];
   const codeFiles = files.filter(f =>
-    f.endsWith(".js") || f.endsWith(".ts") || f.endsWith(".jsx") || f.endsWith(".tsx")
+    (f.endsWith(".js") || f.endsWith(".ts") || f.endsWith(".jsx") || f.endsWith(".tsx")) &&
+    !testPattern.test(f) &&
+    !selfPatterns.some(s => f.endsWith(s))
   );
 
   // Parse .graphql/.gql files

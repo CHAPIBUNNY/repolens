@@ -1,25 +1,132 @@
-// Infer data flows through the application using heuristics
+// Infer data flows through the application using import graph analysis + heuristics
 
-export function inferDataFlows(scanResult, config) {
+/**
+ * Primary flow inference: uses dep graph when available for real import-chain flows,
+ * falls back to keyword heuristics for repos without dep graph data.
+ */
+export function inferDataFlows(scanResult, config, depGraph = null) {
   const flows = [];
   
-  // Stock/Market Data Flow (if applicable)
+  // If we have dep graph data, build real import-chain flows from entry points
+  if (depGraph?.nodes && depGraph.nodes.length > 0) {
+    const entryFlows = inferFlowsFromEntryPoints(scanResult, depGraph);
+    flows.push(...entryFlows);
+  }
+
+  // Keyword-based heuristic flows (only add if not already covered by import-chain analysis)
+  const existingNames = new Set(flows.map(f => f.name.toLowerCase()));
+
   const marketFlow = inferMarketDataFlow(scanResult);
-  if (marketFlow) flows.push(marketFlow);
+  if (marketFlow && !existingNames.has(marketFlow.name.toLowerCase())) flows.push(marketFlow);
   
-  // Authentication Flow
   const authFlow = inferAuthFlow(scanResult);
-  if (authFlow) flows.push(authFlow);
+  if (authFlow && !existingNames.has(authFlow.name.toLowerCase())) flows.push(authFlow);
   
-  // Content/Article Flow
   const contentFlow = inferContentFlow(scanResult);
-  if (contentFlow) flows.push(contentFlow);
+  if (contentFlow && !existingNames.has(contentFlow.name.toLowerCase())) flows.push(contentFlow);
   
-  // API Integration Flow
   const apiFlow = inferApiIntegrationFlow(scanResult);
-  if (apiFlow) flows.push(apiFlow);
+  if (apiFlow && !existingNames.has(apiFlow.name.toLowerCase())) flows.push(apiFlow);
   
   return flows;
+}
+
+/**
+ * Trace real import chains from entry points through the dep graph.
+ * Entry points: CLI/bin files, page components, API route handlers, index files.
+ */
+function inferFlowsFromEntryPoints(scanResult, depGraph) {
+  const flows = [];
+  if (!depGraph?.nodes) return flows;
+
+  // Find entry points (files with high fan-out and low/zero fan-in)
+  const entryPoints = depGraph.nodes.filter(n => {
+    const key = n.key.toLowerCase();
+    const isEntry = (
+      key.includes("bin/") || 
+      key.includes("cli") ||
+      key.endsWith("/index") ||
+      key.includes("pages/") ||
+      key.includes("app/") ||
+      (n.importedBy.length === 0 && n.imports.length >= 2) // True entry: nothing imports it
+    );
+    return isEntry && n.imports.length >= 2;
+  }).sort((a, b) => {
+    // Prioritize src/ entry points over tests/
+    const aIsTest = a.key.toLowerCase().includes("test");
+    const bIsTest = b.key.toLowerCase().includes("test");
+    if (aIsTest !== bIsTest) return aIsTest ? 1 : -1;
+    return b.imports.length - a.imports.length;
+  });
+
+  // Limit: all src entries + max 2 test entries
+  const srcEntries = entryPoints.filter(n => !n.key.toLowerCase().includes("test"));
+  const testEntries = entryPoints.filter(n => n.key.toLowerCase().includes("test")).slice(0, 2);
+  const selectedEntries = [...srcEntries, ...testEntries].slice(0, 5);
+
+  for (const entry of selectedEntries) {
+    const chain = traceImportChain(entry.key, depGraph, 6);
+    if (chain.length < 2) continue;
+
+    const shortName = entry.key.split("/").pop();
+    const isCliEntry = entry.key.toLowerCase().includes("cli") || entry.key.toLowerCase().includes("bin/");
+    const flowType = isCliEntry ? "Command" : "Request";
+    
+    // Classify each step in the chain
+    const steps = chain.map((nodeKey, i) => {
+      const node = depGraph.nodes.find(n => n.key === nodeKey);
+      const name = nodeKey.split("/").pop();
+      const fanIn = node?.importedBy?.length || 0;
+      const fanOut = node?.imports?.length || 0;
+      
+      if (i === 0) return `\`${name}\` (entry point, imports ${fanOut} modules)`;
+      if (fanIn >= 5) return `\`${name}\` (shared infrastructure, used by ${fanIn} files)`;
+      if (fanOut === 0) return `\`${name}\` (leaf — no further dependencies)`;
+      return `\`${name}\` → imports ${fanOut} module${fanOut === 1 ? "" : "s"}`;
+    });
+
+    flows.push({
+      name: `${shortName} ${flowType} Flow`,
+      description: `Import chain starting from \`${entry.key}\` — traces how this entry point depends on ${chain.length - 1} downstream module${chain.length - 1 === 1 ? "" : "s"}`,
+      steps,
+      modules: chain.slice(0, 8),
+      critical: entry.imports.length >= 5,
+    });
+  }
+
+  return flows;
+}
+
+/**
+ * Trace from an entry node through the dep graph via BFS, following highest-fan-out paths.
+ * Returns an ordered chain of module keys representing the primary dependency path.
+ */
+function traceImportChain(startKey, depGraph, maxDepth = 6) {
+  const chain = [startKey];
+  const visited = new Set([startKey]);
+  let current = startKey;
+
+  for (let depth = 0; depth < maxDepth; depth++) {
+    const node = depGraph.nodes.find(n => n.key === current);
+    if (!node || node.imports.length === 0) break;
+
+    // Follow the most-imported (highest fan-in) dependency first — it's the most interesting path
+    const candidates = node.imports
+      .filter(imp => !visited.has(imp))
+      .map(imp => {
+        const target = depGraph.nodes.find(n => n.key === imp);
+        return { key: imp, fanIn: target?.importedBy?.length || 0 };
+      })
+      .sort((a, b) => b.fanIn - a.fanIn);
+
+    if (candidates.length === 0) break;
+
+    current = candidates[0].key;
+    visited.add(current);
+    chain.push(current);
+  }
+
+  return chain;
 }
 
 function inferMarketDataFlow(scanResult) {

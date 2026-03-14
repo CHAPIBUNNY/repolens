@@ -2,6 +2,26 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.7.0
+
+### ✨ Features
+
+- **Dependency-weighted module roles**: Module catalog now shows import-based role labels (e.g. "Orchestrator — coordinates 54 modules", "Critical shared infrastructure — imported by 55 modules") derived from real dependency graph metrics.
+- **Context-aware route map**: CLI tools now get a helpful explanation ("This project is a CLI tool — it does not expose HTTP routes") instead of an empty route table with a stale footer.
+- **Verified architecture patterns**: Detected patterns now include confidence labels (e.g. "naming only" vs evidence-backed) based on dependency graph verification.
+- **Import-chain data flows**: Data flows are now traced from real entry points via import chains, replacing hardcoded template flows. Shows actual module dependencies and downstream traces.
+- **CLI-aware tech stack labels**: All 4 key documents (Executive Summary, System Overview, Architecture Overview, Developer Onboarding) now show "N/A (CLI tool)" instead of "Not detected" for Frameworks and Build Tools when the project is a CLI tool.
+- **Test flow filtering**: Test file flows are now filtered from Executive Summary, Data Flows, and Developer Onboarding documents, keeping output focused on production code paths.
+- **Hub flow cleanup**: Integration flows derived from dependency graph hubs no longer list test files as importers in their step chains.
+
+### 🐛 Bug Fixes
+
+- **GraphQL false positives**: The GraphQL analyzer now excludes test files and its own analysis/rendering source files from scanning, preventing self-detection of library patterns (e.g. detecting "Apollo Server" from regex pattern strings).
+- **GraphQL pattern precision**: The `graphql-js` detection pattern now uses word boundaries (`\bGraphQLSchema\b`) to avoid false matches from function names like `renderGraphQLSchema`.
+- **Change impact noise filtering**: Architecture diff now filters `node_modules/`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `.repolens/`, and `.git/` from both the Impacted Modules list and the file lists (Added/Removed/Modified).
+- **Zero-value suppression**: Documents no longer show "serves 0 application pages" or "0 API endpoints" for CLI tools — these rows are conditionally hidden when values are zero.
+- **Module label enrichment**: `describeModule()` now recognizes 6 additional module types (plugin, prompt, provider, generate/section, ai/ml), reducing generic "Application module" fallbacks.
+
 ## 1.6.0
 
 ### ✨ Features

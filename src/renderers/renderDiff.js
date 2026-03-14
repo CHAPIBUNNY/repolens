@@ -31,6 +31,20 @@ function routePathFromFile(file) {
   return file;
 }
 
+// Files/dirs to exclude from impacted modules (build artifacts, lockfiles, etc.)
+const NOISE_PATTERNS = [
+  /^node_modules/,
+  /^package-lock\.json$/,
+  /^yarn\.lock$/,
+  /^pnpm-lock\.yaml$/,
+  /^\.repolens\//,
+  /^\.git\//,
+];
+
+function isNoiseFile(file) {
+  return NOISE_PATTERNS.some(p => p.test(file));
+}
+
 function moduleFromFile(file) {
   const normalized = file.replace(/\\/g, "/");
   const parts = normalized.split("/");
@@ -50,14 +64,20 @@ export function buildArchitectureDiffData(diff) {
   const addedRoutes = diff.added.filter(isRouteFile).map(routePathFromFile);
   const removedRoutes = diff.removed.filter(isRouteFile).map(routePathFromFile);
 
+  // Filter out noise files (node_modules, lockfiles, etc.) from all lists
+  const added = diff.added.filter(f => !isNoiseFile(f));
+  const removed = diff.removed.filter(f => !isNoiseFile(f));
+  const modified = diff.modified.filter(f => !isNoiseFile(f));
+  const allFiles = [...added, ...removed, ...modified];
   const impactedModules = [
-    ...new Set(
-      [...diff.added, ...diff.removed, ...diff.modified].map(moduleFromFile)
-    )
+    ...new Set(allFiles.map(moduleFromFile))
   ].sort();
 
   return {
     ...diff,
+    added,
+    removed,
+    modified,
     addedRoutes,
     removedRoutes,
     impactedModules

@@ -2,7 +2,83 @@
 
 import { groupModulesByDomain } from "./domain-inference.js";
 
-export function buildAIContext(scanResult, config) {
+/**
+ * Compute per-module dependency metrics from the dep graph.
+ * Returns a Map<normalizedKey, { fanIn, fanOut, isHub, isOrphan, isLeaf, isOrchestrator }>.
+ */
+export function computeModuleDepMetrics(depGraph) {
+  const metrics = new Map();
+  if (!depGraph?.nodes) return metrics;
+
+  const hubThreshold = Math.max(3, Math.floor(depGraph.nodes.length * 0.05));
+
+  for (const node of depGraph.nodes) {
+    const fanIn = node.importedBy.length;
+    const fanOut = node.imports.length;
+    metrics.set(node.key, {
+      fanIn,
+      fanOut,
+      isHub: fanIn >= hubThreshold,
+      isOrphan: fanIn === 0 && fanOut === 0,
+      isLeaf: fanOut === 0 && fanIn > 0,
+      isOrchestrator: fanOut >= 5 && fanIn < fanOut,
+    });
+  }
+  return metrics;
+}
+
+/**
+ * Build a module-level dep metrics map (aggregating file-level metrics).
+ * moduleKey → { fanIn, fanOut, isHub, isOrphan, isLeaf, isOrchestrator }
+ */
+export function computeModuleLevelMetrics(depGraph, modules) {
+  const fileMetrics = computeModuleDepMetrics(depGraph);
+  if (fileMetrics.size === 0 || !modules) return new Map();
+
+  const moduleLevelMap = new Map();
+
+  for (const mod of modules) {
+    const moduleKey = mod.key;
+    const lowerKey = moduleKey.toLowerCase();
+
+    // Find all file-level nodes that belong to this module
+    let totalFanIn = 0;
+    let totalFanOut = 0;
+    let fileCount = 0;
+
+    for (const [nodeKey, m] of fileMetrics) {
+      if (nodeKey === lowerKey || nodeKey.startsWith(lowerKey + "/") || nodeKey === moduleKey || nodeKey.startsWith(moduleKey + "/")) {
+        // Count only external edges (crossing module boundary)
+        if (depGraph?.nodes) {
+          const node = depGraph.nodes.find(n => n.key === nodeKey);
+          if (node) {
+            const externalIn = node.importedBy.filter(imp => !imp.startsWith(moduleKey + "/") && imp !== moduleKey).length;
+            const externalOut = node.imports.filter(imp => !imp.startsWith(moduleKey + "/") && imp !== moduleKey).length;
+            totalFanIn += externalIn;
+            totalFanOut += externalOut;
+            fileCount++;
+          }
+        }
+      }
+    }
+
+    if (fileCount > 0) {
+      const hubThreshold = Math.max(5, Math.floor(modules.length * 0.15));
+      moduleLevelMap.set(moduleKey, {
+        fanIn: totalFanIn,
+        fanOut: totalFanOut,
+        isHub: totalFanIn >= hubThreshold,
+        isOrphan: totalFanIn === 0 && totalFanOut === 0,
+        isLeaf: totalFanOut === 0 && totalFanIn > 0,
+        isOrchestrator: totalFanOut >= 5 && totalFanIn < totalFanOut,
+      });
+    }
+  }
+
+  return moduleLevelMap;
+}
+
+export function buildAIContext(scanResult, config, depGraph = null) {
   const { filesCount, modules, api, pages, metadata } = scanResult;
   
   // Get domain hints from config if available
@@ -17,13 +93,17 @@ export function buildAIContext(scanResult, config) {
   // Group modules by business domain
   const domainGroups = groupModulesByDomain(modules, customHints);
   
-  // Identify top modules
+  // Compute module-level dependency metrics
+  const moduleMetrics = computeModuleLevelMetrics(depGraph, modules);
+  
+  // Identify top modules with enriched types
   const topModules = modules
     .slice(0, 15)
     .map(m => ({
       key: m.key,
       fileCount: m.fileCount,
-      type: inferModuleType(m.key)
+      type: inferModuleType(m.key),
+      depRole: describeModuleDepRole(m.key, moduleMetrics),
     }));
   
   // Categorize routes
@@ -48,8 +128,8 @@ export function buildAIContext(scanResult, config) {
     testFrameworks: metadata?.testFrameworks || []
   };
   
-  // Identify key architectural patterns
-  const patterns = inferArchitecturalPatterns(modules);
+  // Identify key architectural patterns (verified against dep graph when available)
+  const patterns = inferArchitecturalPatterns(modules, depGraph);
   
   // Build compact context object
   return {
@@ -124,11 +204,31 @@ function inferModuleType(modulePath) {
   return "other";
 }
 
-function inferArchitecturalPatterns(modules) {
+function inferArchitecturalPatterns(modules, depGraph = null) {
   const patterns = [];
   const keys = modules.map(m => m.key.toLowerCase());
   
   const has = (keyword) => keys.some(k => k.includes(keyword));
+
+  // Compute module-level metrics for verification
+  const moduleMetrics = depGraph ? computeModuleLevelMetrics(depGraph, modules) : new Map();
+  const hasCycles = depGraph?.cycles?.length > 0;
+  
+  // Verify pattern: a module matching `keyword` has high fan-in (truly central)
+  const verifyHub = (keyword) => {
+    for (const [mKey, m] of moduleMetrics) {
+      if (mKey.toLowerCase().includes(keyword) && m.fanIn >= 3) return true;
+    }
+    return false;
+  };
+
+  // Verify pattern: modules matching keyword have mostly outbound deps (orchestrators)
+  const verifyOrchestrator = (keyword) => {
+    for (const [mKey, m] of moduleMetrics) {
+      if (mKey.toLowerCase().includes(keyword) && m.fanOut >= 3) return true;
+    }
+    return false;
+  };
   
   // Web framework patterns
   if (has("app/")) patterns.push("Next.js App Router");
@@ -137,25 +237,95 @@ function inferArchitecturalPatterns(modules) {
   if (has("hook")) patterns.push("React hooks pattern");
   if (has("store") || has("state") || has("redux") || has("zustand")) patterns.push("Centralized state management");
   
-  // General patterns
+  // General patterns — verified against dep graph when available
   if (has("api") || has("endpoint")) patterns.push("API route pattern");
-  if (has("core") || has("kernel")) patterns.push("Core/kernel architecture");
-  if (has("plugin") || has("extension")) patterns.push("Plugin system");
+
+  if (has("core") || has("kernel")) {
+    if (moduleMetrics.size > 0 && verifyHub("core")) {
+      patterns.push("Core/kernel architecture (verified — high fan-in)");
+    } else if (moduleMetrics.size > 0) {
+      patterns.push("Core/kernel architecture (naming only)");
+    } else {
+      patterns.push("Core/kernel architecture");
+    }
+  }
+
+  if (has("plugin") || has("extension")) {
+    if (moduleMetrics.size > 0 && (verifyHub("plugin") || verifyOrchestrator("plugin") || verifyHub("loader"))) {
+      patterns.push("Plugin system (verified — loader/registry detected)");
+    } else if (moduleMetrics.size > 0) {
+      patterns.push("Plugin system (naming only)");
+    } else {
+      patterns.push("Plugin system");
+    }
+  }
+
   if (has("middleware")) patterns.push("Middleware pipeline");
-  if (has("render") || has("template")) patterns.push("Renderer pipeline");
-  if (has("publish") || has("output")) patterns.push("Multi-output publishing");
+
+  if (has("render") || has("template")) {
+    if (moduleMetrics.size > 0 && verifyOrchestrator("render")) {
+      patterns.push("Renderer pipeline (verified — multi-output)");
+    } else {
+      patterns.push("Renderer pipeline");
+    }
+  }
+
+  if (has("publish") || has("output")) {
+    if (moduleMetrics.size > 0 && verifyOrchestrator("publish")) {
+      patterns.push("Multi-output publishing (verified — multiple targets)");
+    } else {
+      patterns.push("Multi-output publishing");
+    }
+  }
+
   if (has("analyz") || has("detect") || has("inspect")) patterns.push("Analysis pipeline");
   if (has("cli") || has("command") || has("bin")) patterns.push("CLI tool architecture");
-  if (has("util") || has("helper") || has("lib")) patterns.push("Shared utility layer");
+  
+  if (has("util") || has("helper") || has("lib")) {
+    if (moduleMetrics.size > 0 && verifyHub("util") || verifyHub("helper") || verifyHub("lib")) {
+      patterns.push("Shared utility layer (verified — high fan-in)");
+    } else {
+      patterns.push("Shared utility layer");
+    }
+  }
+  
   if (has("integrat") || has("adapter") || has("connect")) patterns.push("Integration adapters");
   if (has("ai") || has("prompt") || has("provider")) patterns.push("AI/LLM integration");
   if (has("deliver") || has("dispatch")) patterns.push("Delivery pipeline");
   if (has("test") || has("spec")) patterns.push("Dedicated test infrastructure");
-  
+
+  // Structural patterns from dep graph (not keyword-based)
+  if (depGraph?.stats) {
+    if (depGraph.stats.cycles === 0 && depGraph.stats.totalEdges > 10) {
+      patterns.push("Acyclic dependency graph — clean layering");
+    }
+    if (hasCycles) {
+      patterns.push(`⚠️ ${depGraph.stats.cycles} circular dependency cycle(s) detected`);
+    }
+  }
+
   return patterns;
 }
 
-export function buildModuleContext(modules, config) {
+/**
+ * Generate a dependency-aware role description for a module.
+ */
+function describeModuleDepRole(moduleKey, moduleMetrics) {
+  const m = moduleMetrics.get(moduleKey);
+  if (!m) return null;
+
+  if (m.isOrphan) return "Isolated (no imports or importers)";
+  if (m.isHub && m.fanIn >= 15) return `Critical shared infrastructure (imported by ${m.fanIn} modules)`;
+  if (m.isHub) return `Shared infrastructure (imported by ${m.fanIn} modules)`;
+  if (m.isOrchestrator) return `Orchestrator (coordinates ${m.fanOut} modules)`;
+  if (m.isLeaf) return `Leaf module (consumed only, ${m.fanIn} importer${m.fanIn === 1 ? "" : "s"})`;
+  if (m.fanIn > 0 && m.fanOut > 0) return `Connector (${m.fanIn} in, ${m.fanOut} out)`;
+  return null;
+}
+
+export { describeModuleDepRole };
+
+export function buildModuleContext(modules, config, depGraph = null) {
   const customHints = config.domains 
     ? Object.entries(config.domains).map(([key, domain]) => ({
         match: domain.match || [],
@@ -165,6 +335,7 @@ export function buildModuleContext(modules, config) {
     : [];
   
   const domainGroups = groupModulesByDomain(modules, customHints);
+  const moduleMetrics = computeModuleLevelMetrics(depGraph, modules);
   
   return modules.map(module => {
     const domain = domainGroups.find(d => 
@@ -175,6 +346,7 @@ export function buildModuleContext(modules, config) {
       key: module.key,
       fileCount: module.fileCount,
       type: inferModuleType(module.key),
+      depRole: describeModuleDepRole(module.key, moduleMetrics),
       domain: domain?.name || "Other",
       domainDescription: domain?.description || "Uncategorized"
     };

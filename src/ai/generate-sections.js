@@ -125,6 +125,18 @@ function getFallbackExecutiveSummary(context, enrichment = {}) {
   const languageList = context.techStack.languages.join(", ") || "multiple languages";
   const domainSummary = context.domains.slice(0, 5).map(d => d.name).join(", ");
   const testFrameworks = context.techStack.testFrameworks || [];
+  const isCLI = (context.patterns || []).some(p => p.toLowerCase().includes("cli"));
+
+  // Build the "what it does" line based on project type
+  let interfaceLine;
+  if (isCLI) {
+    interfaceLine = "It operates as a **command-line tool**, interacting through terminal commands rather than a web interface.";
+  } else {
+    const parts = [];
+    if (context.project.apiRoutesDetected > 0) parts.push(`exposes **${context.project.apiRoutesDetected} API endpoint${context.project.apiRoutesDetected === 1 ? "" : "s"}**`);
+    if (context.project.pagesDetected > 0) parts.push(`serves **${context.project.pagesDetected} application page${context.project.pagesDetected === 1 ? "" : "s"}** to end users`);
+    interfaceLine = parts.length > 0 ? `It ${parts.join(" and ")}.` : "";
+  }
 
   let output = `# Executive Summary
 
@@ -132,7 +144,7 @@ function getFallbackExecutiveSummary(context, enrichment = {}) {
 
 ${context.project.name} is a ${frameworkList} application built with ${languageList}. The codebase contains **${context.project.modulesDetected} modules** spread across **${context.project.filesScanned} files**, organized into ${context.domains.length} functional domain${context.domains.length === 1 ? "" : "s"}.
 
-${context.project.apiRoutesDetected > 0 ? `The system exposes **${context.project.apiRoutesDetected} API endpoint${context.project.apiRoutesDetected === 1 ? "" : "s"}** and` : "It"} serves **${context.project.pagesDetected} application page${context.project.pagesDetected === 1 ? "" : "s"}** to end users.
+${interfaceLine}
 
 ## Primary Functional Areas
 
@@ -146,9 +158,9 @@ ${context.domains.map(d => `| ${d.name} | ${d.moduleCount} | ${d.description || 
 
 | Category | Details |
 |----------|---------|
-| Frameworks | ${context.techStack.frameworks.join(", ") || "Not detected"} |
+| Frameworks | ${context.techStack.frameworks.join(", ") || (isCLI ? "N/A (CLI tool)" : "Not detected")} |
 | Languages | ${context.techStack.languages.join(", ") || "Not detected"} |
-| Build Tools | ${context.techStack.buildTools.join(", ") || "Not detected"} |
+| Build Tools | ${context.techStack.buildTools.join(", ") || (isCLI ? "N/A (CLI tool)" : "Not detected")} |
 ${testFrameworks.length > 0 ? `| Test Frameworks | ${testFrameworks.join(", ")} |\n` : ""}`;
 
   // Module type breakdown
@@ -188,11 +200,12 @@ ${testFrameworks.length > 0 ? `| Test Frameworks | ${testFrameworks.join(", ")} 
     }
   }
 
-  // Data flows
-  if (flows && flows.length > 0) {
+  // Data flows (filter out test file flows for exec summary)
+  const summaryFlows = (flows || []).filter(f => !f.name?.toLowerCase().includes('test'));
+  if (summaryFlows.length > 0) {
     output += `\n## Key Data Flows\n\n`;
-    output += `${flows.length} data flow${flows.length === 1 ? "" : "s"} identified:\n\n`;
-    for (const flow of flows) {
+    output += `${summaryFlows.length} data flow${summaryFlows.length === 1 ? "" : "s"} identified:\n\n`;
+    for (const flow of summaryFlows) {
       output += `- **${flow.name}**${flow.critical ? " (critical)" : ""} — ${flow.description}\n`;
     }
   }
@@ -213,6 +226,7 @@ function getFallbackSystemOverview(context, enrichment = {}) {
   const sizeLabel = context.project.modulesDetected > 50 ? "large-scale" :
                     context.project.modulesDetected > 20 ? "medium-sized" : "focused";
   const testFrameworks = context.techStack.testFrameworks || [];
+  const isCLI = (context.patterns || []).some(p => p.toLowerCase().includes("cli"));
 
   let output = `# System Overview
 
@@ -224,16 +238,14 @@ This is a ${sizeLabel} codebase organized into **${context.project.modulesDetect
 |--------|-------|
 | Files scanned | ${context.project.filesScanned} |
 | Modules | ${context.project.modulesDetected} |
-| Application pages | ${context.project.pagesDetected} |
-| API endpoints | ${context.project.apiRoutesDetected} |
-
+${context.project.pagesDetected > 0 ? `| Application pages | ${context.project.pagesDetected} |\n` : ""}${context.project.apiRoutesDetected > 0 ? `| API endpoints | ${context.project.apiRoutesDetected} |\n` : ""}
 ## Technology Stack
 
 | Category | Technologies |
 |----------|-------------|
-| Frameworks | ${context.techStack.frameworks.join(", ") || "Not detected"} |
+| Frameworks | ${context.techStack.frameworks.join(", ") || (isCLI ? "N/A (CLI tool)" : "Not detected")} |
 | Languages | ${context.techStack.languages.join(", ") || "Not detected"} |
-| Build Tools | ${context.techStack.buildTools.join(", ") || "Not detected"} |
+| Build Tools | ${context.techStack.buildTools.join(", ") || (isCLI ? "N/A (CLI tool)" : "Not detected")} |
 ${testFrameworks.length > 0 ? `| Test Frameworks | ${testFrameworks.join(", ")} |\n` : ""}
 ## Detected Patterns
 
@@ -378,6 +390,7 @@ function getFallbackBusinessDomains(context, enrichment = {}) {
 
 function getFallbackArchitectureOverview(context, enrichment = {}) {
   const { depGraph, driftResult } = enrichment;
+  const isCLI = (context.patterns || []).some(p => p.toLowerCase().includes("cli"));
   const patternDesc = context.patterns.length > 0
     ? `The detected architectural patterns are **${context.patterns.join(", ")}**. These patterns shape how data and control flow through the system.`
     : "No specific architectural patterns were detected. The project appears to follow a straightforward directory-based organization.";
@@ -415,13 +428,13 @@ ${context.domains.slice(0, 8).map(d => `| **${d.name}** | ${d.description || "Ha
 
 | Category | Technologies |
 |----------|-------------|
-| Frameworks | ${context.techStack.frameworks.join(", ") || "Not detected"} |
+| Frameworks | ${context.techStack.frameworks.join(", ") || (isCLI ? "N/A (CLI tool)" : "Not detected")} |
 | Languages | ${context.techStack.languages.join(", ") || "Not detected"} |
-| Build Tools | ${context.techStack.buildTools.join(", ") || "Not detected"} |
+| Build Tools | ${context.techStack.buildTools.join(", ") || (isCLI ? "N/A (CLI tool)" : "Not detected")} |
 
 ## Scale & Complexity
 
-The repository comprises **${context.project.filesScanned} files** organized into **${context.project.modulesDetected} modules**. ${context.project.apiRoutesDetected > 0 ? `It exposes **${context.project.apiRoutesDetected} API endpoint${context.project.apiRoutesDetected === 1 ? "" : "s"}** and` : "It"} serves **${context.project.pagesDetected} application page${context.project.pagesDetected === 1 ? "" : "s"}**.
+The repository comprises **${context.project.filesScanned} files** organized into **${context.project.modulesDetected} modules**.${context.project.apiRoutesDetected > 0 ? ` It exposes **${context.project.apiRoutesDetected} API endpoint${context.project.apiRoutesDetected === 1 ? "" : "s"}**.` : ""}${context.project.pagesDetected > 0 ? ` It serves **${context.project.pagesDetected} application page${context.project.pagesDetected === 1 ? "" : "s"}**.` : ""}${isCLI ? " It operates as a command-line tool." : ""}
 `;
 
   // Dependency graph health
@@ -502,8 +515,8 @@ function getFallbackDataFlows(flows, context, enrichment = {}) {
   let output = `# Data Flows\n\n`;
   output += `> Data flows describe how information moves through the system — from external inputs through processing layers to storage or presentation.\n\n`;
 
-  // Combine heuristic flows with dep-graph-derived flows
-  const allFlows = [...(flows || [])];
+  // Combine heuristic flows with dep-graph-derived flows, filtering out test file flows
+  const allFlows = [...(flows || [])].filter(f => !f.name?.toLowerCase().includes('test'));
 
   // Generate additional flows from dependency graph hub chains
   if (depGraph?.nodes && depGraph.nodes.length > 0 && allFlows.length < 3) {
@@ -571,6 +584,7 @@ function getFallbackDeveloperOnboarding(context, enrichment = {}) {
   const frameworkList = context.techStack.frameworks.join(", ") || "general-purpose tools";
   const languageList = context.techStack.languages.join(", ") || "standard languages";
   const testFrameworks = context.techStack.testFrameworks || [];
+  const isCLI = (context.patterns || []).some(p => p.toLowerCase().includes("cli"));
   const routes = context.routes || {};
   const pages = routes.pages || [];
   const apis = routes.apis || [];
@@ -604,9 +618,9 @@ ${context.repoRoots.map(root => `| \`${root}\` | ${describeRoot(root)} |`).join(
 
 | Category | Technologies |
 |----------|-------------|
-| Frameworks | ${context.techStack.frameworks.join(", ") || "Not detected"} |
+| Frameworks | ${context.techStack.frameworks.join(", ") || (isCLI ? "N/A (CLI tool)" : "Not detected")} |
 | Languages | ${context.techStack.languages.join(", ") || "Not detected"} |
-| Build Tools | ${context.techStack.buildTools.join(", ") || "Not detected"} |
+| Build Tools | ${context.techStack.buildTools.join(", ") || (isCLI ? "N/A (CLI tool)" : "Not detected")} |
 ${testFrameworks.length > 0 ? `| Test Frameworks | ${testFrameworks.join(", ")} |\n` : ""}
 ## Largest Modules
 
@@ -637,11 +651,12 @@ ${context.topModules.slice(0, 10).map(m => `| \`${m.key}\` | ${m.fileCount} | ${
     }
   }
 
-  // Data flows overview
-  if (flows && flows.length > 0) {
+  // Data flows overview (filter out test flows)
+  const onboardingFlows = (flows || []).filter(f => !f.name?.toLowerCase().includes('test'));
+  if (onboardingFlows.length > 0) {
     output += `## How Data Flows\n\n`;
     output += `Understanding these flows will help you see how the system works end-to-end:\n\n`;
-    for (const flow of flows) {
+    for (const flow of onboardingFlows) {
       output += `- **${flow.name}** — ${flow.description}\n`;
     }
     output += "\n";
@@ -715,7 +730,8 @@ function inferFlowsFromDepGraph(depGraph) {
     .slice(0, 3);
 
   for (const hub of hubs) {
-    const importers = hub.importedBy.slice(0, 5);
+    const testPattern = /(?:^|\/)(?:tests?|__tests?__|spec|__spec__)\/|\.(test|spec)\.[jt]sx?$/i;
+    const importers = hub.importedBy.filter(i => !testPattern.test(i)).slice(0, 5);
     const downstream = hub.imports.slice(0, 3);
     const shortName = hub.key.split("/").pop();
 
