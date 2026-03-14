@@ -2,6 +2,16 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.7.1
+
+### 🛡️ AI Output Guardrails
+
+- **System prompt hardening**: Added anti-conversational rules — AI now instructed to never offer additional work, never ask questions, never use second-person address (except onboarding), and to back every claim with context evidence.
+- **Evidence-only constraints**: Architecture weaknesses, exec summary risks, and onboarding complexity hotspots now require concrete evidence from context data (cycle counts, coupling metrics, orphan files). No speculation.
+- **Output sanitizer**: New `sanitizeAIOutput()` strips conversational patterns (`"If you want"`, `"I can produce"`, `"Shall I"`, `"Let me know"`) from both structured JSON and plain-text AI responses before they reach documents.
+- **Structured renderer sanitization**: `renderArchitectureOverviewJSON` now sanitizes weakness bullet items, removing conversational lines even if they survive prompt-level constraints.
+- **Dual-path coverage**: Sanitization applies to both structured JSON mode (Path A) and plain-text fallback (Path B), closing all AI output paths.
+
 ## 1.7.0
 
 ### ✨ Features

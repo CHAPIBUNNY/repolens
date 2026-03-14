@@ -57,7 +57,12 @@ Rules:
 - Do not mention AI, LLMs, or that you are an assistant.
 - No markdown tables unless specifically requested.
 - Use simple formatting: headings, paragraphs, lists.
-- Maximum 2 heading levels deep within sections.`;
+- Maximum 2 heading levels deep within sections.
+- You are producing a static document, not participating in a conversation.
+- Never offer to do additional work (no "If you want", "I can also", "Let me know", "Shall I").
+- Never ask the reader questions or invite follow-up.
+- Never address the reader in second person ("you") unless the document type requires it (e.g. onboarding).
+- Every claim must be supported by concrete evidence from the supplied context data.`;
 
 export function createExecutiveSummaryPrompt(context) {
   return `Write an executive summary for a mixed audience of technical and non-technical readers.
@@ -70,7 +75,7 @@ Requirements:
 - Explain the main system areas using the domain information.
 - Explain the business capabilities implied by the codebase structure.
 - Mention key external dependencies only if they are present in the context.
-- Mention architectural or operational risks if they are strongly supported by the context.
+- Mention architectural or operational risks only if they are directly supported by concrete data in the context (e.g. cycle counts, orphan files, coupling metrics).
 - Do not mention file counts more than once.
 - Maximum 500 words.
 - Use this structure:
@@ -89,7 +94,9 @@ Requirements:
 
 ## Operational and architectural risks
 
-## Recommended focus areas`;
+## Recommended focus areas
+
+IMPORTANT: Only list risks and focus areas that are directly evidenced by the context data. Do not speculate.`;
 }
 
 export function createSystemOverviewPrompt(context) {
@@ -183,7 +190,9 @@ Requirements:
 
 ## Architectural strengths
 
-## Architectural weaknesses`;
+## Architectural weaknesses
+
+IMPORTANT: Only list weaknesses that are directly evidenced by the context data (e.g. cycle counts, orphan files, high coupling metrics, missing layers). Do not speculate about what the system lacks.`;
 }
 
 export function createDataFlowsPrompt(flows, context) {
@@ -249,7 +258,9 @@ Requirements:
 
 ## What to understand first
 
-## Known complexity hotspots`;
+## Known complexity hotspots
+
+IMPORTANT: Only cite complexity hotspots that are supported by concrete evidence in the context (e.g. high import counts, circular dependencies, large file counts). Do not speculate about what might be complex.`;
 }
 
 export function createModuleSummaryPrompt(module, context) {
@@ -520,12 +531,22 @@ function renderBusinessDomainsJSON(d) {
   return md;
 }
 
+function sanitizeBulletList(val) {
+  const raw = toBulletList(val);
+  if (!raw) return raw;
+  // Strip conversational lines from bullet lists
+  return raw.split("\n").filter(line => {
+    const lower = line.toLowerCase();
+    return !/(^|\s)(if you (?:want|need|would)|shall i |let me know|i can (?:also )?(?:produce|create|generate|help)|would you like|do you want|feel free)/i.test(lower);
+  }).join("\n");
+}
+
 function renderArchitectureOverviewJSON(d) {
   let md = `# Architecture Overview\n\n`;
   md += `## Architecture Style\n\n${safeStr(d.style)}\n\n`;
   md += `## Layers\n\n${toHeadingSections(d.layers)}\n\n`;
-  md += `## Architectural Strengths\n\n${toBulletList(d.strengths)}\n\n`;
-  md += `## Architectural Weaknesses\n\n${toBulletList(d.weaknesses)}\n`;
+  md += `## Architectural Strengths\n\n${sanitizeBulletList(d.strengths)}\n\n`;
+  md += `## Architectural Weaknesses\n\n${sanitizeBulletList(d.weaknesses)}\n`;
   return md;
 }
 

@@ -18,6 +18,27 @@ import {
 import { identifyFlowDependencies } from "../analyzers/flow-inference.js";
 import { info, warn } from "../utils/logger.js";
 
+// Strip conversational patterns that LLMs sometimes inject into documentation
+const CONVERSATIONAL_PATTERNS = [
+  /^(?:[-*]\s*)?if you (?:want|need|would like|prefer)[^.\n]*[.\n]/gmi,
+  /^(?:[-*]\s*)?(?:shall|should) I [^.\n]*[.\n]/gmi,
+  /^(?:[-*]\s*)?(?:let me know|feel free)[^.\n]*[.\n]/gmi,
+  /^(?:[-*]\s*)?I can (?:also |additionally )?(?:produce|create|generate|help|provide|suggest|recommend)[^.\n]*[.\n]/gmi,
+  /^(?:[-*]\s*)?(?:would you like|do you want)[^.\n]*[.\n]/gmi,
+  /^(?:[-*]\s*)?(?:here is|here's) (?:a |the )?(?:summary|overview|breakdown)[^.\n]*:\s*$/gmi,
+];
+
+function sanitizeAIOutput(text) {
+  if (!text || typeof text !== "string") return text;
+  let cleaned = text;
+  for (const pattern of CONVERSATIONAL_PATTERNS) {
+    cleaned = cleaned.replace(pattern, "");
+  }
+  // Collapse multiple blank lines left by removals
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n").trim();
+  return cleaned;
+}
+
 /**
  * Try structured JSON mode first, fall back to plain-text AI, then deterministic.
  */
@@ -41,7 +62,7 @@ async function generateWithStructuredFallback(key, promptText, maxTokens, fallba
 
     if (result.success && result.parsed) {
       const md = renderStructuredToMarkdown(key, result.parsed);
-      if (md) return md;
+      if (md) return sanitizeAIOutput(md);
     }
     // If structured mode failed, fall through to plain-text
     warn(`Structured AI failed for ${key}, trying plain-text mode...`);
@@ -60,7 +81,7 @@ async function generateWithStructuredFallback(key, promptText, maxTokens, fallba
     return fallbackFn();
   }
 
-  return result.text;
+  return sanitizeAIOutput(result.text);
 }
 
 export async function generateExecutiveSummary(context, enrichment = {}) {
