@@ -2,6 +2,42 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.9.3
+
+### ✨ Premium Deterministic Documentation
+
+**Major overhaul of all 6 AI-fallback document generators.** Deterministic mode now produces documentation quality comparable to AI-enhanced mode:
+
+- **Executive Summary**: Complete rewrite with health scoring (0-100 scale), monorepo structure detection, module composition breakdown by layer, codebase health tables with status indicators, key data flow summaries with criticality markers, and strategic observations based on actual patterns.
+
+- **System Overview**: Enhanced with route pattern descriptions, dependency graph metrics, hub module analysis, and detailed route summaries explaining what each pattern (API, page, SSR) means.
+
+- **Business Domains**: Rich domain capability descriptions, cross-domain dependency analysis with full module paths, domain health summary table, and business impact assessment per domain.
+
+- **Architecture Overview**: Pattern explanation with benefits, system layers table with architectural insights, dependency health metrics, strengths and concerns sections, and hub module highlighting.
+
+- **Data Flows**: Flow diagrams with step-by-step breakdowns explaining what each step does, shared libraries context, import network statistics, and actionable recommendations.
+
+- **Developer Onboarding**: Getting Started checklist, codebase-at-a-glance statistics, key routes with explanations, framework and language learning tips, common pitfalls section, and module importance ratings.
+
+**18+ new helper functions** added for intelligent content generation:
+`inferDomainCapability()`, `getLayerResponsibility()`, `calculateHealthScore()`, `formatFileScale()`, `describeRoutePattern()`, `inferFrameworkPurpose()`, `explainPattern()`, `getBenefitsForPattern()`, `getLayerInsight()`, `getFrameworkArchitecturalImplication()`, `getLanguageImplication()`, `inferPageDescription()`, `inferAPIEndpointPurpose()`, `inferPackageDescription()`, `inferStepPurpose()`, `shouldStartHere()`, `getFrameworkLearningTip()`, `getLanguageLearningTip()`, `getModuleImportance()`
+
+### 🔧 Why This Matters
+
+Users without AI API keys now get production-quality documentation instead of sparse placeholders. The deterministic output includes:
+- Health scores and assessments
+- Business capability descriptions
+- Architectural pattern explanations
+- Actionable recommendations
+- Framework-specific learning tips
+- Rich tables with insights
+
+### 🧪 Tests
+
+- **380 tests passing** across 22 test files
+- All deterministic enrichment tests updated and passing
+
 ## 1.9.2
 
 ### 🐛 Bug Fixes
