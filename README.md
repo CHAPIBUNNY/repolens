@@ -17,7 +17,7 @@
 
 RepoLens scans your repository, generates living architecture documentation, and publishes it to Notion, Confluence, GitHub Wiki, or Markdown — automatically on every push. Engineers get technical docs. Stakeholders get readable system overviews. Nobody writes a word.
 
-> Stable as of v1.0 — [API guarantees](STABILITY.md) · [Security hardened](SECURITY.md) · v1.8.1
+> Stable as of v1.0 — [API guarantees](STABILITY.md) · [Security hardened](SECURITY.md) · v1.9.0
 
 ---
 
@@ -28,6 +28,14 @@ RepoLens scans your repository, generates living architecture documentation, and
 [![RepoLens Demo](https://img.youtube.com/vi/Lpyg0dGsiws/maxresdefault.jpg)](https://youtu.be/Lpyg0dGsiws)
 
 ▶️ *Click to watch on YouTube*
+
+<details>
+<summary>🔍 <strong>Supported Languages</strong> (16 auto-detected)</summary>
+
+`JavaScript` `TypeScript` `Python` `Go` `Rust` `Java` `C` `C++` `C#` `Ruby` `PHP` `Swift` `Kotlin` `Scala` `Shell` `SQL`
+
+Plus framework detection: **Django** · **FastAPI** · **Flask** · **Gin** · **Echo** · **Fiber** · **Actix** · **Rocket** — and all major JS frameworks (React, Next.js, Vue, Angular, Express, NestJS, Svelte, etc.)
+</details>
 
 ---
 
