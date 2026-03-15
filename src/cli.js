@@ -492,6 +492,12 @@ async function main() {
       info("Browse your docs: open the .repolens/ directory");
       info("\nTo publish to Notion, Confluence, or GitHub Wiki, run: repolens publish");
       
+      // Upsell AI enhancement when not already enabled
+      if (!cfg.ai?.enabled && process.env.REPOLENS_AI_ENABLED !== "true") {
+        info("\n💡 Want richer, AI-enhanced docs? Run: repolens init --interactive");
+        info("   Select GitHub Models (free) — uses your existing GITHUB_TOKEN, no extra keys needed.");
+      }
+      
       printPerformanceSummary();
       
       trackUsage("demo", "success", {

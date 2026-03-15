@@ -182,9 +182,16 @@ export async function runDoctor(targetDir = process.cwd()) {
     }
 
     if (cfg.ai?.enabled || process.env.REPOLENS_AI_ENABLED === "true") {
-      envChecks.push(
-        { key: "REPOLENS_AI_API_KEY", required: true, publisher: "AI" },
-      );
+      const aiProvider = process.env.REPOLENS_AI_PROVIDER || "openai_compatible";
+      if (aiProvider === "github") {
+        envChecks.push(
+          { key: "GITHUB_TOKEN", required: true, publisher: "AI (GitHub Models)" },
+        );
+      } else {
+        envChecks.push(
+          { key: "REPOLENS_AI_API_KEY", required: true, publisher: "AI" },
+        );
+      }
     }
 
     if (envChecks.length === 0) {

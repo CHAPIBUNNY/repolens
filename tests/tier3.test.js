@@ -345,6 +345,150 @@ describe("AI Provider", () => {
     expect(config.provider).toBe("google");
     expect(config.model).toBe("gemini-pro");
   });
+
+  it("getAIConfig reflects github provider with default model", () => {
+    process.env.REPOLENS_AI_PROVIDER = "github";
+    const config = getAIConfig();
+    expect(config.provider).toBe("github");
+    expect(config.model).toBe("gpt-4o-mini");
+  });
+
+  it("github provider uses GITHUB_TOKEN when no AI key set", () => {
+    process.env.REPOLENS_AI_PROVIDER = "github";
+    delete process.env.REPOLENS_AI_API_KEY;
+    process.env.GITHUB_TOKEN = "ghp_test_token";
+    const config = getAIConfig();
+    expect(config.hasApiKey).toBe(true);
+  });
+
+  it("github provider hasApiKey is false when neither token set", () => {
+    process.env.REPOLENS_AI_PROVIDER = "github";
+    delete process.env.REPOLENS_AI_API_KEY;
+    delete process.env.GITHUB_TOKEN;
+    const config = getAIConfig();
+    expect(config.hasApiKey).toBe(false);
+  });
+
+  it("REPOLENS_AI_API_KEY takes priority over GITHUB_TOKEN for github provider", () => {
+    process.env.REPOLENS_AI_PROVIDER = "github";
+    process.env.REPOLENS_AI_API_KEY = "sk-explicit-key";
+    process.env.GITHUB_TOKEN = "ghp_fallback";
+    const config = getAIConfig();
+    expect(config.hasApiKey).toBe(true);
+  });
+
+  it("custom model overrides github provider default", () => {
+    process.env.REPOLENS_AI_PROVIDER = "github";
+    process.env.REPOLENS_AI_MODEL = "o1-mini";
+    const config = getAIConfig();
+    expect(config.model).toBe("o1-mini");
+  });
+
+  it("custom model overrides openai_compatible default", () => {
+    delete process.env.REPOLENS_AI_PROVIDER;
+    process.env.REPOLENS_AI_MODEL = "gpt-4o";
+    const config = getAIConfig();
+    expect(config.model).toBe("gpt-4o");
+  });
+
+  it("github provider returns fallback with GITHUB_TOKEN but AI disabled", async () => {
+    delete process.env.REPOLENS_AI_ENABLED;
+    process.env.REPOLENS_AI_PROVIDER = "github";
+    process.env.GITHUB_TOKEN = "ghp_test";
+    const result = await generateText({ system: "test", user: "test" });
+    expect(result.success).toBe(false);
+    expect(result.fallback).toBe(true);
+  });
+
+  it("github provider enabled with GITHUB_TOKEN attempts API call", async () => {
+    process.env.REPOLENS_AI_ENABLED = "true";
+    process.env.REPOLENS_AI_PROVIDER = "github";
+    process.env.GITHUB_TOKEN = "ghp_test_token";
+    delete process.env.REPOLENS_AI_API_KEY;
+    // Will fail because the token is fake, but should attempt the call (not return missing-key fallback)
+    const result = await generateText({ system: "test", user: "test" });
+    expect(result.fallback).toBe(true);
+    // Should NOT be "Missing API key" — it should attempt the network call and fail differently
+    expect(result.error).not.toBe("Missing API key");
+  });
+
+  it("non-github provider ignores GITHUB_TOKEN", async () => {
+    process.env.REPOLENS_AI_ENABLED = "true";
+    delete process.env.REPOLENS_AI_PROVIDER;
+    delete process.env.REPOLENS_AI_API_KEY;
+    process.env.GITHUB_TOKEN = "ghp_test_token";
+    const result = await generateText({ system: "test", user: "test" });
+    expect(result.error).toBe("Missing API key");
+  });
+
+  it("getAIConfig temperature and maxTokens parsing", () => {
+    process.env.REPOLENS_AI_TEMPERATURE = "0.5";
+    process.env.REPOLENS_AI_MAX_TOKENS = "4000";
+    const config = getAIConfig();
+    expect(config.temperature).toBe(0.5);
+    expect(config.maxTokens).toBe(4000);
+  });
+
+  it("getAIConfig temperature undefined when not set", () => {
+    delete process.env.REPOLENS_AI_TEMPERATURE;
+    const config = getAIConfig();
+    expect(config.temperature).toBeUndefined();
+  });
+
+  it("isAIEnabled returns false by default", () => {
+    delete process.env.REPOLENS_AI_ENABLED;
+    expect(isAIEnabled()).toBe(false);
+  });
+
+  it("isAIEnabled returns true when env var is 'true'", () => {
+    process.env.REPOLENS_AI_ENABLED = "true";
+    expect(isAIEnabled()).toBe(true);
+  });
+
+  it("isAIEnabled returns true from config when env var not set", () => {
+    delete process.env.REPOLENS_AI_ENABLED;
+    expect(isAIEnabled({ ai: { enabled: true } })).toBe(true);
+  });
+
+  it("isAIEnabled env var overrides config", () => {
+    process.env.REPOLENS_AI_ENABLED = "true";
+    expect(isAIEnabled({ ai: { enabled: false } })).toBe(true);
+  });
+
+  it("getAIConfig reads provider from config when env not set", () => {
+    delete process.env.REPOLENS_AI_PROVIDER;
+    const result = getAIConfig({ ai: { provider: "github" } });
+    expect(result.provider).toBe("github");
+    expect(result.model).toBe("gpt-4o-mini"); // github default
+  });
+
+  it("getAIConfig reads model from config when env not set", () => {
+    delete process.env.REPOLENS_AI_MODEL;
+    delete process.env.REPOLENS_AI_PROVIDER;
+    const result = getAIConfig({ ai: { provider: "openai_compatible", model: "gpt-4o" } });
+    expect(result.model).toBe("gpt-4o");
+  });
+
+  it("getAIConfig env vars take precedence over config", () => {
+    process.env.REPOLENS_AI_PROVIDER = "anthropic";
+    process.env.REPOLENS_AI_MODEL = "claude-sonnet-4-20250514";
+    const result = getAIConfig({ ai: { provider: "github", model: "gpt-4o-mini" } });
+    expect(result.provider).toBe("anthropic");
+    expect(result.model).toBe("claude-sonnet-4-20250514");
+  });
+
+  it("getAIConfig reads enabled from config", () => {
+    delete process.env.REPOLENS_AI_ENABLED;
+    const result = getAIConfig({ ai: { enabled: true, provider: "github" } });
+    expect(result.enabled).toBe(true);
+    expect(result.provider).toBe("github");
+  });
+
+  it("getAIConfig reads temperature from config when env not set", () => {
+    delete process.env.REPOLENS_AI_TEMPERATURE;
+    const result = getAIConfig({ ai: { temperature: 0.7 } });
+    expect(result.temperature).toBe(0.7);
+  });
 });
 
 // --- Structured AI Output tests (prompts) ---

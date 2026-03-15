@@ -20,11 +20,13 @@ export async function generateText({ system, user, temperature, maxTokens, confi
   }
   
   // Get provider configuration (env vars take precedence, then config, then defaults)
-  const provider = process.env.REPOLENS_AI_PROVIDER || "openai_compatible";
-  const baseUrl = process.env.REPOLENS_AI_BASE_URL;
-  const apiKey = process.env.REPOLENS_AI_API_KEY;
-  const model = process.env.REPOLENS_AI_MODEL || "gpt-5-mini";
-  const timeoutMs = parseInt(process.env.REPOLENS_AI_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
+  const provider = process.env.REPOLENS_AI_PROVIDER || aiConfig.provider || "openai_compatible";
+  const baseUrl = process.env.REPOLENS_AI_BASE_URL || aiConfig.base_url;
+  // For "github" provider, fall back to GITHUB_TOKEN when no explicit AI key is set
+  const apiKey = process.env.REPOLENS_AI_API_KEY
+    || (provider === "github" ? process.env.GITHUB_TOKEN : undefined);
+  const model = process.env.REPOLENS_AI_MODEL || aiConfig.model || getDefaultModel(provider);
+  const timeoutMs = parseInt(process.env.REPOLENS_AI_TIMEOUT_MS || aiConfig.timeout_ms || DEFAULT_TIMEOUT_MS);
   
   // Use config values as fallback for maxTokens; temperature only when explicitly set
   const resolvedTemp = temperature ?? aiConfig.temperature ?? undefined;
@@ -141,6 +143,18 @@ function validateSchema(obj, schema) {
 }
 
 /**
+ * Get default model for a provider.
+ */
+function getDefaultModel(provider) {
+  switch (provider) {
+    case "anthropic": return "claude-sonnet-4-20250514";
+    case "google": return "gemini-pro";
+    case "github": return "gpt-4o-mini";
+    default: return "gpt-5-mini";
+  }
+}
+
+/**
  * Get default base URL for a provider.
  */
 function getDefaultBaseUrl(provider) {
@@ -148,6 +162,7 @@ function getDefaultBaseUrl(provider) {
     case "anthropic": return "https://api.anthropic.com";
     case "azure": return process.env.REPOLENS_AI_BASE_URL || "https://api.openai.com/v1";
     case "google": return "https://generativelanguage.googleapis.com";
+    case "github": return "https://models.inference.ai.github.com/v1";
     default: return "https://api.openai.com/v1";
   }
 }
@@ -159,7 +174,7 @@ function getProviderAdapter(provider) {
   switch (provider) {
     case "anthropic": return callAnthropicAPI;
     case "google": return callGoogleAPI;
-    // "openai_compatible" and "azure" both use the OpenAI format
+    // "openai_compatible", "azure", and "github" all use the OpenAI chat/completions format
     default: return callOpenAICompatibleAPI;
   }
 }
@@ -334,21 +349,21 @@ async function callGoogleAPI({ baseUrl, apiKey, model, system, user, temperature
   });
 }
 
-export function isAIEnabled() {
-  return process.env.REPOLENS_AI_ENABLED === "true";
+export function isAIEnabled(config) {
+  return process.env.REPOLENS_AI_ENABLED === "true" || config?.ai?.enabled === true;
 }
 
-export function getAIConfig() {
-  const provider = process.env.REPOLENS_AI_PROVIDER || "openai_compatible";
-  const defaultModel = provider === "anthropic" ? "claude-sonnet-4-20250514"
-    : provider === "google" ? "gemini-pro"
-    : "gpt-5-mini";
+export function getAIConfig(config) {
+  const aiConfig = config?.ai || {};
+  const provider = process.env.REPOLENS_AI_PROVIDER || aiConfig.provider || "openai_compatible";
+  const hasApiKey = !!(process.env.REPOLENS_AI_API_KEY
+    || (provider === "github" ? process.env.GITHUB_TOKEN : undefined));
   return {
-    enabled: isAIEnabled(),
+    enabled: isAIEnabled(config),
     provider,
-    model: process.env.REPOLENS_AI_MODEL || defaultModel,
-    hasApiKey: !!process.env.REPOLENS_AI_API_KEY,
-    temperature: process.env.REPOLENS_AI_TEMPERATURE ? parseFloat(process.env.REPOLENS_AI_TEMPERATURE) : undefined,
-    maxTokens: parseInt(process.env.REPOLENS_AI_MAX_TOKENS || DEFAULT_MAX_TOKENS)
+    model: process.env.REPOLENS_AI_MODEL || aiConfig.model || getDefaultModel(provider),
+    hasApiKey,
+    temperature: process.env.REPOLENS_AI_TEMPERATURE ? parseFloat(process.env.REPOLENS_AI_TEMPERATURE) : (aiConfig.temperature != null ? aiConfig.temperature : undefined),
+    maxTokens: parseInt(process.env.REPOLENS_AI_MAX_TOKENS || aiConfig.max_tokens || DEFAULT_MAX_TOKENS)
   };
 }

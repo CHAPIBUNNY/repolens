@@ -3,8 +3,13 @@ import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { info, warn } from "./utils/logger.js";
 
-const PUBLISHER_CHOICES = ["markdown", "notion", "confluence"];
-const AI_PROVIDERS = ["openai", "anthropic", "azure", "ollama"];
+const PUBLISHER_CHOICES = ["markdown", "notion", "confluence", "github_wiki"];
+const AI_PROVIDERS = [
+  { value: "github",           label: "GitHub Models  (free in GitHub Actions)" },
+  { value: "openai_compatible", label: "OpenAI / Compatible  (GPT-5, GPT-4o, etc.)" },
+  { value: "anthropic",         label: "Anthropic  (Claude)" },
+  { value: "google",            label: "Google  (Gemini)" },
+];
 const SCAN_PRESETS = {
   nextjs: {
     include: [
@@ -84,6 +89,10 @@ jobs:
           CONFLUENCE_API_TOKEN: \${{ secrets.CONFLUENCE_API_TOKEN }}
           CONFLUENCE_SPACE_KEY: \${{ secrets.CONFLUENCE_SPACE_KEY }}
           CONFLUENCE_PARENT_PAGE_ID: \${{ secrets.CONFLUENCE_PARENT_PAGE_ID }}
+          # Uncomment to enable free AI-enhanced docs via GitHub Models:
+          # REPOLENS_AI_ENABLED: true
+          # REPOLENS_AI_PROVIDER: github
+          # GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
         run: npx @chappibunny/repolens@latest publish
 `;
 
@@ -106,6 +115,11 @@ CONFLUENCE_PARENT_PAGE_ID=
 # REPOLENS_AI_BASE_URL=https://api.openai.com/v1
 # REPOLENS_AI_MODEL=gpt-5-mini
 # REPOLENS_AI_MAX_TOKENS=2000
+
+# GitHub Models (free tier — zero-config in GitHub Actions)
+# REPOLENS_AI_PROVIDER=github
+# Uses GITHUB_TOKEN automatically — no separate API key needed
+# REPOLENS_AI_MODEL=gpt-4o-mini
 `;
 
 const DEFAULT_REPOLENS_README = `# RepoLens Documentation
@@ -194,7 +208,20 @@ Adds 5 natural language documents readable by non-technical audiences:
 
 AI features add natural language explanations for non-technical stakeholders.
 
-1. Get an OpenAI API key from https://platform.openai.com/api-keys
+### Option A: GitHub Models (Free — Recommended for GitHub Actions)
+
+Every GitHub repo gets free access to AI models. In your workflow:
+\`\`\`yaml
+env:
+  REPOLENS_AI_ENABLED: true
+  REPOLENS_AI_PROVIDER: github
+  GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+\`\`\`
+No API key signup needed. Uses \`gpt-4o-mini\` by default.
+
+### Option B: OpenAI / Other Providers
+
+1. Get an API key from your chosen provider
 2. Add to your \`.env\` file:
    \`\`\`bash
    REPOLENS_AI_ENABLED=true
@@ -214,7 +241,7 @@ AI features add natural language explanations for non-technical stakeholders.
      developer_onboarding: true
    \`\`\`
 
-**Cost estimate**: $0.10-$0.40 per run for typical projects
+**Cost estimate**: $0.10-$0.40 per run for typical projects (or free with GitHub Models)
 
 See [AI.md](https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md) for full documentation
 - **Module Catalog** — Detected code modules
@@ -532,10 +559,15 @@ async function runInteractiveWizard(repoRoot) {
     let aiProvider = null;
     if (enableAi) {
       info("Select AI provider:");
-      AI_PROVIDERS.forEach((p, i) => info(`  ${i + 1}. ${p}`));
-      const aiInput = (await ask(`Provider [1] (default: 1 openai): `)).trim() || "1";
+      AI_PROVIDERS.forEach((p, i) => info(`  ${i + 1}. ${p.label}`));
+      const aiInput = (await ask(`Provider [1] (default: 1 GitHub Models — free): `)).trim() || "1";
       const idx = parseInt(aiInput, 10);
-      aiProvider = AI_PROVIDERS[(idx >= 1 && idx <= AI_PROVIDERS.length) ? idx - 1 : 0];
+      const chosen = AI_PROVIDERS[(idx >= 1 && idx <= AI_PROVIDERS.length) ? idx - 1 : 0];
+      aiProvider = chosen.value;
+      if (aiProvider === "github") {
+        info("\n  ✨ Great choice! GitHub Models uses your existing GITHUB_TOKEN — no extra API key needed.");
+        info("     Works automatically in GitHub Actions with the free tier.");
+      }
     }
 
     // 4. Scan preset
@@ -605,6 +637,9 @@ function buildWizardConfig(answers) {
     lines.push(`ai:`);
     lines.push(`  enabled: true`);
     lines.push(`  mode: hybrid`);
+    if (answers.aiProvider) {
+      lines.push(`  provider: ${answers.aiProvider}`);
+    }
     lines.push(``);
     lines.push(`features:`);
     lines.push(`  executive_summary: true`);
@@ -758,14 +793,18 @@ NOTION_VERSION=2022-06-28
     info("Next steps:");
     info("  1. Review .repolens.yml to customize your documentation");
     info("  2. Run 'npx @chappibunny/repolens publish' to generate your first docs (deterministic mode)");
-    info("  3. (Optional) Enable AI features by adding to .env:");
+    info("  3. (Optional) Enable AI features:");
+    info("     ── FREE: GitHub Models (recommended for GitHub Actions) ──");
+    info("     REPOLENS_AI_ENABLED=true");
+    info("     REPOLENS_AI_PROVIDER=github");
+    info("     (Uses your GITHUB_TOKEN automatically — no API key signup needed)");
+    info("     ── Or: OpenAI / Anthropic / Google ──");
     info("     REPOLENS_AI_ENABLED=true");
     info("     REPOLENS_AI_API_KEY=sk-...");
     info("     See AI.md for full guide: https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md");
     info("  4. For GitHub Actions, add these repository secrets:");
     info("     - NOTION_TOKEN");
     info("     - NOTION_PARENT_PAGE_ID");
-    info("     - REPOLENS_AI_API_KEY (if using AI features)");
     info("  5. Commit the generated files (workflow will run automatically)");
   } else {
     info("Next steps:");
@@ -773,7 +812,12 @@ NOTION_VERSION=2022-06-28
     info("  2. To enable Notion publishing:");
     info("     - Copy .env.example to .env and add your credentials, OR");
     info("     - Add GitHub secrets: NOTION_TOKEN, NOTION_PARENT_PAGE_ID");
-    info("  3. (Optional) Enable AI features by adding to .env:");
+    info("  3. (Optional) Enable AI features:");
+    info("     ── FREE: GitHub Models (recommended for GitHub Actions) ──");
+    info("     REPOLENS_AI_ENABLED=true");
+    info("     REPOLENS_AI_PROVIDER=github");
+    info("     (Uses your GITHUB_TOKEN automatically — no API key signup needed)");
+    info("     ── Or: OpenAI / Anthropic / Google ──");
     info("     REPOLENS_AI_ENABLED=true");
     info("     REPOLENS_AI_API_KEY=sk-...");
     info("     See: https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md");

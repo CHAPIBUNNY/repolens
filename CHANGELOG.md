@@ -2,6 +2,28 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.8.0
+
+### ✨ GitHub Models — First-Class AI Provider
+
+- **GitHub Models provider**: Added `github` as a native AI provider. Uses the OpenAI-compatible endpoint at `models.inference.ai.github.com` with automatic `GITHUB_TOKEN` authentication — no extra API keys needed in GitHub Actions.
+- **Zero-config AI in CI**: When `ai.provider: github` is set in `.repolens.yml`, RepoLens uses the default `GITHUB_TOKEN` injected by GitHub Actions. No secrets to create or manage.
+- **Config-driven AI settings**: `ai.enabled`, `ai.provider`, `ai.model`, `ai.temperature`, and `ai.base_url` in `.repolens.yml` are now fully respected at runtime (env vars still take precedence). Previously these config values were ignored.
+- **Init wizard fixes**: Provider selection now uses correct runtime values (`github`, `openai_compatible`, `anthropic`, `google`) instead of mismatched labels. The wizard now emits `ai.provider` to the generated YAML. Added `github_wiki` to publisher choices.
+- **Demo AI upsell**: `repolens demo` now shows a hint about GitHub Models (free) when AI is not enabled, guiding users to `repolens init --interactive`.
+- **Doctor validation**: `repolens doctor` now checks for `GITHUB_TOKEN` when provider is `github`, and `REPOLENS_AI_API_KEY` for other providers.
+
+### 📖 Documentation
+
+- Updated AI.md, ENVIRONMENT.md, ONBOARDING.md, README.md with GitHub Models as recommended provider
+- Init templates (.env.example, workflow, README) include GitHub Models setup instructions
+- Onboarding shows dual-track: Option A (GitHub Models, free) and Option B (OpenAI / other)
+
+### 🧪 Tests
+
+- 24 new tests: provider config fallbacks, `isAIEnabled` with config, `getAIConfig` with config, GitHub Models defaults, init wizard content, doctor env validation
+- **374 tests passing** across 22 test files
+
 ## 1.7.1
 
 ### 🛡️ AI Output Guardrails

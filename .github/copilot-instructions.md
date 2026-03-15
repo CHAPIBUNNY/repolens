@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.6.0  
+**Version:** 1.8.0  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -60,7 +60,7 @@ src/
     monorepo-detector.js  # Monorepo workspace detection (npm/yarn/pnpm/Lerna)
     codeowners.js         # CODEOWNERS file parser + ownership mapping
   ai/
-    provider.js           # Multi-provider AI text generation (OpenAI, Anthropic, Google)
+    provider.js           # Multi-provider AI text generation (OpenAI, Anthropic, Google, GitHub Models)
     prompts.js            # Strict prompt templates + JSON schemas + structured renderers
     document-plan.js      # Canonical document structure definition
     generate-sections.js  # AI-powered section generation with structured output + fallbacks
@@ -98,7 +98,7 @@ src/
   plugins/
     loader.js             # Plugin resolution and dynamic import
     manager.js            # Plugin registry and lifecycle orchestration
-tests/                    # Vitest test suite (347 tests across 22 files)
+tests/                    # Vitest test suite (374 tests across 22 files)
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
   config-discovery.test.js # Config auto-discovery tests
@@ -146,7 +146,7 @@ tests/                    # Vitest test suite (347 tests across 22 files)
 - **Zero Hallucination**: AI receives only structured JSON context, never raw code
 - **Context Size Limiting**: `truncateContext()` enforces 12K char cap with progressive field pruning (routes→15, domains→8, modules→10)
 - **Strict Prompts**: Word limits, required sections, concrete prose, no speculation
-- **Multi-Provider**: Native adapters for OpenAI (+ compatible), Anthropic (Messages API), Google Gemini; Azure uses OpenAI adapter
+- **Multi-Provider**: Native adapters for OpenAI (+ compatible), Anthropic (Messages API), Google Gemini, GitHub Models (free tier); Azure uses OpenAI adapter
 - **Structured Output**: JSON mode with schema validation per document type, one re-prompt on failure, then graceful fallback
 - **Graceful Fallback**: Structured JSON → plain-text AI → deterministic docs (three-tier cascade)
 - **Enriched Deterministic Mode**: Even without AI, fallbacks produce rich output using dep graph stats, data flows, routes, monorepo info, drift results, and module type classifications
@@ -239,7 +239,7 @@ tests/                    # Vitest test suite (347 tests across 22 files)
 - Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
 - Test config discovery, validation, rendering, branch detection, migration, security fuzzing
-- **Coverage**: 347 tests passing across 22 test files
+- **Coverage**: 374 tests passing across 22 test files
 - Run: `npm test`
 
 ### Configuration
@@ -400,10 +400,10 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 
 ### AI Enhancement (optional)
 - `REPOLENS_AI_ENABLED` - Enable AI-powered sections (true/false)
-- `REPOLENS_AI_PROVIDER` - AI provider: `openai_compatible` (default), `anthropic`, `google`
-- `REPOLENS_AI_API_KEY` - API key for AI provider
-- `REPOLENS_AI_BASE_URL` - API base URL (default: https://api.openai.com/v1)
-- `REPOLENS_AI_MODEL` - Model name (e.g., gpt-5-mini)
+- `REPOLENS_AI_PROVIDER` - AI provider: `openai_compatible` (default), `anthropic`, `google`, `github`
+- `REPOLENS_AI_API_KEY` - API key for AI provider (not needed for `github` provider)
+- `REPOLENS_AI_BASE_URL` - API base URL (auto-set per provider; override for custom endpoints)
+- `REPOLENS_AI_MODEL` - Model name (e.g., gpt-5-mini, gpt-4o-mini)
 - `REPOLENS_AI_TEMPERATURE` - Generation temperature (only sent when explicitly set; omitted by default for GPT-5 compatibility)
 - `REPOLENS_AI_MAX_TOKENS` - Max completion tokens per request (default: 2000)
 

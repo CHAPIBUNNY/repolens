@@ -36,11 +36,14 @@
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `REPOLENS_AI_ENABLED` | No | Enable AI-powered sections (`true`/`false`) |
-| `REPOLENS_AI_API_KEY` | No | API key for AI provider |
-| `REPOLENS_AI_BASE_URL` | No | API base URL (default: `https://api.openai.com/v1`) |
-| `REPOLENS_AI_MODEL` | No | Model name (e.g., `gpt-5-mini`) |
+| `REPOLENS_AI_PROVIDER` | No | Provider: `openai_compatible` (default), `anthropic`, `google`, `github` |
+| `REPOLENS_AI_API_KEY` | No | API key for AI provider (not needed for `github` provider) |
+| `REPOLENS_AI_BASE_URL` | No | API base URL (auto-set per provider; override for custom endpoints) |
+| `REPOLENS_AI_MODEL` | No | Model name (e.g., `gpt-5-mini`, `gpt-4o-mini`, `claude-sonnet-4-20250514`) |
 | `REPOLENS_AI_TEMPERATURE` | No | Generation temperature (omitted by default for GPT-5 compatibility) |
 | `REPOLENS_AI_MAX_TOKENS` | No | Max completion tokens per request (default: `2000`) |
+
+> **GitHub Models (free):** Set `REPOLENS_AI_PROVIDER=github` in GitHub Actions — uses `GITHUB_TOKEN` automatically, no separate API key required. See [AI.md](AI.md) for details.
 
 ## Telemetry
 

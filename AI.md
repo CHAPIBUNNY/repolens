@@ -89,27 +89,58 @@ npx @chappibunny/repolens publish
 
 ## AI Providers
 
-RepoLens supports any OpenAI-compatible API:
+RepoLens supports multiple AI providers natively. Set `REPOLENS_AI_PROVIDER` to select one.
+
+### GitHub Models (Free — Recommended for GitHub Actions)
+
+Every GitHub repository gets free access to AI models via [GitHub Models](https://github.com/marketplace/models). In GitHub Actions, the `GITHUB_TOKEN` is already available — no API key signup needed.
+
+```bash
+REPOLENS_AI_ENABLED=true
+REPOLENS_AI_PROVIDER=github
+# Uses GITHUB_TOKEN automatically — no REPOLENS_AI_API_KEY needed
+# Default model: gpt-4o-mini (free tier)
+```
+
+**GitHub Actions workflow:**
+```yaml
+env:
+  REPOLENS_AI_ENABLED: true
+  REPOLENS_AI_PROVIDER: github
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+> **Free tier limits:** ~150 requests/day for gpt-4o-mini. RepoLens makes ~15 AI calls per run, so this is more than sufficient.
 
 ### OpenAI
 
 ```bash
+REPOLENS_AI_PROVIDER=openai_compatible
 REPOLENS_AI_BASE_URL=https://api.openai.com/v1
 REPOLENS_AI_API_KEY=sk-xxx
 REPOLENS_AI_MODEL=gpt-5-mini
 ```
 
-### Anthropic (via OpenAI-compatible proxy)
+### Anthropic
 
 ```bash
-REPOLENS_AI_BASE_URL=https://your-proxy.com/v1
+REPOLENS_AI_PROVIDER=anthropic
 REPOLENS_AI_API_KEY=sk-ant-xxx
-REPOLENS_AI_MODEL=claude-3-opus-20240229
+REPOLENS_AI_MODEL=claude-sonnet-4-20250514
+```
+
+### Google Gemini
+
+```bash
+REPOLENS_AI_PROVIDER=google
+REPOLENS_AI_API_KEY=xxx
+REPOLENS_AI_MODEL=gemini-pro
 ```
 
 ### Azure OpenAI
 
 ```bash
+REPOLENS_AI_PROVIDER=openai_compatible
 REPOLENS_AI_BASE_URL=https://your-resource.openai.azure.com/openai/deployments/your-deployment
 REPOLENS_AI_API_KEY=xxx
 REPOLENS_AI_MODEL=gpt-5-mini
@@ -118,6 +149,7 @@ REPOLENS_AI_MODEL=gpt-5-mini
 ### Local Models (Ollama, LM Studio, etc.)
 
 ```bash
+REPOLENS_AI_PROVIDER=openai_compatible
 REPOLENS_AI_BASE_URL=http://localhost:11434/v1
 REPOLENS_AI_API_KEY=dummy # not used for local
 REPOLENS_AI_MODEL=llama3

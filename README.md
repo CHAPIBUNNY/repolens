@@ -83,7 +83,7 @@ Run `npx @chappibunny/repolens migrate` to automatically update your workflow fi
 | **Everyone** | System Overview · Developer Onboarding · Change Impact |
 | **Engineers** | Architecture Overview · Module Catalog · API Surface · Route Map · System Map |
 
-**Two modes:** Deterministic (free, fast, always works) or AI-Enhanced (optional — OpenAI, Anthropic, Azure, Ollama).
+**Two modes:** Deterministic (free, fast, always works) or AI-Enhanced (optional — GitHub Models, OpenAI, Anthropic, Google, Azure, Ollama).
 
 ---
 

@@ -99,13 +99,34 @@ AI-enhanced documentation adds natural language explanations for non-technical a
 
 ### Choose an AI Provider
 
-RepoLens works with any OpenAI-compatible API:
+RepoLens works with multiple AI providers:
+- **GitHub Models** (free tier — recommended for GitHub Actions, uses `GITHUB_TOKEN`)
 - **OpenAI** (gpt-5-mini, gpt-5.4, gpt-5-nano)
-- **Anthropic Claude** (via API gateway)
+- **Anthropic Claude** (native adapter)
+- **Google Gemini** (native adapter)
 - **Azure OpenAI** (enterprise deployments)
 - **Local Models** (Ollama, LM Studio, etc.)
 
-### Add Environment Variables
+### Option A: GitHub Models (Free — Recommended)
+
+Every GitHub repo gets free access to AI models. No API key signup needed.
+
+In your GitHub Actions workflow:
+```yaml
+env:
+  REPOLENS_AI_ENABLED: true
+  REPOLENS_AI_PROVIDER: github
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+For local development, create a [personal access token](https://github.com/settings/tokens) and add to `.env`:
+```bash
+REPOLENS_AI_ENABLED=true
+REPOLENS_AI_PROVIDER=github
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
+```
+
+### Option B: OpenAI / Other Providers
 
 Create `.env` in your project root:
 ```bash
@@ -140,9 +161,11 @@ features:
 - Small repo (<50 files): $0.10–$0.30 per run
 - Medium repo (50–200 files): $0.30–$0.80 per run
 - Large repo (200+ files): $0.80–$2.00 per run
+- **Free** with GitHub Models (gpt-4o-mini, rate-limited)
 
-**For GitHub Actions**, add as repository secret:
-- Name: `AI_KEY`, Value: `sk-xxxxx` (your OpenAI API key)
+**For GitHub Actions**, add as repository secrets:
+- For GitHub Models: no extra secrets needed — `GITHUB_TOKEN` is automatic
+- For OpenAI/other: Name: `AI_KEY`, Value: your API key
 
 See [AI.md](AI.md) for complete AI documentation and provider setup.
 

@@ -42,8 +42,8 @@ function sanitizeAIOutput(text) {
 /**
  * Try structured JSON mode first, fall back to plain-text AI, then deterministic.
  */
-async function generateWithStructuredFallback(key, promptText, maxTokens, fallbackFn) {
-  if (!isAIEnabled()) return fallbackFn();
+async function generateWithStructuredFallback(key, promptText, maxTokens, fallbackFn, config) {
+  if (!isAIEnabled(config)) return fallbackFn();
 
   const schema = AI_SCHEMAS[key];
 
@@ -58,6 +58,7 @@ async function generateWithStructuredFallback(key, promptText, maxTokens, fallba
       maxTokens,
       jsonMode: true,
       jsonSchema: schema,
+      config,
     });
 
     if (result.success && result.parsed) {
@@ -74,6 +75,7 @@ async function generateWithStructuredFallback(key, promptText, maxTokens, fallba
     system: SYSTEM_PROMPT,
     user: promptText,
     maxTokens,
+    config,
   });
 
   if (!result.success) {
@@ -84,57 +86,63 @@ async function generateWithStructuredFallback(key, promptText, maxTokens, fallba
   return sanitizeAIOutput(result.text);
 }
 
-export async function generateExecutiveSummary(context, enrichment = {}) {
+export async function generateExecutiveSummary(context, enrichment = {}, config) {
   return generateWithStructuredFallback(
     "executive_summary",
     createExecutiveSummaryPrompt(context),
     1500,
     () => getFallbackExecutiveSummary(context, enrichment),
+    config,
   );
 }
 
-export async function generateSystemOverview(context, enrichment = {}) {
+export async function generateSystemOverview(context, enrichment = {}, config) {
   return generateWithStructuredFallback(
     "system_overview",
     createSystemOverviewPrompt(context),
     1200,
     () => getFallbackSystemOverview(context, enrichment),
+    config,
   );
 }
 
-export async function generateBusinessDomains(context, enrichment = {}) {
+export async function generateBusinessDomains(context, enrichment = {}, config) {
   return generateWithStructuredFallback(
     "business_domains",
     createBusinessDomainsPrompt(context),
     2000,
     () => getFallbackBusinessDomains(context, enrichment),
+    config,
   );
 }
 
-export async function generateArchitectureOverview(context, enrichment = {}) {
+export async function generateArchitectureOverview(context, enrichment = {}, config) {
   return generateWithStructuredFallback(
     "architecture_overview",
     createArchitectureOverviewPrompt(context),
     1800,
     () => getFallbackArchitectureOverview(context, enrichment),
+    config,
   );
 }
 
-export async function generateDataFlows(flows, context, enrichment = {}) {
+export async function generateDataFlows(flows, context, enrichment = {}, config) {
   return generateWithStructuredFallback(
     "data_flows",
     createDataFlowsPrompt(flows, context),
     1800,
     () => getFallbackDataFlows(flows, context, enrichment),
+    config,
   );
 }
 
-export async function generateDeveloperOnboarding(context, enrichment = {}) {
+export async function generateDeveloperOnboarding(context, enrichment = {}, config) {
   return generateWithStructuredFallback(
     "developer_onboarding",
     createDeveloperOnboardingPrompt(context),
     2200,
     () => getFallbackDeveloperOnboarding(context, enrichment),
+    config,
   );
 }
 
