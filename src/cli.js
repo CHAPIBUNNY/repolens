@@ -21,7 +21,7 @@ import { upsertPrComment } from "./delivery/comment.js";
 import { runInit } from "./init.js";
 import { runMigrate } from "./migrate.js";
 import { runWatch } from "./watch.js";
-import { info, error, warn } from "./utils/logger.js";
+import { info, error, warn, fmt } from "./utils/logger.js";
 import { formatError } from "./utils/errors.js";
 import { checkForUpdates } from "./utils/update-check.js";
 import { generateDocumentSet } from "./docs/generate-doc-set.js";
@@ -520,23 +520,25 @@ async function main() {
       info("\nTo publish to Notion, Confluence, or GitHub Wiki, run: repolens publish");
       
       if (aiAutoEnabled) {
-        info("\n🤖 AI-enhanced docs were generated using GitHub Models (free tier)");
+        info(`\n🤖 AI-enhanced docs were generated using ${fmt.boldGreen("GitHub Models (FREE)")}`);
         info("   To keep AI enabled permanently, run: repolens init --interactive");
       } else if (!cfg.ai?.enabled && process.env.REPOLENS_AI_ENABLED !== "true") {
-        info("\n─────────────────────────────────────────────────────────────────");
-        info("💡 Your docs are missing AI-enhanced sections:");
-        info("   • Executive Summary — plain language overview for leadership");
-        info("   • Business Domains — what the system does for stakeholders");
-        info("   • Architecture Overview — deeper narrative for architects");
-        info("   • Data Flows — how information moves through your system");
-        info("   • Developer Onboarding — getting started guide for new hires");
-        info("");
-        info("   To enable for FREE with GitHub Models:");
-        info("     export GITHUB_TOKEN=<your-token>");
-        info("     repolens demo");
-        info("");
-        info("   Or run: repolens init --interactive → select GitHub Models");
-        info("─────────────────────────────────────────────────────────────────");
+        info(`\n${fmt.cyan("┌──────────────────────────────────────────────────────────────────┐")}`);
+        info(`${fmt.cyan("│")} ${fmt.boldYellow("✨ Unlock AI-Enhanced Documentation")}                             ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("├──────────────────────────────────────────────────────────────────┤")}`);
+        info(`${fmt.cyan("│")} Your docs are missing these AI-powered sections:                ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Executive Summary — plain language overview for leadership   ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Business Domains — what the system does for stakeholders    ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Architecture Overview — deeper narrative for architects     ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Data Flows — how information moves through your system      ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Developer Onboarding — getting started guide for new hires  ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("│")}                                                                  ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("│")} ${fmt.boldGreen("🆓 Enable for FREE with GitHub Models:")}                          ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("│")}   ${fmt.green("export GITHUB_TOKEN=<your-token>")}                            ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("│")}   ${fmt.green("repolens demo")}                                               ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("│")}                                                                  ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("│")} Or run: ${fmt.brightCyan("repolens init --interactive")} → select GitHub Models      ${fmt.cyan("│")}`);
+        info(`${fmt.cyan("└──────────────────────────────────────────────────────────────────┘")}`);
       }
       
       printPerformanceSummary();

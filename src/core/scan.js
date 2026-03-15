@@ -136,7 +136,70 @@ function routePathFromFile(file) {
   return file;
 }
 
-async function extractRepoMetadata(repoRoot) {
+/**
+ * Detect languages from file extensions
+ */
+function detectLanguagesFromFiles(files) {
+  const languages = new Set();
+  
+  // Extension to language mapping
+  const extensionMap = {
+    // JavaScript/TypeScript
+    ".js": "JavaScript",
+    ".mjs": "JavaScript",
+    ".cjs": "JavaScript",
+    ".jsx": "JavaScript",
+    ".ts": "TypeScript",
+    ".tsx": "TypeScript",
+    // Python
+    ".py": "Python",
+    ".pyw": "Python",
+    ".pyi": "Python",
+    // Go
+    ".go": "Go",
+    // Rust
+    ".rs": "Rust",
+    // Java
+    ".java": "Java",
+    // C/C++
+    ".c": "C",
+    ".h": "C",
+    ".cpp": "C++",
+    ".hpp": "C++",
+    ".cc": "C++",
+    ".cxx": "C++",
+    // C#
+    ".cs": "C#",
+    // Ruby
+    ".rb": "Ruby",
+    // PHP
+    ".php": "PHP",
+    // Swift
+    ".swift": "Swift",
+    // Kotlin
+    ".kt": "Kotlin",
+    ".kts": "Kotlin",
+    // Scala
+    ".scala": "Scala",
+    // Shell
+    ".sh": "Shell",
+    ".bash": "Shell",
+    ".zsh": "Shell",
+    // SQL
+    ".sql": "SQL",
+  };
+
+  for (const file of files) {
+    const ext = path.extname(file).toLowerCase();
+    if (extensionMap[ext]) {
+      languages.add(extensionMap[ext]);
+    }
+  }
+
+  return languages;
+}
+
+async function extractRepoMetadata(repoRoot, files = []) {
   const metadata = {
     hasPackageJson: false,
     frameworks: [],
@@ -191,11 +254,8 @@ async function extractRepoMetadata(repoRoot) {
     if (allDeps["swc"] || allDeps["@swc/core"]) metadata.buildTools.push("SWC");
     if (allDeps["parcel"]) metadata.buildTools.push("Parcel");
 
-    // Detect languages
+    // Detect TypeScript from dependencies (supplements file detection)
     if (allDeps["typescript"]) metadata.languages.add("TypeScript");
-
-    // Infer JavaScript if package.json exists (any npm project uses JS/Node)
-    metadata.languages.add("JavaScript");
 
     // Detect Node.js runtime indicators
     const hasNodeEngines = pkg.engines && pkg.engines.node;
@@ -209,6 +269,82 @@ async function extractRepoMetadata(repoRoot) {
   } catch {
     // No package.json or invalid JSON
   }
+
+  // Detect Python frameworks and tools
+  try {
+    // Check for pyproject.toml (modern Python)
+    const pyprojectPath = path.join(repoRoot, "pyproject.toml");
+    const pyprojectContent = await fs.readFile(pyprojectPath, "utf8");
+    metadata.languages.add("Python");
+    
+    // Detect Python frameworks from pyproject.toml
+    if (/django/i.test(pyprojectContent)) metadata.frameworks.push("Django");
+    if (/fastapi/i.test(pyprojectContent)) metadata.frameworks.push("FastAPI");
+    if (/flask/i.test(pyprojectContent)) metadata.frameworks.push("Flask");
+    if (/pytest/i.test(pyprojectContent)) metadata.testFrameworks.push("pytest");
+    if (/poetry/i.test(pyprojectContent)) metadata.buildTools.push("Poetry");
+  } catch {
+    // No pyproject.toml
+  }
+
+  try {
+    // Check for requirements.txt
+    const reqPath = path.join(repoRoot, "requirements.txt");
+    const reqContent = await fs.readFile(reqPath, "utf8");
+    metadata.languages.add("Python");
+    
+    if (/django/i.test(reqContent)) metadata.frameworks.push("Django");
+    if (/fastapi/i.test(reqContent)) metadata.frameworks.push("FastAPI");
+    if (/flask/i.test(reqContent)) metadata.frameworks.push("Flask");
+    if (/pytest/i.test(reqContent)) metadata.testFrameworks.push("pytest");
+  } catch {
+    // No requirements.txt
+  }
+
+  try {
+    // Check for setup.py (legacy Python)
+    await fs.access(path.join(repoRoot, "setup.py"));
+    metadata.languages.add("Python");
+  } catch {
+    // No setup.py
+  }
+
+  // Detect Go modules
+  try {
+    const goModPath = path.join(repoRoot, "go.mod");
+    const goModContent = await fs.readFile(goModPath, "utf8");
+    metadata.languages.add("Go");
+    
+    if (/gin-gonic/i.test(goModContent)) metadata.frameworks.push("Gin");
+    if (/echo/i.test(goModContent)) metadata.frameworks.push("Echo");
+    if (/fiber/i.test(goModContent)) metadata.frameworks.push("Fiber");
+  } catch {
+    // No go.mod
+  }
+
+  // Detect Rust via Cargo.toml
+  try {
+    const cargoPath = path.join(repoRoot, "Cargo.toml");
+    const cargoContent = await fs.readFile(cargoPath, "utf8");
+    metadata.languages.add("Rust");
+    
+    if (/actix/i.test(cargoContent)) metadata.frameworks.push("Actix");
+    if (/rocket/i.test(cargoContent)) metadata.frameworks.push("Rocket");
+    if (/tokio/i.test(cargoContent)) metadata.frameworks.push("Tokio");
+  } catch {
+    // No Cargo.toml
+  }
+
+  // Merge languages detected from file extensions
+  const fileLanguages = detectLanguagesFromFiles(files);
+  for (const lang of fileLanguages) {
+    metadata.languages.add(lang);
+  }
+
+  // De-duplicate frameworks (in case detected from multiple sources)
+  metadata.frameworks = [...new Set(metadata.frameworks)];
+  metadata.testFrameworks = [...new Set(metadata.testFrameworks)];
+  metadata.buildTools = [...new Set(metadata.buildTools)];
 
   return metadata;
 }
@@ -435,8 +571,8 @@ export async function scanRepo(cfg) {
     }
   }
 
-  // Extract repository metadata
-  const metadata = await extractRepoMetadata(repoRoot);
+  // Extract repository metadata (pass files for language detection)
+  const metadata = await extractRepoMetadata(repoRoot, files);
 
   // Detect external API integrations
   const externalApis = await detectExternalApis(files, repoRoot);
