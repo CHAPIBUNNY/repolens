@@ -42,7 +42,7 @@ describe("runInit", () => {
     expect(env).toContain("gpt-4o-mini");
   });
 
-  it("workflow template contains commented GitHub Models env vars", async () => {
+  it("workflow template contains GitHub Models env vars enabled by default", async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "repolens-init-wf-"));
     await runInit(tempDir);
 
@@ -53,8 +53,8 @@ describe("runInit", () => {
     expect(wf).toContain("REPOLENS_AI_PROVIDER: github");
     expect(wf).toContain("REPOLENS_AI_ENABLED: true");
     expect(wf).toContain("GITHUB_TOKEN");
-    // Should be commented out by default
-    expect(wf).toContain("# REPOLENS_AI_ENABLED: true");
+    // AI should be enabled by default (not commented out) since GitHub Models is free
+    expect(wf).not.toContain("# REPOLENS_AI_ENABLED: true");
   });
 
   it("README contains GitHub Models as Option A", async () => {

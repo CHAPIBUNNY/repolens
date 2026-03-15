@@ -245,7 +245,7 @@ The codebase follows ${context.patterns.length > 0 ? context.patterns.join(", ")
 
 ---
 
-*This summary is generated deterministically from repository structure. Enable AI enhancement (\`REPOLENS_AI_ENABLED=true\`) for natural language insights tailored to non-technical readers.*`;
+*This summary was generated from repository structure analysis. Set \`GITHUB_TOKEN\` to auto-enable AI-enhanced summaries via GitHub Models (free) \u2014 adds plain-language explanations for non-technical readers, strategic recommendations, and risk assessments.*`;
 
   return output;
 }
@@ -353,7 +353,7 @@ ${context.domains.slice(0, 5).map((d, i) => `| ${i + 1} | ${d.name} | ${d.fileCo
 
   output += `---
 
-*This overview is generated deterministically. Enable AI enhancement (\`REPOLENS_AI_ENABLED=true\`) for richer contextual explanations.*`;
+*This overview was generated from repository structure analysis. Set \`GITHUB_TOKEN\` to auto-enable AI via GitHub Models (free) \u2014 adds narrative context, architectural rationale, and technology trade-off analysis.*`;
 
   return output;
 }
@@ -412,7 +412,7 @@ function getFallbackBusinessDomains(context, enrichment = {}) {
     output += "\n";
   }
   
-  output += `---\n\n*Domain mapping is based on directory naming conventions. Enable AI enhancement (\`REPOLENS_AI_ENABLED=true\`) for natural language descriptions aimed at non-technical stakeholders.*`;
+  output += `---\n\n*Domain mapping is based on directory naming conventions. Set \`GITHUB_TOKEN\` to auto-enable AI via GitHub Models (free) \u2014 adds business-language descriptions, stakeholder impact analysis, and cross-domain relationship narratives.*`;
   
   return output;
 }
@@ -533,7 +533,7 @@ The repository comprises **${context.project.filesScanned} files** organized int
 
   output += `---
 
-*This architecture overview is generated deterministically. Enable AI enhancement (\`REPOLENS_AI_ENABLED=true\`) for deeper architectural narratives.*`;
+*This architecture overview was generated from repository structure analysis. Set \`GITHUB_TOKEN\` to auto-enable AI via GitHub Models (free) \u2014 adds architectural narratives, design rationale, scalability analysis, and refactoring recommendations.*`;
 
   return output;
 }
@@ -559,7 +559,7 @@ function getFallbackDataFlows(flows, context, enrichment = {}) {
 
   if (allFlows.length === 0) {
     output += `No data flows were detected. This typically means the system uses straightforward request–response patterns without distinct multi-step pipelines.\n\n`;
-    output += `---\n\n*Enable AI enhancement (\`REPOLENS_AI_ENABLED=true\`) for heuristic-based flow descriptions.*`;
+    output += `---\n\n*Set \`GITHUB_TOKEN\` to auto-enable AI via GitHub Models (free) \u2014 AI can infer data flows from import patterns even when heuristics find none.*`;
     return output;
   }
 
@@ -603,7 +603,7 @@ function getFallbackDataFlows(flows, context, enrichment = {}) {
     }
   }
   
-  output += `---\n\n*Flow detection is based on naming conventions and import patterns. Enable AI enhancement (\`REPOLENS_AI_ENABLED=true\`) for natural language flow narratives.*`;
+  output += `---\n\n*Flow detection is based on naming conventions and import patterns. Set \`GITHUB_TOKEN\` to auto-enable AI via GitHub Models (free) \u2014 adds end-to-end flow narratives, failure mode analysis, and data transformation descriptions.*`;
   
   return output;
 }
@@ -715,7 +715,7 @@ ${context.topModules.slice(0, 10).map(m => `| \`${m.key}\` | ${m.fileCount} | ${
 
   output += `\n\n---
 
-*This onboarding guide is generated deterministically. Enable AI enhancement (\`REPOLENS_AI_ENABLED=true\`) for a narrative-style guide with tips and common pitfalls.*`;
+*This onboarding guide was generated from repository structure analysis. Set \`GITHUB_TOKEN\` to auto-enable AI via GitHub Models (free) \u2014 adds narrative walkthroughs, common pitfalls, debugging tips, and contribution guidelines.*`;
 
   return output;
 }

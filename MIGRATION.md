@@ -28,7 +28,7 @@ npm uninstall -g @rabitai/repolens
 npm install -g @chappibunny/repolens
 ```
 
-Or run `repolens migrate` to auto-update workflow files.
+Or run `npx @chappibunny/repolens migrate` to auto-update workflow files.
 
 ### Confluence Publisher (New in v0.6.0+)
 
@@ -78,7 +78,7 @@ Run cd tools/repolens
 cd: tools/repolens: No such file or directory
 ```
 
-**Your workflow has an outdated format.** Run `repolens migrate` or update manually:
+**Your workflow has an outdated format.** Run `npx @chappibunny/repolens migrate` or update manually:
 
 **Old format (v0.3.0 and earlier):**
 ```yaml
@@ -153,13 +153,13 @@ v0.4.0 is 100% backward compatible:
 
 ```bash
 # Preview changes without applying
-repolens migrate --dry-run
+npx @chappibunny/repolens migrate --dry-run
 
 # Apply migration with confirmation
-repolens migrate
+npx @chappibunny/repolens migrate
 
 # Apply without confirmation
-repolens migrate --force
+npx @chappibunny/repolens migrate --force
 ```
 
 The migration tool:
@@ -195,7 +195,7 @@ RepoLens checks for updates automatically:
 ### Manual Version Check
 
 ```bash
-repolens doctor
+npx @chappibunny/repolens doctor
 ```
 
 ### Installation Methods
@@ -283,7 +283,7 @@ npm install @chappibunny/repolens@latest
 ### Update notification not showing
 
 **Cause:** Checks are cached for 24 hours.  
-**Fix:** Run `repolens doctor` to force a check.
+**Fix:** Run `npx @chappibunny/repolens doctor` to force a check.
 
 ### "Command not found: repolens"
 

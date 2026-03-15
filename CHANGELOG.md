@@ -2,6 +2,25 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.8.2
+
+### 🐛 Bug Fixes
+
+- **Uninstall crash fixed**: `repolens uninstall` crashed with `Cannot read properties of undefined (reading 'trim')` when run via `npx`. The readline prompt used the callback-based `node:readline` API incorrectly with `await`. Fixed by wrapping in a proper Promise with null guard.
+
+### ✨ AI Auto-Detection
+
+- **GITHUB_TOKEN auto-enables AI**: `demo`, `publish`, and `init` commands now detect `GITHUB_TOKEN` in the environment and automatically enable AI-enhanced docs via GitHub Models (free). No manual configuration needed.
+- **Workflow template enables AI by default**: The generated `.github/workflows/repolens.yml` now has `REPOLENS_AI_ENABLED`, `REPOLENS_AI_PROVIDER`, and `GITHUB_TOKEN` enabled (not commented out) since GitHub Models is free.
+- **Init auto-configures AI**: Non-interactive `repolens init` writes `ai.enabled: true` and `ai.provider: github` to `.repolens.yml` when `GITHUB_TOKEN` is detected.
+- **Better AI messaging**: Demo and publish commands show prominent status about AI mode (enabled/deterministic) with specific guidance on what AI adds.
+- **Sharper deterministic upsell**: All 6 fallback document types now explain exactly what AI adds (e.g., "adds plain-language explanations, strategic recommendations, and risk assessments") and mention `GITHUB_TOKEN` auto-detection.
+
+### 📖 Documentation
+
+- **Scoped package name everywhere**: All user-facing docs now use `npx @chappibunny/repolens` instead of bare `repolens`. Added warning about the squatted `repolens@0.0.1` placeholder package on npm.
+- Updated: README.md (commands table + warning), TROUBLESHOOTING.md, MIGRATION.md (6 instances), KNOWN_ISSUES.md (2 instances), bug report template.
+
 ## 1.8.1
 
 ### 📖 Documentation Refresh

@@ -65,7 +65,7 @@ npm uninstall -g @chappibunny/repolens
 npm install -g @chappibunny/repolens@latest
 ```
 
-Verify: `repolens version` should print the latest version.
+Verify: `npx @chappibunny/repolens version` should print the latest version.
 
 ---
 

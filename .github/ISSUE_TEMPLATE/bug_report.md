@@ -45,7 +45,7 @@ Example:
 
 - OS: [e.g. macOS, Linux, Windows]  
 - Node Version: [e.g. v20.11.0]  
-- RepoLens Version: [run `repolens --version`]  
+- RepoLens Version: [run `npx @chappibunny/repolens --version`]  
 - Package Manager: [e.g. npm, pnpm, yarn]  
 
 ---

@@ -39,7 +39,7 @@ These bugs were discovered in production and have been fixed:
 **Issue:** While migration is highly reliable (185 tests passing), edge cases may exist in complex workflows.
 
 **Workaround:** 
-1. Run `repolens migrate --dry-run` first
+1. Run `npx @chappibunny/repolens migrate --dry-run` first
 2. Review the diff before applying
 3. Check backup files created as `*.backup`
 4. Test locally with `npx @chappibunny/repolens@latest publish`
@@ -183,7 +183,7 @@ npx @chappibunny/repolens@latest publish --config ../shared/.repolens.yml
 
 **Impact:** Old documentation may reference unscoped name.
 
-**Migration:** Use `repolens migrate` to automatically update workflows.
+**Migration:** Use `npx @chappibunny/repolens migrate` to automatically update workflows.
 
 **Note:** Unscoped `repolens` package (v0.0.1) is a placeholder from another author.
 

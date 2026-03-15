@@ -89,10 +89,10 @@ jobs:
           CONFLUENCE_API_TOKEN: \${{ secrets.CONFLUENCE_API_TOKEN }}
           CONFLUENCE_SPACE_KEY: \${{ secrets.CONFLUENCE_SPACE_KEY }}
           CONFLUENCE_PARENT_PAGE_ID: \${{ secrets.CONFLUENCE_PARENT_PAGE_ID }}
-          # Uncomment to enable free AI-enhanced docs via GitHub Models:
-          # REPOLENS_AI_ENABLED: true
-          # REPOLENS_AI_PROVIDER: github
-          # GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          # AI-enhanced docs via GitHub Models (free)
+          REPOLENS_AI_ENABLED: true
+          REPOLENS_AI_PROVIDER: github
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
         run: npx @chappibunny/repolens@latest publish
 `;
 
@@ -324,9 +324,10 @@ function buildIgnorePatterns() {
   ];
 }
 
-function buildRepoLensConfig(projectName, detectedRoots) {
+function buildRepoLensConfig(projectName, detectedRoots, options = {}) {
   const includePatterns = buildIncludePatterns(detectedRoots);
   const ignorePatterns = buildIgnorePatterns();
+  const enableAI = options.enableAI || false;
 
   const lines = [
     `configVersion: 1`,
@@ -358,9 +359,34 @@ function buildRepoLensConfig(projectName, detectedRoots) {
     `#   owner: "your-username"`,
     `#   repo: "your-repo-name"`,
     ``,
-    `scan:`,
-    `  include:`
   ];
+
+  // AI configuration
+  if (enableAI) {
+    lines.push(`# AI-enhanced documentation (auto-detected GITHUB_TOKEN)`);
+    lines.push(`ai:`);
+    lines.push(`  enabled: true`);
+    lines.push(`  provider: github`);
+    lines.push(``);
+    lines.push(`features:`);
+    lines.push(`  executive_summary: true`);
+    lines.push(`  business_domains: true`);
+    lines.push(`  architecture_overview: true`);
+    lines.push(`  data_flows: true`);
+    lines.push(`  developer_onboarding: true`);
+    lines.push(`  change_impact: true`);
+    lines.push(``);
+  } else {
+    lines.push(`# AI-enhanced documentation (free via GitHub Models)`);
+    lines.push(`# Uncomment to enable — or set GITHUB_TOKEN and it auto-activates:`);
+    lines.push(`# ai:`);
+    lines.push(`#   enabled: true`);
+    lines.push(`#   provider: github`);
+    lines.push(``);
+  }
+
+  lines.push(`scan:`);
+  lines.push(`  include:`);
 
   if (includePatterns.length) {
     for (const pattern of includePatterns) {
@@ -725,9 +751,12 @@ export async function runInit(targetDir = process.cwd(), options = {}) {
 
   const projectName = wizardAnswers?.projectName || detectProjectName(repoRoot);
   const detectedRoots = wizardAnswers ? [] : await detectRepoStructure(repoRoot);
+
+  // Auto-detect GITHUB_TOKEN for AI enablement
+  const hasGitHubToken = !!process.env.GITHUB_TOKEN;
   const configContent = wizardAnswers
     ? buildWizardConfig(wizardAnswers)
-    : buildRepoLensConfig(projectName, detectedRoots);
+    : buildRepoLensConfig(projectName, detectedRoots, { enableAI: hasGitHubToken });
 
   info(`Detected project name: ${projectName}`);
 
@@ -786,8 +815,11 @@ NOTION_VERSION=2022-06-28
   }
 
   info("\n✨ RepoLens initialization complete!\n");
-  
-  if (notionCredentials) {
+    if (hasGitHubToken && !wizardAnswers) {
+    info("🤖 Detected GITHUB_TOKEN — AI-enhanced docs enabled via GitHub Models (free)");
+    info("   Your workflow and config are pre-configured. No extra setup needed.\n");
+  }
+    if (notionCredentials) {
     info("🎉 Notion publishing is ready!");
     info("   Your credentials are stored in .env (gitignored)\n");
     info("Next steps:");
@@ -812,16 +844,18 @@ NOTION_VERSION=2022-06-28
     info("  2. To enable Notion publishing:");
     info("     - Copy .env.example to .env and add your credentials, OR");
     info("     - Add GitHub secrets: NOTION_TOKEN, NOTION_PARENT_PAGE_ID");
-    info("  3. (Optional) Enable AI features:");
-    info("     ── FREE: GitHub Models (recommended for GitHub Actions) ──");
-    info("     REPOLENS_AI_ENABLED=true");
-    info("     REPOLENS_AI_PROVIDER=github");
-    info("     (Uses your GITHUB_TOKEN automatically — no API key signup needed)");
-    info("     ── Or: OpenAI / Anthropic / Google ──");
-    info("     REPOLENS_AI_ENABLED=true");
-    info("     REPOLENS_AI_API_KEY=sk-...");
-    info("     See: https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md");
-    info("  4. Run 'npx @chappibunny/repolens publish' to test locally");
-    info("  5. Commit the generated files");
+    if (!hasGitHubToken) {
+      info("  3. (Optional) Enable AI features:");
+      info("     \u2500\u2500 FREE: GitHub Models (recommended for GitHub Actions) \u2500\u2500");
+      info("     REPOLENS_AI_ENABLED=true");
+      info("     REPOLENS_AI_PROVIDER=github");
+      info("     (Uses your GITHUB_TOKEN automatically \u2014 no API key signup needed)");
+      info("     \u2500\u2500 Or: OpenAI / Anthropic / Google \u2500\u2500");
+      info("     REPOLENS_AI_ENABLED=true");
+      info("     REPOLENS_AI_API_KEY=sk-...");
+      info("     See: https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md");
+    }
+    info(`  ${hasGitHubToken ? "3" : "4"}. Run 'npx @chappibunny/repolens publish' to test locally`);
+    info(`  ${hasGitHubToken ? "4" : "5"}. Commit the generated files`);
   }
 }

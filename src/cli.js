@@ -338,6 +338,14 @@ async function main() {
       process.exit(EXIT_VALIDATION);
     }
 
+    // Auto-detect GITHUB_TOKEN and enable AI with GitHub Models (free)
+    if (!cfg.ai?.enabled && process.env.REPOLENS_AI_ENABLED !== "true" && process.env.GITHUB_TOKEN) {
+      info("✨ GITHUB_TOKEN detected — enabling AI-enhanced docs via GitHub Models (free)");
+      cfg.ai = { enabled: true, provider: "github" };
+      process.env.REPOLENS_AI_ENABLED = "true";
+      process.env.REPOLENS_AI_PROVIDER = "github";
+    }
+
     // Load plugins
     let pluginManager;
     try {
@@ -472,6 +480,22 @@ async function main() {
       };
     }
     
+    // Auto-detect GITHUB_TOKEN and enable AI with GitHub Models (free)
+    const aiAlreadyConfigured = cfg.ai?.enabled || process.env.REPOLENS_AI_ENABLED === "true";
+    let aiAutoEnabled = false;
+    if (!aiAlreadyConfigured && process.env.GITHUB_TOKEN) {
+      info("\n✨ GITHUB_TOKEN detected — enabling AI-enhanced docs via GitHub Models (free)");
+      cfg.ai = { enabled: true, provider: "github" };
+      process.env.REPOLENS_AI_ENABLED = "true";
+      process.env.REPOLENS_AI_PROVIDER = "github";
+      aiAutoEnabled = true;
+    } else if (aiAlreadyConfigured) {
+      info("\n🤖 AI-enhanced documentation enabled");
+    } else {
+      info("\n📄 Running in deterministic mode (no GITHUB_TOKEN detected)");
+      info("   Set GITHUB_TOKEN to auto-enable free AI-enhanced docs via GitHub Models");
+    }
+    
     try {
       info("Scanning repository...");
       const scanTimer = startTimer("scan");
@@ -495,10 +519,24 @@ async function main() {
       info("Browse your docs: open the .repolens/ directory");
       info("\nTo publish to Notion, Confluence, or GitHub Wiki, run: repolens publish");
       
-      // Upsell AI enhancement when not already enabled
-      if (!cfg.ai?.enabled && process.env.REPOLENS_AI_ENABLED !== "true") {
-        info("\n💡 Want richer, AI-enhanced docs? Run: repolens init --interactive");
-        info("   Select GitHub Models (free) — uses your existing GITHUB_TOKEN, no extra keys needed.");
+      if (aiAutoEnabled) {
+        info("\n🤖 AI-enhanced docs were generated using GitHub Models (free tier)");
+        info("   To keep AI enabled permanently, run: repolens init --interactive");
+      } else if (!cfg.ai?.enabled && process.env.REPOLENS_AI_ENABLED !== "true") {
+        info("\n─────────────────────────────────────────────────────────────────");
+        info("💡 Your docs are missing AI-enhanced sections:");
+        info("   • Executive Summary — plain language overview for leadership");
+        info("   • Business Domains — what the system does for stakeholders");
+        info("   • Architecture Overview — deeper narrative for architects");
+        info("   • Data Flows — how information moves through your system");
+        info("   • Developer Onboarding — getting started guide for new hires");
+        info("");
+        info("   To enable for FREE with GitHub Models:");
+        info("     export GITHUB_TOKEN=<your-token>");
+        info("     repolens demo");
+        info("");
+        info("   Or run: repolens init --interactive → select GitHub Models");
+        info("─────────────────────────────────────────────────────────────────");
       }
       
       printPerformanceSummary();
@@ -575,10 +613,12 @@ async function main() {
         info("\nCI/test environment detected — skipping confirmation (use --force to suppress this message).");
       } else {
         const rl = createInterface({ input: process.stdin, output: process.stdout });
-        const answer = await rl.question(`\nRemove ${found.length} item${found.length === 1 ? "" : "s"}? This cannot be undone. (y/N): `);
+        const answer = await new Promise((resolve) => {
+          rl.question(`\nRemove ${found.length} item${found.length === 1 ? "" : "s"}? This cannot be undone. (y/N): `, resolve);
+        });
         rl.close();
         
-        if (answer.trim().toLowerCase() !== "y") {
+        if (!answer || answer.trim().toLowerCase() !== "y") {
           info("Uninstall cancelled.");
           await closeTelemetry();
           return;

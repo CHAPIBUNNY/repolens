@@ -148,16 +148,19 @@ Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki,
 
 | Command | Description |
 |---|---|
-| `repolens init` | Scaffold config + GitHub Actions workflow |
-| `repolens init --interactive` | Step-by-step configuration wizard |
-| `repolens publish` | Scan, generate, and publish documentation |
-| `repolens demo` | Quick local preview — no API keys needed |
-| `repolens doctor` | Validate your setup |
-| `repolens watch` | Auto-regenerate docs on file changes |
-| `repolens migrate` | Upgrade from v0.3.0 workflows ([details](MIGRATION.md)) |
-| `repolens uninstall` | Remove all RepoLens files (config, docs, workflow) |
-| `repolens uninstall --force` | Remove without confirmation prompt |
-| `repolens feedback` | Send feedback to the team |
+| `npx @chappibunny/repolens init` | Scaffold config + GitHub Actions workflow |
+| `npx @chappibunny/repolens init --interactive` | Step-by-step configuration wizard |
+| `npx @chappibunny/repolens publish` | Scan, generate, and publish documentation |
+| `npx @chappibunny/repolens demo` | Quick local preview — no API keys needed |
+| `npx @chappibunny/repolens doctor` | Validate your setup |
+| `npx @chappibunny/repolens watch` | Auto-regenerate docs on file changes |
+| `npx @chappibunny/repolens migrate` | Upgrade from v0.3.0 workflows ([details](MIGRATION.md)) |
+| `npx @chappibunny/repolens uninstall` | Remove all RepoLens files (config, docs, workflow) |
+| `npx @chappibunny/repolens uninstall --force` | Remove without confirmation prompt |
+| `npx @chappibunny/repolens feedback` | Send feedback to the team |
+
+> **Note:** If you installed globally with `npm install -g @chappibunny/repolens`, you can use the shorter `repolens <command>` form.
+> **Warning:** Do not run bare `npx repolens` — there is an unrelated `repolens@0.0.1` placeholder package on npm. Always use the scoped name `@chappibunny/repolens`.
 
 ---
 
@@ -255,7 +258,7 @@ When you open a pull request, RepoLens posts:
 - **Report issues**: Share bugs, edge cases, or UX friction
 - **Request features**: Tell us what's missing
 - **Build plugins**: Extend RepoLens with custom renderers and publishers
-- **Share feedback**: `repolens feedback`
+- **Share feedback**: `npx @chappibunny/repolens feedback`
 
 ---
 
