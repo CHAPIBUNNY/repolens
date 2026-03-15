@@ -2,6 +2,20 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.9.2
+
+### 🐛 Bug Fixes
+
+- **Notion duplicate pages fixed**: Publishing no longer creates duplicate pages on every release. Added Notion Search API as primary lookup method for existing pages (more reliable than child block iteration), with case-insensitive title matching fallback.
+- **Confluence empty pages fixed**: Executive Summary, System Overview, Business Domains and other AI-generated docs now publish correctly to Confluence. Added defensive null/empty content checks with helpful fallback messages instead of blank pages.
+- **Document generation validation**: All document generators now validate output and provide error placeholders if generation fails, ensuring publishers always have content to work with.
+- **Notion publisher robustness**: Now iterates over all rendered pages (not just config-defined ones), with content length logging for debugging.
+
+### 🧪 Tests
+
+- Added test for `markdownToConfluenceStorage` handling of empty/null content
+- **380 tests passing** across 22 test files
+
 ## 1.8.2
 
 ### 🐛 Bug Fixes

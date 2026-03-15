@@ -1,6 +1,6 @@
 {
   "name": "@chappibunny/repolens",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "AI-assisted documentation intelligence system for technical and non-technical audiences",
   "license": "MIT",
   "type": "module",
@@ -11,10 +11,10 @@
   "files": [
     "bin",
     "src",
+    "docs",
     "package.json",
     "README.md",
-    "CHANGELOG.md",
-    "RELEASE.md"
+    "CHANGELOG.md"
   ],
   "keywords": [
     "cli",

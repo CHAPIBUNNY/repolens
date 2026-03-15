@@ -107,7 +107,7 @@ npm test -- tests/security-fuzzing.test.js
 - [ ] Minimal permissions in workflows
 
 **Security Documentation**:
-- [ ] Review [SECURITY.md](SECURITY.md) for threat model
+- [ ] Review [SECURITY.md](../SECURITY.md) for threat model
 - [ ] Understand secret detection patterns
 - [ ] Configure security reporting process
 

@@ -308,6 +308,22 @@ describe("Confluence publisher error handling", () => {
     expect(html).toContain("<table>");
     expect(html).toContain("<th>Name</th>");
   });
+
+  it("markdownToConfluenceStorage handles empty and null content gracefully", async () => {
+    const { markdownToConfluenceStorage } = await import("../src/publishers/confluence.js");
+    
+    // Null content should return a fallback message
+    const nullResult = markdownToConfluenceStorage(null);
+    expect(nullResult).toContain("No content available");
+    
+    // Empty string should return a fallback message
+    const emptyResult = markdownToConfluenceStorage("");
+    expect(emptyResult).toContain("No content available");
+    
+    // Whitespace-only content should return a fallback message
+    const whitespaceResult = markdownToConfluenceStorage("   \n\n   ");
+    expect(whitespaceResult).toContain("No content available");
+  });
 });
 
 // ============================================================

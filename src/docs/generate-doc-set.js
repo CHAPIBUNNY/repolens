@@ -118,16 +118,29 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
         pluginManager,
       });
       
+      // Validate that content was actually generated
+      if (!content || (typeof content === "string" && content.trim() === "")) {
+        warn(`Document ${docPlan.key} returned empty content, using placeholder`);
+        content = `# ${docPlan.title}\n\n> This document could not be generated. Check the logs for errors.\n`;
+      }
+      
       documents.push({
         ...docPlan,
         content,
         generated: new Date().toISOString()
       });
       
-      info(`✓ Generated ${docPlan.filename}`);
+      info(`✓ Generated ${docPlan.filename} (${content.length} chars)`);
       
     } catch (error) {
-      info(`✗ Failed to generate ${docPlan.filename}: ${error.message}`);
+      warn(`✗ Failed to generate ${docPlan.filename}: ${error.message}`);
+      // Add placeholder document so publishers know about the failure
+      documents.push({
+        ...docPlan,
+        content: `# ${docPlan.title}\n\n> **Generation Error:** ${error.message}\n\nPlease check the RepoLens logs for details.\n`,
+        generated: new Date().toISOString(),
+        error: true
+      });
     }
   }
 

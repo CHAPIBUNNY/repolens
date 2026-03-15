@@ -2,6 +2,7 @@ import "dotenv/config";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createInterface } from "node:readline/promises";
 import { loadConfig } from "./core/config.js";
 import { scanRepo } from "./core/scan.js";
 import { getGitDiff } from "./core/diff.js";
@@ -39,7 +40,6 @@ import {
   sendFeedback,
   getTimings
 } from "./utils/telemetry.js";
-import { createInterface } from "node:readline";
 
 // Standardized exit codes
 const EXIT_SUCCESS = 0;
@@ -49,6 +49,96 @@ const EXIT_VALIDATION = 2;
 function formatDuration(ms) {
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
+}
+
+/**
+ * Simple Y/n prompt for CLI interaction
+ * Returns true for Y/y/yes/empty, false for N/n/no
+ */
+async function promptYesNo(question, defaultYes = true) {
+  // Skip prompts in CI or non-TTY environments
+  if (process.env.CI || process.env.REPOLENS_NON_INTERACTIVE || !process.stdin.isTTY) {
+    return defaultYes;
+  }
+  
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const suffix = defaultYes ? "(Y/n)" : "(y/N)";
+    const answer = await rl.question(`${question} ${suffix}: `);
+    const normalized = answer.trim().toLowerCase();
+    if (normalized === "") return defaultYes;
+    return normalized === "y" || normalized === "yes";
+  } finally {
+    rl.close();
+  }
+}
+
+/**
+ * Show AI enhancement prompt and optionally enable GitHub Models
+ * Returns true if AI was enabled by user, false otherwise
+ */
+async function promptForAI(cfg) {
+  const aiAlreadyConfigured = cfg.ai?.enabled || process.env.REPOLENS_AI_ENABLED === "true";
+  
+  // Already configured - no need to prompt
+  if (aiAlreadyConfigured) {
+    info(`\n🤖 AI-enhanced documentation ${fmt.boldGreen("enabled")}`);
+    return { enabled: true, wasPrompted: false };
+  }
+  
+  const hasGitHubToken = Boolean(process.env.GITHUB_TOKEN);
+  
+  // No token available - show instructions
+  if (!hasGitHubToken) {
+    return { enabled: false, wasPrompted: false, noToken: true };
+  }
+  
+  // Token available - prompt user
+  info(`\n${fmt.cyan("┌──────────────────────────────────────────────────────────────────┐")}`);
+  info(`${fmt.cyan("│")} ${fmt.boldYellow("✨ AI-Enhanced Documentation Available")}                         ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("├──────────────────────────────────────────────────────────────────┤")}`);
+  info(`${fmt.cyan("│")} GITHUB_TOKEN detected! You can enable ${fmt.boldGreen("FREE")} AI-powered docs:     ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Executive Summary — plain language overview for leadership   ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Business Domains — what the system does for stakeholders    ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Architecture Overview — deeper narrative for architects     ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Data Flows — how information moves through your system      ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Developer Onboarding — getting started guide for new hires  ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("└──────────────────────────────────────────────────────────────────┘")}`);
+  
+  const enableAI = await promptYesNo(`\n${fmt.boldGreen("🆓")} Enable free AI with GitHub Models?`, true);
+  
+  if (enableAI) {
+    cfg.ai = { enabled: true, provider: "github" };
+    process.env.REPOLENS_AI_ENABLED = "true";
+    process.env.REPOLENS_AI_PROVIDER = "github";
+    info(`\n${fmt.boldGreen("✓")} AI-enhanced documentation enabled via GitHub Models`);
+    return { enabled: true, wasPrompted: true };
+  } else {
+    info(`\n${fmt.dim("→")} Running in deterministic mode (AI skipped)`);
+    return { enabled: false, wasPrompted: true };
+  }
+}
+
+/**
+ * Show the post-generation AI notice for users without GITHUB_TOKEN
+ */
+function showPostGenerationAINotice() {
+  info(`\n${fmt.cyan("┌──────────────────────────────────────────────────────────────────┐")}`);
+  info(`${fmt.cyan("│")} ${fmt.boldYellow("✨ Unlock AI-Enhanced Documentation")}                             ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("├──────────────────────────────────────────────────────────────────┤")}`);
+  info(`${fmt.cyan("│")} Your docs are missing these AI-powered sections:                ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Executive Summary — plain language overview for leadership   ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Business Domains — what the system does for stakeholders    ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Architecture Overview — deeper narrative for architects     ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Data Flows — how information moves through your system      ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Developer Onboarding — getting started guide for new hires  ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}                                                                  ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")} ${fmt.boldGreen("🆓 Enable for FREE with GitHub Models:")}                          ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   ${fmt.green("export GITHUB_TOKEN=<your-token>")}                            ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   ${fmt.green("repolens demo")}                                               ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}                                                                  ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")} Or run: ${fmt.brightCyan("repolens init --interactive")} → select GitHub Models      ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("└──────────────────────────────────────────────────────────────────┘")}`);
 }
 
 function printPerformanceSummary() {
@@ -338,13 +428,8 @@ async function main() {
       process.exit(EXIT_VALIDATION);
     }
 
-    // Auto-detect GITHUB_TOKEN and enable AI with GitHub Models (free)
-    if (!cfg.ai?.enabled && process.env.REPOLENS_AI_ENABLED !== "true" && process.env.GITHUB_TOKEN) {
-      info("✨ GITHUB_TOKEN detected — enabling AI-enhanced docs via GitHub Models (free)");
-      cfg.ai = { enabled: true, provider: "github" };
-      process.env.REPOLENS_AI_ENABLED = "true";
-      process.env.REPOLENS_AI_PROVIDER = "github";
-    }
+    // Prompt for AI enhancement if GITHUB_TOKEN is available
+    const aiResult = await promptForAI(cfg);
 
     // Load plugins
     let pluginManager;
@@ -480,21 +565,8 @@ async function main() {
       };
     }
     
-    // Auto-detect GITHUB_TOKEN and enable AI with GitHub Models (free)
-    const aiAlreadyConfigured = cfg.ai?.enabled || process.env.REPOLENS_AI_ENABLED === "true";
-    let aiAutoEnabled = false;
-    if (!aiAlreadyConfigured && process.env.GITHUB_TOKEN) {
-      info("\n✨ GITHUB_TOKEN detected — enabling AI-enhanced docs via GitHub Models (free)");
-      cfg.ai = { enabled: true, provider: "github" };
-      process.env.REPOLENS_AI_ENABLED = "true";
-      process.env.REPOLENS_AI_PROVIDER = "github";
-      aiAutoEnabled = true;
-    } else if (aiAlreadyConfigured) {
-      info("\n🤖 AI-enhanced documentation enabled");
-    } else {
-      info("\n📄 Running in deterministic mode (no GITHUB_TOKEN detected)");
-      info("   Set GITHUB_TOKEN to auto-enable free AI-enhanced docs via GitHub Models");
-    }
+    // Prompt for AI enhancement if GITHUB_TOKEN is available
+    const aiResult = await promptForAI(cfg);
     
     try {
       info("Scanning repository...");
@@ -519,26 +591,12 @@ async function main() {
       info("Browse your docs: open the .repolens/ directory");
       info("\nTo publish to Notion, Confluence, or GitHub Wiki, run: repolens publish");
       
-      if (aiAutoEnabled) {
+      if (aiResult.enabled && aiResult.wasPrompted) {
         info(`\n🤖 AI-enhanced docs were generated using ${fmt.boldGreen("GitHub Models (FREE)")}`);
         info("   To keep AI enabled permanently, run: repolens init --interactive");
-      } else if (!cfg.ai?.enabled && process.env.REPOLENS_AI_ENABLED !== "true") {
-        info(`\n${fmt.cyan("┌──────────────────────────────────────────────────────────────────┐")}`);
-        info(`${fmt.cyan("│")} ${fmt.boldYellow("✨ Unlock AI-Enhanced Documentation")}                             ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("├──────────────────────────────────────────────────────────────────┤")}`);
-        info(`${fmt.cyan("│")} Your docs are missing these AI-powered sections:                ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Executive Summary — plain language overview for leadership   ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Business Domains — what the system does for stakeholders    ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Architecture Overview — deeper narrative for architects     ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Data Flows — how information moves through your system      ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Developer Onboarding — getting started guide for new hires  ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("│")}                                                                  ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("│")} ${fmt.boldGreen("🆓 Enable for FREE with GitHub Models:")}                          ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("│")}   ${fmt.green("export GITHUB_TOKEN=<your-token>")}                            ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("│")}   ${fmt.green("repolens demo")}                                               ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("│")}                                                                  ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("│")} Or run: ${fmt.brightCyan("repolens init --interactive")} → select GitHub Models      ${fmt.cyan("│")}`);
-        info(`${fmt.cyan("└──────────────────────────────────────────────────────────────────┘")}`);
+      } else if (aiResult.noToken) {
+        // No GITHUB_TOKEN - show instructions
+        showPostGenerationAINotice();
       }
       
       printPerformanceSummary();

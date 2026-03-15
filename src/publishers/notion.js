@@ -82,7 +82,48 @@ async function getChildBlocks(blockId) {
   return results;
 }
 
+/**
+ * Search for existing page using Notion's search API (more reliable than child block iteration)
+ */
+async function searchForPage(title) {
+  try {
+    const result = await notionRequest("POST", "/search", {
+      query: title,
+      filter: { property: "object", value: "page" },
+      page_size: 20
+    });
+
+    if (result.results?.length) {
+      // Find exact title match
+      for (const page of result.results) {
+        const pageTitle = page.properties?.title?.title?.[0]?.plain_text?.trim();
+        if (pageTitle === title) {
+          log(`Found existing page via search: "${title}" (${page.id})`);
+          return page.id;
+        }
+      }
+      // No exact match - try case-insensitive match
+      for (const page of result.results) {
+        const pageTitle = page.properties?.title?.title?.[0]?.plain_text?.trim();
+        if (pageTitle?.toLowerCase() === title.toLowerCase()) {
+          log(`Found existing page (case-insensitive) via search: "${pageTitle}" (${page.id})`);
+          return page.id;
+        }
+      }
+    }
+    return null;
+  } catch (err) {
+    log(`Search API failed, falling back to child block scan: ${err.message}`);
+    return null;
+  }
+}
+
 async function findExistingChildPageByTitle(parentPageId, title) {
+  // Try search API first (more reliable)
+  const searchResult = await searchForPage(title);
+  if (searchResult) return searchResult;
+
+  // Fall back to child block iteration
   const children = await getChildBlocks(parentPageId);
 
   log(`Looking for child page: "${title}"`);
@@ -93,8 +134,15 @@ async function findExistingChildPageByTitle(parentPageId, title) {
       const childTitle = child.child_page?.title?.trim();
       log(`Found child page block: "${childTitle}" (${child.id})`);
 
+      // Exact match
       if (childTitle === title) {
         log(`Reusing existing page: "${title}" (${child.id})`);
+        return child.id;
+      }
+      
+      // Case-insensitive match
+      if (childTitle?.toLowerCase() === title.toLowerCase()) {
+        log(`Reusing existing page (case-insensitive): "${childTitle}" (${child.id})`);
         return child.id;
       }
     }

@@ -378,5 +378,5 @@ Get notified when documentation changes significantly — rich embeds with cover
 - [Configuration Reference](CONFIGURATION.md) — Full `.repolens.yml` schema
 - [Environment Variables](ENVIRONMENT.md) — All env vars by feature
 - [Architecture](ARCHITECTURE.md) — Pipeline and project structure
-- [Security](SECURITY.md) — Threat model and hardening details
+- [Security](../SECURITY.md) — Threat model and hardening details
 - [Troubleshooting](TROUBLESHOOTING.md) — Common issues and fixes

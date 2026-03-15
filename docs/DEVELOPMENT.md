@@ -32,7 +32,7 @@ npm test
 - Watch mode and migration (including e2e)
 - Robustness (timeout, partial-publish, error isolation)
 
-**Coverage:** 379 tests passing across 22 test files
+**Coverage:** 380 tests passing across 22 test files
 
 ## Test Package Installation Locally
 

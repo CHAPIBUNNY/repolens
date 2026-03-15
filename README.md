@@ -10,14 +10,14 @@
 
 [![npm version](https://img.shields.io/npm/v/@chappibunny/repolens)](https://www.npmjs.com/package/@chappibunny/repolens)
 [![VS Code Extension](https://img.shields.io/visual-studio-marketplace/v/CHAPIBUNNY.repolens-architecture?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture)
-[![Tests](https://img.shields.io/badge/tests-379%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
+[![Tests](https://img.shields.io/badge/tests-380%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **Your architecture docs are already outdated.** RepoLens fixes that.
 
 RepoLens scans your repository, generates living architecture documentation, and publishes it to Notion, Confluence, GitHub Wiki, or Markdown — automatically on every push. Engineers get technical docs. Stakeholders get readable system overviews. Nobody writes a word.
 
-> Stable as of v1.0 — [API guarantees](STABILITY.md) · [Security hardened](SECURITY.md) · v1.9.0
+> Stable as of v1.0 — [API guarantees](docs/STABILITY.md) · [Security hardened](SECURITY.md) · v1.9.2
 
 ---
 
@@ -77,7 +77,7 @@ npx @chappibunny/repolens publish
 **Done!** Your docs are now live in Notion, Confluence, and/or `.repolens/` directory.
 
 **🔄 Upgrading from v0.3.0 or earlier?**
-Run `npx @chappibunny/repolens migrate` to automatically update your workflow files. See [MIGRATION.md](MIGRATION.md) for details.
+Run `npx @chappibunny/repolens migrate` to automatically update your workflow files. See [MIGRATION.md](docs/MIGRATION.md) for details.
 
 ---
 
@@ -118,7 +118,7 @@ npm install @chappibunny/repolens
 
 Or try instantly without installing: `npx @chappibunny/repolens demo`
 
-For alternative methods, see [INSTALLATION.md](INSTALLATION.md).
+For alternative methods, see [INSTALLATION.md](docs/INSTALLATION.md).
 
 ---
 
@@ -148,7 +148,7 @@ The extension reads your `.repolens.yml` configuration and provides an interacti
 
 Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki, Discord, and CI/CD automation.
 
-**[→ Full Onboarding Guide](ONBOARDING.md)**
+**[→ Full Onboarding Guide](docs/ONBOARDING.md)**
 
 ---
 
@@ -162,7 +162,7 @@ Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki,
 | `npx @chappibunny/repolens demo` | Quick local preview — no API keys needed |
 | `npx @chappibunny/repolens doctor` | Validate your setup |
 | `npx @chappibunny/repolens watch` | Auto-regenerate docs on file changes |
-| `npx @chappibunny/repolens migrate` | Upgrade from v0.3.0 workflows ([details](MIGRATION.md)) |
+| `npx @chappibunny/repolens migrate` | Upgrade from v0.3.0 workflows ([details](docs/MIGRATION.md)) |
 | `npx @chappibunny/repolens uninstall` | Remove all RepoLens files (config, docs, workflow) |
 | `npx @chappibunny/repolens uninstall --force` | Remove without confirmation prompt |
 | `npx @chappibunny/repolens feedback` | Send feedback to the team |
@@ -236,7 +236,7 @@ When you open a pull request, RepoLens posts:
 
 ## 🔒 Privacy & Security
 
-- **Telemetry is opt-in and disabled by default** — no code, secrets, or personal data leaves your machine. See [TELEMETRY.md](TELEMETRY.md).
+- **Telemetry is opt-in and disabled by default** — no code, secrets, or personal data leaves your machine. See [TELEMETRY.md](docs/TELEMETRY.md).
 - **Defense-in-depth security** — input validation, secret detection (15+ patterns), rate limiting, injection prevention, supply chain hardening. See [SECURITY.md](SECURITY.md).
 - **Report vulnerabilities** to trades@rabitaitrades.com (not public issues). Response within 48 hours.
 
@@ -246,16 +246,16 @@ When you open a pull request, RepoLens posts:
 
 | Guide | Description |
 |---|---|
-| [Onboarding Guide](ONBOARDING.md) | Step-by-step setup: publishers, AI, Notion, Confluence, Discord |
-| [Configuration](CONFIGURATION.md) | Complete `.repolens.yml` schema and examples |
-| [Environment Variables](ENVIRONMENT.md) | All env vars by publisher and feature |
-| [Architecture](ARCHITECTURE.md) | Pipeline diagram, project structure |
-| [Development](DEVELOPMENT.md) | Setup, tests (379 across 22 files), release process |
+| [Onboarding Guide](docs/ONBOARDING.md) | Step-by-step setup: publishers, AI, Notion, Confluence, Discord |
+| [Configuration](docs/CONFIGURATION.md) | Complete `.repolens.yml` schema and examples |
+| [Environment Variables](docs/ENVIRONMENT.md) | All env vars by publisher and feature |
+| [Architecture](docs/ARCHITECTURE.md) | Pipeline diagram, project structure |
+| [Development](docs/DEVELOPMENT.md) | Setup, tests (380 across 22 files), release process |
 | [Security](SECURITY.md) | Threat model, secret detection, validation layers |
-| [Telemetry](TELEMETRY.md) | Opt-in privacy-first usage analytics |
-| [Troubleshooting](TROUBLESHOOTING.md) | Common issues and fixes |
-| [Migration](MIGRATION.md) | Upgrading from v0.3.0 or earlier |
-| [Stability](STABILITY.md) | API contract and semver guarantees |
+| [Telemetry](docs/TELEMETRY.md) | Opt-in privacy-first usage analytics |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | Common issues and fixes |
+| [Migration](docs/MIGRATION.md) | Upgrading from v0.3.0 or earlier |
+| [Stability](docs/STABILITY.md) | API contract and semver guarantees |
 
 ---
 
@@ -281,7 +281,7 @@ v1.0+ features complete — CLI, config schema, and plugin interface are frozen.
 - [ ] Obsidian publisher
 - [ ] GitHub App
 
-See [ROADMAP.md](ROADMAP.md) for detailed planning.
+See [ROADMAP.md](docs/ROADMAP.md) for detailed planning.
 
 ---
 
@@ -293,7 +293,7 @@ MIT
 
 ## 💬 Support & Contact
 
-- **Troubleshooting**: [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — installation, config, publishing, AI, and CI/CD issues
+- **Troubleshooting**: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — installation, config, publishing, AI, and CI/CD issues
 - **Diagnostics**: Run `npx @chappibunny/repolens doctor` to validate your setup
 - **Issues**: [GitHub Issues](https://github.com/CHAPIBUNNY/repolens/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/CHAPIBUNNY/repolens/discussions)

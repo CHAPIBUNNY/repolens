@@ -136,6 +136,11 @@ async function writeCache(cache) {
 
 // Convert Markdown to Confluence Storage Format
 function markdownToConfluenceStorage(markdown) {
+  if (!markdown || typeof markdown !== "string" || markdown.trim() === "") {
+    warn("Empty or invalid markdown content received for Confluence conversion");
+    return "<p><em>No content available. Check documentation generation logs.</em></p>";
+  }
+
   // Rewrite relative file links that can't resolve in Confluence
   const rewritten = markdown.replace(
     /\[([^\]]+)\]\(\.{1,2}\/[^)]+\)/g,
@@ -275,7 +280,15 @@ function markdownToConfluenceStorage(markdown) {
     i++;
   }
 
-  return output.join("");
+  const result = output.join("");
+  
+  // Defensive check: if conversion resulted in empty content, provide a fallback
+  if (!result || result.trim() === "") {
+    warn("Confluence conversion produced empty content");
+    return `<p><em>Document content could not be rendered. Original markdown length: ${markdown.length} chars.</em></p>`;
+  }
+
+  return result;
 }
 
 function escapeHtml(text) {
@@ -376,6 +389,14 @@ async function publishPage(cfg, key, markdown, cache) {
     throw new Error("Missing CONFLUENCE_SPACE_KEY environment variable");
   }
 
+  // Validate content before proceeding
+  if (!markdown || markdown.trim() === "") {
+    warn(`Skipping ${key}: Empty markdown content`);
+    return null;
+  }
+
+  info(`Publishing ${key} to Confluence (${markdown.length} chars of markdown)`);
+
   // Get human-readable title
   const titleMap = {
     system_overview: "System Overview",
@@ -465,20 +486,26 @@ export async function publishToConfluence(cfg, renderedPages) {
   
   info(`Publishing to Confluence: ${baseUrl}`);
   info(`Space: ${spaceKey}`);
+  info(`Pages to publish: ${Object.keys(renderedPages).join(", ")}`);
 
   // Load cache
   const cache = await readCache();
 
   // Publish each page
   const published = [];
+  const skipped = [];
   for (const [key, markdown] of Object.entries(renderedPages)) {
     try {
       const page = await publishPage(cfg, key, markdown, cache);
-      published.push({
-        key,
-        pageId: page.id,
-        url: `${baseUrl}/pages/viewpage.action?pageId=${page.id}`
-      });
+      if (page) {
+        published.push({
+          key,
+          pageId: page.id,
+          url: `${baseUrl}/pages/viewpage.action?pageId=${page.id}`
+        });
+      } else {
+        skipped.push(key);
+      }
     } catch (err) {
       warn(`Failed to publish ${key}: ${err.message}`);
       throw err; // Re-throw to signal publishing failure
@@ -493,6 +520,10 @@ export async function publishToConfluence(cfg, renderedPages) {
   published.forEach(p => {
     info(`   ${p.key}: ${p.url}`);
   });
+  
+  if (skipped.length > 0) {
+    warn(`Skipped ${skipped.length} pages due to empty content: ${skipped.join(", ")}`);
+  }
 
   return published;
 }
