@@ -2,6 +2,14 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.8.1
+
+### 📖 Documentation Refresh
+
+- **README overhaul**: Updated test badge (379 passing), version reference (v1.8.1), document count (15 types), expanded audience table to include all 15 documents (GraphQL Schema, TypeScript Type Graph, Dependency Graph, Architecture Drift), added `uninstall` and `uninstall --force` to commands table.
+- **DEVELOPMENT.md**: Updated test coverage (379 across 22 files), expanded test suite description to cover all test categories, fixed tarball version in install example.
+- **CLI version test**: Now reads version from `package.json` dynamically instead of hardcoding — won't break on future version bumps.
+
 ## 1.8.0
 
 ### ✨ GitHub Models — First-Class AI Provider
@@ -11,6 +19,7 @@ All notable changes to RepoLens will be documented in this file.
 - **Config-driven AI settings**: `ai.enabled`, `ai.provider`, `ai.model`, `ai.temperature`, and `ai.base_url` in `.repolens.yml` are now fully respected at runtime (env vars still take precedence). Previously these config values were ignored.
 - **Init wizard fixes**: Provider selection now uses correct runtime values (`github`, `openai_compatible`, `anthropic`, `google`) instead of mismatched labels. The wizard now emits `ai.provider` to the generated YAML. Added `github_wiki` to publisher choices.
 - **Demo AI upsell**: `repolens demo` now shows a hint about GitHub Models (free) when AI is not enabled, guiding users to `repolens init --interactive`.
+- **Uninstall command**: `repolens uninstall` removes all RepoLens-generated files (`.repolens/`, `.repolens.yml`, workflow, `.env.example`, `README.repolens.md`) with confirmation prompt and `--force` flag.
 - **Doctor validation**: `repolens doctor` now checks for `GITHUB_TOKEN` when provider is `github`, and `REPOLENS_AI_API_KEY` for other providers.
 
 ### 📖 Documentation
@@ -21,8 +30,8 @@ All notable changes to RepoLens will be documented in this file.
 
 ### 🧪 Tests
 
-- 24 new tests: provider config fallbacks, `isAIEnabled` with config, `getAIConfig` with config, GitHub Models defaults, init wizard content, doctor env validation
-- **374 tests passing** across 22 test files
+- 29 new tests: provider config fallbacks, `isAIEnabled` with config, `getAIConfig` with config, GitHub Models defaults, init wizard content, doctor env validation, uninstall command (5 scenarios)
+- **379 tests passing** across 22 test files
 
 ## 1.7.1
 

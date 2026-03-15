@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.8.0  
+**Version:** 1.8.1  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -98,7 +98,7 @@ src/
   plugins/
     loader.js             # Plugin resolution and dynamic import
     manager.js            # Plugin registry and lifecycle orchestration
-tests/                    # Vitest test suite (374 tests across 22 files)
+tests/                    # Vitest test suite (379 tests across 22 files)
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
   config-discovery.test.js # Config auto-discovery tests
@@ -133,6 +133,7 @@ tests/                    # Vitest test suite (374 tests across 22 files)
 - `repolens demo` - Generate local docs without API keys (quick preview)
 - `repolens watch` - Watch for file changes and regenerate docs (Markdown only)
 - `repolens migrate` - Migrate legacy workflows + config files (adds `configVersion: 1` if missing)
+- `repolens uninstall` - Remove all RepoLens-generated files
 - `repolens feedback` - Send feedback to the RepoLens team
 - `repolens version` - Display version
 - `repolens help` - Show usage
@@ -239,7 +240,7 @@ tests/                    # Vitest test suite (374 tests across 22 files)
 - Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
 - Test config discovery, validation, rendering, branch detection, migration, security fuzzing
-- **Coverage**: 374 tests passing across 22 test files
+- **Coverage**: 379 tests passing across 22 test files
 - Run: `npm test`
 
 ### Configuration

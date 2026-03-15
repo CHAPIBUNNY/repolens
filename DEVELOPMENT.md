@@ -18,11 +18,21 @@ npm test
 **Test Suite:**
 - Config discovery and validation
 - Branch detection (GitHub/GitLab/CircleCI)
-- Markdown publisher
-- Integration workflows
+- CLI commands (version, help, uninstall)
+- Markdown publisher and parser tests (Notion, Confluence)
+- Integration and HTTP integration workflows
 - Doctor command validation
+- Init wizard and scaffolding
+- AI provider and structured output tests
+- Extended analysis (GraphQL, TypeScript, dependency graph, drift)
+- Plugin system (loader, manager, config)
+- Renderers (system map, diff, analysis)
+- Deterministic enrichment (all 6 AI-enhanced doc types)
+- Security fuzzing and rate-limit stress tests
+- Watch mode and migration (including e2e)
+- Robustness (timeout, partial-publish, error isolation)
 
-**Coverage:** 185 tests passing across 15 test files
+**Coverage:** 379 tests passing across 22 test files
 
 ## Test Package Installation Locally
 
@@ -33,7 +43,7 @@ Simulates the full user installation experience:
 npm pack
 
 # Install globally from tarball
-npm install -g chappibunny-repolens-1.5.0.tgz
+npm install -g chappibunny-repolens-1.8.1.tgz
 
 # Verify
 repolens --version

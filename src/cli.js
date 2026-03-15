@@ -145,6 +145,7 @@ Commands:
   publish     Scan, render, and publish documentation
   demo        Generate local docs without API keys (quick preview)
   watch       Watch for file changes and regenerate docs
+  uninstall   Remove all RepoLens-generated files from your repository
   feedback    Send feedback to the RepoLens team
   version     Print the current RepoLens version
 
@@ -169,6 +170,8 @@ Examples:
   repolens publish --config /path/.repolens.yml # Explicit config path
   repolens demo                                  # Quick local preview (no API keys)
   repolens watch                                # Watch mode (Markdown only)
+  repolens uninstall                             # Remove all RepoLens files
+  repolens uninstall --target /tmp/my-repo       # Uninstall from specific repo
   repolens --version
 `);
 }
@@ -521,6 +524,96 @@ async function main() {
     return;
   }
 
+  if (command === "uninstall") {
+    await printBanner();
+    
+    const targetDir = getArg("--target") || process.cwd();
+    const forceFlag = process.argv.includes("--force");
+    
+    info("Scanning for RepoLens files...\n");
+    
+    // All files/directories that RepoLens creates
+    const candidates = [
+      { path: path.join(targetDir, ".repolens"),                    type: "dir",  label: ".repolens/",                     source: "demo/publish" },
+      { path: path.join(targetDir, ".repolens.yml"),                type: "file", label: ".repolens.yml",                  source: "init" },
+      { path: path.join(targetDir, ".github", "workflows", "repolens.yml"), type: "file", label: ".github/workflows/repolens.yml", source: "init" },
+      { path: path.join(targetDir, ".env.example"),                 type: "file", label: ".env.example",                   source: "init" },
+      { path: path.join(targetDir, "README.repolens.md"),           type: "file", label: "README.repolens.md",             source: "init" },
+    ];
+    
+    // Check which files exist
+    const found = [];
+    for (const item of candidates) {
+      try {
+        const stat = await fs.stat(item.path);
+        if ((item.type === "dir" && stat.isDirectory()) || (item.type === "file" && stat.isFile())) {
+          found.push(item);
+        }
+      } catch {
+        // File doesn't exist — skip
+      }
+    }
+    
+    if (found.length === 0) {
+      info("No RepoLens files found. Nothing to remove.");
+      await closeTelemetry();
+      return;
+    }
+    
+    info("Found the following RepoLens files:\n");
+    for (const item of found) {
+      const icon = item.type === "dir" ? "📁" : "📄";
+      info(`  ${icon} ${item.label}  (created by ${item.source})`);
+    }
+    
+    // Confirm unless --force
+    if (!forceFlag) {
+      const isCI = process.env.CI || process.env.GITHUB_ACTIONS;
+      const isTest = process.env.NODE_ENV === "test" || process.env.VITEST;
+      
+      if (isCI || isTest) {
+        info("\nCI/test environment detected — skipping confirmation (use --force to suppress this message).");
+      } else {
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        const answer = await rl.question(`\nRemove ${found.length} item${found.length === 1 ? "" : "s"}? This cannot be undone. (y/N): `);
+        rl.close();
+        
+        if (answer.trim().toLowerCase() !== "y") {
+          info("Uninstall cancelled.");
+          await closeTelemetry();
+          return;
+        }
+      }
+    }
+    
+    // Remove files
+    let removed = 0;
+    for (const item of found) {
+      try {
+        if (item.type === "dir") {
+          await fs.rm(item.path, { recursive: true, force: true });
+        } else {
+          await fs.unlink(item.path);
+        }
+        info(`  ✓ Removed ${item.label}`);
+        removed++;
+      } catch (err) {
+        error(`  ✗ Failed to remove ${item.label}: ${err.message}`);
+      }
+    }
+    
+    info(`\n✓ Removed ${removed}/${found.length} RepoLens file${found.length === 1 ? "" : "s"}.`);
+    
+    if (removed > 0) {
+      info("\nTo reinstall, run: repolens init");
+      info("To uninstall the npm package: npm uninstall @chappibunny/repolens");
+    }
+    
+    trackUsage("uninstall", "success", { removed, total: found.length });
+    await closeTelemetry();
+    return;
+  }
+
   if (command === "feedback") {
     await printBanner();
     info("Send feedback to the RepoLens team");
@@ -567,7 +660,7 @@ async function main() {
   }
 
   error(`Unknown command: ${command}`);
-  error("Available commands: init, doctor, migrate, publish, demo, watch, feedback, version, help");
+  error("Available commands: init, doctor, migrate, publish, demo, watch, uninstall, feedback, version, help");
   process.exit(EXIT_ERROR);
 }
 

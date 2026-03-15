@@ -10,14 +10,14 @@
 
 [![npm version](https://img.shields.io/npm/v/@chappibunny/repolens)](https://www.npmjs.com/package/@chappibunny/repolens)
 [![VS Code Extension](https://img.shields.io/visual-studio-marketplace/v/CHAPIBUNNY.repolens-architecture?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture)
-[![Tests](https://img.shields.io/badge/tests-185%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
+[![Tests](https://img.shields.io/badge/tests-379%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **Your architecture docs are already outdated.** RepoLens fixes that.
 
 RepoLens scans your repository, generates living architecture documentation, and publishes it to Notion, Confluence, GitHub Wiki, or Markdown — automatically on every push. Engineers get technical docs. Stakeholders get readable system overviews. Nobody writes a word.
 
-> Stable as of v1.0 — [API guarantees](STABILITY.md) · [Security hardened](SECURITY.md) · v1.5.0
+> Stable as of v1.0 — [API guarantees](STABILITY.md) · [Security hardened](SECURITY.md) · v1.8.1
 
 ---
 
@@ -75,13 +75,13 @@ Run `npx @chappibunny/repolens migrate` to automatically update your workflow fi
 
 ## 📋 What It Generates
 
-**11 document types** for three audiences — no manual writing required:
+**15 document types** for three audiences — no manual writing required:
 
 | Audience | Documents |
 |---|---|
 | **Stakeholders** (founders, PMs, ops) | Executive Summary · Business Domains · Data Flows |
-| **Everyone** | System Overview · Developer Onboarding · Change Impact |
-| **Engineers** | Architecture Overview · Module Catalog · API Surface · Route Map · System Map |
+| **Everyone** | System Overview · Developer Onboarding · Change Impact · Architecture Drift |
+| **Engineers** | Architecture Overview · Module Catalog · API Surface · Route Map · System Map · GraphQL Schema · TypeScript Type Graph · Dependency Graph |
 
 **Two modes:** Deterministic (free, fast, always works) or AI-Enhanced (optional — GitHub Models, OpenAI, Anthropic, Google, Azure, Ollama).
 
@@ -155,6 +155,8 @@ Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki,
 | `repolens doctor` | Validate your setup |
 | `repolens watch` | Auto-regenerate docs on file changes |
 | `repolens migrate` | Upgrade from v0.3.0 workflows ([details](MIGRATION.md)) |
+| `repolens uninstall` | Remove all RepoLens files (config, docs, workflow) |
+| `repolens uninstall --force` | Remove without confirmation prompt |
 | `repolens feedback` | Send feedback to the team |
 
 ---
@@ -237,7 +239,7 @@ When you open a pull request, RepoLens posts:
 | [Configuration](CONFIGURATION.md) | Complete `.repolens.yml` schema and examples |
 | [Environment Variables](ENVIRONMENT.md) | All env vars by publisher and feature |
 | [Architecture](ARCHITECTURE.md) | Pipeline diagram, project structure |
-| [Development](DEVELOPMENT.md) | Setup, tests (185 across 15 files), release process |
+| [Development](DEVELOPMENT.md) | Setup, tests (379 across 22 files), release process |
 | [Security](SECURITY.md) | Threat model, secret detection, validation layers |
 | [Telemetry](TELEMETRY.md) | Opt-in privacy-first usage analytics |
 | [Troubleshooting](TROUBLESHOOTING.md) | Common issues and fixes |
