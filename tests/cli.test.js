@@ -2,11 +2,14 @@ import { describe, it, expect } from "vitest";
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import fs from "node:fs";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8"));
 
 function runNode(args = []) {
   return new Promise((resolve, reject) => {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
     const cliPath = path.resolve(__dirname, "../src/cli.js");
 
     execFile("node", [cliPath, ...args], { env: { ...process.env, NODE_ENV: "test" } }, (error, stdout, stderr) => {
@@ -23,7 +26,7 @@ function runNode(args = []) {
 describe("cli", () => {
   it("prints version", async () => {
     const { stdout } = await runNode(["--version"]);
-    expect(stdout.trim()).toBe("1.7.1");
+    expect(stdout.trim()).toBe(pkg.version);
   });
 
   it("prints help", async () => {
