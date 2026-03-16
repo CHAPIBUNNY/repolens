@@ -2,6 +2,12 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.9.6
+
+### 📹 Documentation
+
+- **Updated demo video**: README now embeds new Loom demo video
+
 ## 1.9.5
 
 ### ✨ UX Improvements
