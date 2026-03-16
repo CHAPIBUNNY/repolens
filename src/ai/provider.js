@@ -33,6 +33,9 @@ const AI_PRESETS = {
   },
 };
 
+// Module-level flag to log config only once
+let hasLoggedConfig = false;
+
 export async function generateText({ system, user, temperature, maxTokens, config, jsonMode, jsonSchema }) {
   // Check if AI is enabled (env var takes precedence, then config)
   const aiConfig = config?.ai || {};
@@ -69,12 +72,20 @@ export async function generateText({ system, user, temperature, maxTokens, confi
   
   // Validate configuration
   if (!apiKey) {
-    warn("REPOLENS_AI_API_KEY not set. AI features disabled.");
+    const keySource = provider === "github" ? "GITHUB_TOKEN or REPOLENS_AI_API_KEY" : "REPOLENS_AI_API_KEY";
+    warn(`AI: No API key found. Expected ${keySource} in environment.`);
     return {
       success: false,
-      error: "Missing API key",
+      error: `Missing API key (expected ${keySource})`,
       fallback: true
     };
+  }
+  
+  // Log configuration once per run
+  if (!hasLoggedConfig) {
+    const keyPreview = apiKey.substring(0, 8) + "...";
+    info(`AI Config: provider=${provider}, model=${model}, key=${keyPreview}`);
+    hasLoggedConfig = true;
   }
   
   if (!baseUrl && provider === "openai_compatible") {

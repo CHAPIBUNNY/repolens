@@ -56,7 +56,7 @@ Everything below is live, tested, and available on npm.
 - ✅ User feedback via `repolens feedback` command
 
 ### Polish & Reliability (v0.7.0)
-- ✅ Interactive configuration wizard (`repolens init --interactive`)
+- ✅ Interactive configuration wizard (now default for `repolens init`)
 - ✅ Watch mode for local development (`repolens watch`)
 - ✅ Enhanced error messages with actionable guidance (centralized error catalog)
 - ✅ Performance monitoring (scan/render/publish timing summary)

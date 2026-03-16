@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.9.12  
+**Version:** 1.10.0  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -146,8 +146,8 @@ scripts/                  # Helper scripts
 
 ### Key Commands
 
-- `repolens init` - Scaffold configuration and GitHub Actions workflow
-- `repolens init --interactive` - Step-by-step configuration wizard
+- `repolens init` - **Interactive wizard** — configure publishers, AI, credentials (default)
+- `repolens init --quick` - Minimal scaffolding, skip wizard
 - `repolens doctor` - Validate repository setup (config, environment, etc.)
 - `repolens publish` - Scan repo, generate docs (with optional AI), publish to outputs
 - `repolens demo` - Generate local docs without API keys (quick preview)
@@ -451,7 +451,7 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - Cross-repository architecture analysis
 - ~~Plugin system for custom renderers~~ ✅ Shipped in v0.9.0
 - ~~GitHub Wiki publisher~~ ✅ Shipped in v1.1.0
-- ~~Interactive configuration wizard (`repolens init --interactive`)~~ ✅ Shipped
+- ~~Interactive configuration wizard~~ ✅ Shipped (now default for `repolens init`)
 - ~~Watch mode for local development (`repolens watch`)~~ ✅ Shipped
 - ~~Generic domain defaults (replace fintech bias)~~ ✅ Shipped in v1.4.0
 - ~~Real import-based system map~~ ✅ Shipped in v1.4.0

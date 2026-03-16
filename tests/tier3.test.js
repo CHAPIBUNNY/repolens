@@ -421,7 +421,7 @@ describe("AI Provider", () => {
     delete process.env.REPOLENS_AI_API_KEY;
     process.env.GITHUB_TOKEN = "ghp_test_token";
     const result = await generateText({ system: "test", user: "test" });
-    expect(result.error).toBe("Missing API key");
+    expect(result.error).toContain("Missing API key");
   });
 
   it("getAIConfig temperature and maxTokens parsing", () => {

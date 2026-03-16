@@ -52,7 +52,7 @@ describe("cli", () => {
     expect(stdout).toContain("uninstall");
     expect(stdout).toContain("feedback");
     expect(stdout).toContain("version");
-    expect(stdout).toContain("--interactive");
+    expect(stdout).toContain("--quick");  // Interactive is now the default
   });
 });
 

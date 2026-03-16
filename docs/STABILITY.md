@@ -16,8 +16,8 @@ RepoLens follows semantic versioning (semver):
 
 | Command | Status | Description |
 |---------|--------|-------------|
-| `init` | Stable | Scaffold configuration and GitHub Actions workflow |
-| `init --interactive` | Stable | Step-by-step configuration wizard |
+| `init` | Stable | **Interactive wizard** — configure publishers, AI, credentials |
+| `init --quick` | Stable | Minimal scaffolding, skip wizard |
 | `doctor` | Stable | Validate repository setup |
 | `publish` | Stable | Scan, generate, and publish documentation |
 | `demo` | Stable | Generate local docs without API keys (quick preview) |
@@ -33,7 +33,7 @@ RepoLens follows semantic versioning (semver):
 |--------|-------|--------|-------------|
 | `--config <path>` | — | Stable | Path to `.repolens.yml` |
 | `--target <path>` | — | Stable | Target repository path (init, doctor, migrate) |
-| `--interactive` | — | Stable | Interactive mode for init |
+| `--quick` | — | Stable | Skip interactive wizard for init |
 | `--dry-run` | — | Stable | Preview changes without applying (migrate) |
 | `--force` | — | Stable | Skip confirmation prompts (migrate) |
 | `--verbose` | — | Stable | Enable verbose logging |

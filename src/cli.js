@@ -134,10 +134,8 @@ function showPostGenerationAINotice() {
   info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Developer Onboarding — getting started guide for new hires  ${fmt.cyan("│")}`);
   info(`${fmt.cyan("│")}                                                                  ${fmt.cyan("│")}`);
   info(`${fmt.cyan("│")} ${fmt.boldGreen("🆓 Enable for FREE with GitHub Models:")}                          ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")}   ${fmt.green("export GITHUB_TOKEN=<your-token>")}                            ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")}   ${fmt.green("repolens demo")}                                               ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")}                                                                  ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")} Or run: ${fmt.brightCyan("repolens init --interactive")} → select GitHub Models      ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   Run: ${fmt.brightCyan("repolens init")} → the wizard will guide you through setup  ${fmt.cyan("│")}`);
+  info(`${fmt.cyan("│")}   Or quick preview: ${fmt.green("export GITHUB_TOKEN=<your-token> && repolens demo")}  ${fmt.cyan("│")}`);  
   info(`${fmt.cyan("└──────────────────────────────────────────────────────────────────┘")}`);
 }
 
@@ -242,7 +240,7 @@ Commands:
 Options:
   --config        Path to .repolens.yml (auto-discovered if not provided)
   --target        Target repository path for init/doctor/migrate
-  --interactive   Run init with step-by-step configuration wizard
+  --quick         Run init with minimal prompts (skip wizard)
   --dry-run       Preview migration changes without applying them
   --force         Skip interactive confirmation for migration
   --verbose       Enable verbose logging
@@ -250,8 +248,8 @@ Options:
   --help          Show this help message
 
 Examples:
-  repolens init                                 # Quick setup with auto-detection
-  repolens init --interactive                   # Step-by-step wizard
+  repolens init                                 # Full interactive wizard (recommended)
+  repolens init --quick                         # Minimal setup, skip wizard
   repolens init --target /tmp/my-repo
   repolens doctor --target /tmp/my-repo
   repolens migrate                              # Migrate workflows in current directory
@@ -295,7 +293,9 @@ async function main() {
   if (command === "init") {
     await printBanner();
     const targetDir = getArg("--target") || process.cwd();
-    const interactive = process.argv.includes("--interactive");
+    // Interactive is now the default; use --quick for minimal scaffolding
+    const quick = process.argv.includes("--quick") || process.argv.includes("--non-interactive");
+    const interactive = !quick;
     info(`Initializing RepoLens in: ${targetDir}`);
     
     const timer = startTimer("init");
@@ -598,7 +598,7 @@ async function main() {
       
       if (aiResult.enabled && aiResult.wasPrompted) {
         info(`\n🤖 AI-enhanced docs were generated using ${fmt.boldGreen("GitHub Models (FREE)")}`);
-        info("   To keep AI enabled permanently, run: repolens init --interactive");
+        info("   To keep AI enabled permanently, run: repolens init");
       } else if (aiResult.noToken) {
         // No GITHUB_TOKEN - show instructions
         showPostGenerationAINotice();

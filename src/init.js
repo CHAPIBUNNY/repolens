@@ -1,14 +1,15 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
+import { exec } from "node:child_process";
 import { info, warn } from "./utils/logger.js";
 
 const PUBLISHER_CHOICES = ["markdown", "notion", "confluence", "github_wiki"];
 const AI_PROVIDERS = [
-  { value: "github",           label: "GitHub Models  (free in GitHub Actions)" },
-  { value: "openai_compatible", label: "OpenAI / Compatible  (GPT-5, GPT-4o, etc.)" },
-  { value: "anthropic",         label: "Anthropic  (Claude)" },
-  { value: "google",            label: "Google  (Gemini)" },
+  { value: "github",            label: "GitHub Models  (free in GitHub Actions)", signupUrl: null },
+  { value: "openai_compatible", label: "OpenAI / Compatible  (GPT-5, GPT-4o, etc.)", signupUrl: "https://platform.openai.com/api-keys" },
+  { value: "anthropic",         label: "Anthropic  (Claude)", signupUrl: "https://console.anthropic.com/settings/keys" },
+  { value: "google",            label: "Google  (Gemini)", signupUrl: "https://aistudio.google.com/app/apikey" },
 ];
 const SCAN_PRESETS = {
   nextjs: {
@@ -89,10 +90,14 @@ jobs:
           CONFLUENCE_API_TOKEN: \${{ secrets.CONFLUENCE_API_TOKEN }}
           CONFLUENCE_SPACE_KEY: \${{ secrets.CONFLUENCE_SPACE_KEY }}
           CONFLUENCE_PARENT_PAGE_ID: \${{ secrets.CONFLUENCE_PARENT_PAGE_ID }}
-          # AI-enhanced docs via GitHub Models (free)
+          # AI-enhanced docs: Choose ONE option below
           REPOLENS_AI_ENABLED: true
+          # Option A: GitHub Models (free — uses GITHUB_TOKEN)
           REPOLENS_AI_PROVIDER: github
           GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          # Option B: OpenAI / Anthropic / Google (comment out Option A, uncomment below)
+          # REPOLENS_AI_API_KEY: \${{ secrets.REPOLENS_AI_API_KEY }}
+          # REPOLENS_AI_PROVIDER: openai_compatible  # or: anthropic, google
         run: npx @chappibunny/repolens@latest publish
 `;
 
@@ -280,6 +285,117 @@ async function dirExists(dirPath) {
     return stat.isDirectory();
   } catch {
     return false;
+  }
+}
+
+/**
+ * Open a URL in the default browser (cross-platform).
+ */
+function openUrl(url) {
+  const platform = process.platform;
+  let cmd;
+  if (platform === "darwin") {
+    cmd = `open "${url}"`;
+  } else if (platform === "win32") {
+    cmd = `start "" "${url}"`;
+  } else {
+    cmd = `xdg-open "${url}"`;
+  }
+  return new Promise((resolve) => {
+    exec(cmd, (err) => {
+      if (err) {
+        warn(`Could not open browser: ${err.message}`);
+        resolve(false);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+}
+
+/**
+ * Test an AI API key by making a minimal request.
+ * Returns { success: true } or { success: false, error: string }.
+ */
+async function testAIKey(provider, apiKey) {
+  try {
+    const timeout = 15000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    let url, headers, body;
+
+    if (provider === "github") {
+      url = "https://models.inference.ai.azure.com/chat/completions";
+      headers = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      };
+      body = JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: "Say OK" }],
+        max_tokens: 5,
+      });
+    } else if (provider === "openai_compatible") {
+      url = "https://api.openai.com/v1/chat/completions";
+      headers = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      };
+      body = JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: "Say OK" }],
+        max_tokens: 5,
+      });
+    } else if (provider === "anthropic") {
+      url = "https://api.anthropic.com/v1/messages";
+      headers = {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      };
+      body = JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 5,
+        messages: [{ role: "user", content: "Say OK" }],
+      });
+    } else if (provider === "google") {
+      url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+      headers = { "Content-Type": "application/json" };
+      body = JSON.stringify({
+        contents: [{ parts: [{ text: "Say OK" }] }],
+        generationConfig: { maxOutputTokens: 5 },
+      });
+    } else {
+      return { success: false, error: "Unknown provider" };
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      return { success: true };
+    }
+
+    const errorBody = await response.text().catch(() => "");
+    if (response.status === 401 || response.status === 403) {
+      return { success: false, error: "Invalid API key" };
+    }
+    if (response.status === 429) {
+      return { success: false, error: "Rate limited — but key is valid" };
+    }
+    return { success: false, error: `API error ${response.status}: ${errorBody.slice(0, 100)}` };
+  } catch (err) {
+    if (err.name === "AbortError") {
+      return { success: false, error: "Request timed out" };
+    }
+    return { success: false, error: err.message };
   }
 }
 
@@ -482,7 +598,8 @@ async function promptNotionCredentials() {
   });
 
   try {
-    info("\n📝 Notion Setup (optional)");
+    info("\n📝 Quick Setup — Notion Publishing");
+    info("(Use 'repolens init' without --quick for full wizard)\n");
     const useNotion = await rl.question("Would you like to publish to Notion? (Y/n): ");
 
     if (useNotion.toLowerCase() === 'n') {
@@ -564,15 +681,20 @@ async function runInteractiveWizard(repoRoot) {
 
   try {
     info("\n🧙 Interactive Configuration Wizard\n");
+    info("This wizard will help you configure RepoLens for your project.");
+    info("Press Enter to accept defaults shown in parentheses.\n");
 
     // 1. Project name
     const defaultName = path.basename(repoRoot) || "my-project";
-    const projectName = (await ask(`Project name (${defaultName}): `)).trim() || defaultName;
+    const projectName = (await ask(`📦 Project name (${defaultName}): `)).trim() || defaultName;
 
     // 2. Publishers
-    info("\nSelect publishers (comma-separated numbers):");
-    PUBLISHER_CHOICES.forEach((p, i) => info(`  ${i + 1}. ${p}`));
-    const pubInput = (await ask(`Publishers [1,2,3] (default: 1): `)).trim() || "1";
+    info("\n📤 Select publishers (comma-separated numbers):");
+    PUBLISHER_CHOICES.forEach((p, i) => {
+      const desc = PUBLISHER_DESCRIPTIONS[p] || "";
+      info(`  ${i + 1}. ${p}${desc ? ` — ${desc}` : ""}`);
+    });
+    const pubInput = (await ask(`Publishers [1] (default: 1 markdown): `)).trim() || "1";
     const publishers = pubInput
       .split(",")
       .map((n) => parseInt(n.trim(), 10))
@@ -580,24 +702,156 @@ async function runInteractiveWizard(repoRoot) {
       .map((n) => PUBLISHER_CHOICES[n - 1]);
     if (publishers.length === 0) publishers.push("markdown");
 
-    // 3. AI
-    const enableAi = (await ask("\nEnable AI-enhanced documentation? (y/N): ")).trim().toLowerCase() === "y";
+    // 3. Collect credentials for each publisher
+    const credentials = {};
+    const githubSecretsNeeded = [];
+
+    // Notion setup
+    if (publishers.includes("notion")) {
+      info("\n📝 Notion Setup");
+      info("   Get your integration token from: https://www.notion.so/my-integrations");
+      info("   Find page ID in the URL: notion.so/workspace/PAGE_ID_HERE\n");
+      
+      const setupNow = (await ask("   Configure Notion credentials now? (Y/n): ")).trim().toLowerCase();
+      if (setupNow !== "n") {
+        credentials.notion = {
+          token: (await ask("   NOTION_TOKEN: ")).trim(),
+          parentPageId: (await ask("   NOTION_PARENT_PAGE_ID: ")).trim(),
+        };
+        if (!credentials.notion.token || !credentials.notion.parentPageId) {
+          warn("   Incomplete credentials. You'll need to set them manually.");
+          delete credentials.notion;
+        } else {
+          info("   ✓ Notion credentials collected");
+        }
+      }
+      githubSecretsNeeded.push("NOTION_TOKEN", "NOTION_PARENT_PAGE_ID");
+    }
+
+    // Confluence setup
+    if (publishers.includes("confluence")) {
+      info("\n📝 Confluence Setup");
+      info("   Get your API token from: https://id.atlassian.com/manage-profile/security/api-tokens");
+      info("   Find space key in the URL: confluence.atlassian.net/wiki/spaces/SPACE_KEY/...\n");
+      
+      const setupNow = (await ask("   Configure Confluence credentials now? (Y/n): ")).trim().toLowerCase();
+      if (setupNow !== "n") {
+        credentials.confluence = {
+          url: (await ask("   CONFLUENCE_URL (e.g., https://company.atlassian.net/wiki): ")).trim(),
+          email: (await ask("   CONFLUENCE_EMAIL: ")).trim(),
+          apiToken: (await ask("   CONFLUENCE_API_TOKEN: ")).trim(),
+          spaceKey: (await ask("   CONFLUENCE_SPACE_KEY: ")).trim(),
+          parentPageId: (await ask("   CONFLUENCE_PARENT_PAGE_ID (optional): ")).trim(),
+        };
+        const conf = credentials.confluence;
+        if (!conf.url || !conf.email || !conf.apiToken || !conf.spaceKey) {
+          warn("   Incomplete credentials. You'll need to set them manually.");
+          delete credentials.confluence;
+        } else {
+          info("   ✓ Confluence credentials collected");
+        }
+      }
+      githubSecretsNeeded.push("CONFLUENCE_URL", "CONFLUENCE_EMAIL", "CONFLUENCE_API_TOKEN", "CONFLUENCE_SPACE_KEY", "CONFLUENCE_PARENT_PAGE_ID");
+    }
+
+    // GitHub Wiki setup
+    if (publishers.includes("github_wiki")) {
+      info("\n📝 GitHub Wiki Setup");
+      info("   Requires GITHUB_TOKEN with repo scope.");
+      if (process.env.GITHUB_TOKEN) {
+        info("   ✓ GITHUB_TOKEN is set in your environment");
+      } else {
+        warn("   GITHUB_TOKEN not found in environment.");
+        info("   For local use: export GITHUB_TOKEN=your_token");
+        info("   For GitHub Actions: Uses ${{ secrets.GITHUB_TOKEN }} automatically");
+      }
+      githubSecretsNeeded.push("GITHUB_TOKEN");
+    }
+
+    // 4. AI Configuration
+    info("\n🤖 AI-Enhanced Documentation");
+    info("   Adds natural language explanations for non-technical stakeholders.");
+    const enableAi = (await ask("   Enable AI features? (Y/n): ")).trim().toLowerCase() !== "n";
+    
     let aiProvider = null;
+    let aiApiKey = null;
+    
     if (enableAi) {
-      info("Select AI provider:");
-      AI_PROVIDERS.forEach((p, i) => info(`  ${i + 1}. ${p.label}`));
-      const aiInput = (await ask(`Provider [1] (default: 1 GitHub Models — free): `)).trim() || "1";
+      info("\n   Select AI provider:");
+      AI_PROVIDERS.forEach((p, i) => info(`     ${i + 1}. ${p.label}`));
+      const aiInput = (await ask(`   Provider [1] (default: 1 GitHub Models — free): `)).trim() || "1";
       const idx = parseInt(aiInput, 10);
       const chosen = AI_PROVIDERS[(idx >= 1 && idx <= AI_PROVIDERS.length) ? idx - 1 : 0];
       aiProvider = chosen.value;
+      
       if (aiProvider === "github") {
-        info("\n  ✨ Great choice! GitHub Models uses your existing GITHUB_TOKEN — no extra API key needed.");
-        info("     Works automatically in GitHub Actions with the free tier.");
+        info("\n   ✨ GitHub Models is free and uses your GITHUB_TOKEN.");
+        
+        // Check for existing token
+        const existingToken = process.env.GITHUB_TOKEN;
+        if (existingToken) {
+          info("   Testing your GITHUB_TOKEN...");
+          const testResult = await testAIKey("github", existingToken);
+          if (testResult.success) {
+            info("   ✓ GITHUB_TOKEN is valid — AI will work locally and in Actions");
+            credentials.ai = { provider: "github", useGitHubToken: true };
+          } else {
+            warn(`   ⚠ GITHUB_TOKEN test failed: ${testResult.error}`);
+            info("   AI will still work in GitHub Actions with ${{ secrets.GITHUB_TOKEN }}");
+          }
+        } else {
+          info("   No GITHUB_TOKEN found in environment.");
+          info("   In GitHub Actions: Works automatically with ${{ secrets.GITHUB_TOKEN }}");
+          info("   For local testing: export GITHUB_TOKEN=your_personal_access_token");
+        }
+        githubSecretsNeeded.push("GITHUB_TOKEN");
+        credentials.ai = { ...(credentials.ai || {}), provider: "github", enabled: true };
+      } else {
+        // Non-GitHub provider: help them get an API key
+        info(`\n   ${chosen.label} requires an API key.`);
+        
+        // Offer to open signup URL
+        if (chosen.signupUrl) {
+          const openBrowser = (await ask(`   Open ${chosen.value} signup page in browser? (Y/n): `)).trim().toLowerCase();
+          if (openBrowser !== "n") {
+            info(`   Opening ${chosen.signupUrl}...`);
+            await openUrl(chosen.signupUrl);
+            info("   Create an API key, then paste it below.\n");
+          }
+        }
+        
+        const keyInput = (await ask(`   Paste your API key (or press Enter to skip): `)).trim();
+        if (keyInput) {
+          info("   Testing your API key...");
+          const testResult = await testAIKey(aiProvider, keyInput);
+          
+          if (testResult.success) {
+            info("   ✓ API key is valid!");
+            aiApiKey = keyInput;
+            credentials.ai = { apiKey: keyInput, provider: aiProvider, enabled: true };
+          } else if (testResult.error === "Rate limited — but key is valid") {
+            info("   ✓ API key is valid (rate limited, but will work)");
+            aiApiKey = keyInput;
+            credentials.ai = { apiKey: keyInput, provider: aiProvider, enabled: true };
+          } else {
+            warn(`   ⚠ API key test failed: ${testResult.error}`);
+            const useAnyway = (await ask(`   Save this key anyway? (y/N): `)).trim().toLowerCase();
+            if (useAnyway === "y") {
+              aiApiKey = keyInput;
+              credentials.ai = { apiKey: keyInput, provider: aiProvider, enabled: true };
+            } else {
+              warn("   Skipping AI configuration. You can set REPOLENS_AI_API_KEY later.");
+            }
+          }
+        } else {
+          warn("   No API key provided. Set REPOLENS_AI_API_KEY in .env or GitHub secrets.");
+        }
+        githubSecretsNeeded.push("REPOLENS_AI_API_KEY");
       }
     }
 
-    // 4. Scan preset
-    info("\nScan preset:");
+    // 5. Scan preset
+    info("\n📂 Scan Preset (determines which files to analyze):");
     const presetKeys = Object.keys(SCAN_PRESETS);
     presetKeys.forEach((p, i) => info(`  ${i + 1}. ${p}`));
     const presetInput = (await ask(`Preset [3] (default: 3 generic): `)).trim() || "3";
@@ -605,19 +859,79 @@ async function runInteractiveWizard(repoRoot) {
     const presetKey = presetKeys[(presetIdx >= 1 && presetIdx <= presetKeys.length) ? presetIdx - 1 : 2];
     const preset = SCAN_PRESETS[presetKey];
 
-    // 5. Branch filtering
-    const branchInput = (await ask("\nBranches allowed to publish to Notion/Confluence (comma-separated, default: main): ")).trim() || "main";
+    // 6. Branch filtering
+    info("\n🌿 Branch Filtering");
+    info("   Limits which branches can publish to Notion/Confluence.");
+    const branchInput = (await ask("   Allowed branches (comma-separated, default: main): ")).trim() || "main";
     const branches = branchInput.split(",").map((b) => b.trim()).filter(Boolean);
 
-    // 6. Discord
-    const enableDiscord = (await ask("\nEnable Discord notifications? (y/N): ")).trim().toLowerCase() === "y";
+    // 7. Discord notifications
+    info("\n🔔 Discord Notifications");
+    const enableDiscord = (await ask("   Enable Discord notifications? (y/N): ")).trim().toLowerCase() === "y";
+    
+    let discordWebhook = null;
+    if (enableDiscord) {
+      info("   Get webhook URL from: Server Settings > Integrations > Webhooks");
+      discordWebhook = (await ask("   DISCORD_WEBHOOK_URL (leave blank to skip): ")).trim() || null;
+      if (discordWebhook) {
+        credentials.discord = { webhookUrl: discordWebhook };
+      }
+      githubSecretsNeeded.push("DISCORD_WEBHOOK_URL");
+    }
 
-    info("\n✓ Wizard complete. Generating config...\n");
-    return { projectName, publishers, enableAi, aiProvider, preset, branches, enableDiscord };
+    // Summary
+    info("\n" + "═".repeat(60));
+    info("📋 Configuration Summary");
+    info("═".repeat(60));
+    info(`   Project:    ${projectName}`);
+    info(`   Publishers: ${publishers.join(", ")}`);
+    info(`   AI:         ${enableAi ? `Enabled (${aiProvider})` : "Disabled"}`);
+    info(`   Scan:       ${presetKey} preset`);
+    info(`   Branches:   ${branches.join(", ")}`);
+    info(`   Discord:    ${enableDiscord ? "Enabled" : "Disabled"}`);
+
+    // GitHub secrets summary
+    const uniqueSecrets = [...new Set(githubSecretsNeeded)];
+    if (uniqueSecrets.length > 0) {
+      info("\n📌 GitHub Actions Secrets Required:");
+      info("   Add these at: https://github.com/YOUR_ORG/YOUR_REPO/settings/secrets/actions");
+      for (const secret of uniqueSecrets) {
+        const status = credentials[secret.toLowerCase().split("_")[0]] ? "✓" : "○";
+        info(`   ${status} ${secret}`);
+      }
+    }
+
+    info("\n" + "═".repeat(60));
+    
+    const proceed = (await ask("\nProceed with this configuration? (Y/n): ")).trim().toLowerCase();
+    if (proceed === "n") {
+      info("Configuration cancelled.");
+      return null;
+    }
+
+    info("\n✓ Wizard complete. Generating files...\n");
+    return { 
+      projectName, 
+      publishers, 
+      enableAi, 
+      aiProvider, 
+      preset, 
+      branches, 
+      enableDiscord,
+      credentials,
+      githubSecretsNeeded: uniqueSecrets
+    };
   } finally {
     rl.close();
   }
 }
+
+const PUBLISHER_DESCRIPTIONS = {
+  markdown: "Local files in .repolens/",
+  notion: "Notion workspace pages",
+  confluence: "Atlassian Confluence pages",
+  github_wiki: "Repository wiki pages",
+};
 
 /**
  * Build a .repolens.yml from wizard answers.
@@ -719,16 +1033,70 @@ function buildWizardConfig(answers) {
   return lines.join("\n");
 }
 
+/**
+ * Build .env content from wizard credentials.
+ */
+function buildEnvFromCredentials(credentials) {
+  const lines = [];
+  
+  if (credentials.notion) {
+    lines.push("# Notion Publishing");
+    lines.push(`NOTION_TOKEN=${credentials.notion.token}`);
+    lines.push(`NOTION_PARENT_PAGE_ID=${credentials.notion.parentPageId}`);
+    lines.push(`NOTION_VERSION=2022-06-28`);
+    lines.push("");
+  }
+  
+  if (credentials.confluence) {
+    lines.push("# Confluence Publishing");
+    lines.push(`CONFLUENCE_URL=${credentials.confluence.url}`);
+    lines.push(`CONFLUENCE_EMAIL=${credentials.confluence.email}`);
+    lines.push(`CONFLUENCE_API_TOKEN=${credentials.confluence.apiToken}`);
+    lines.push(`CONFLUENCE_SPACE_KEY=${credentials.confluence.spaceKey}`);
+    if (credentials.confluence.parentPageId) {
+      lines.push(`CONFLUENCE_PARENT_PAGE_ID=${credentials.confluence.parentPageId}`);
+    }
+    lines.push("");
+  }
+  
+  if (credentials.ai?.enabled) {
+    lines.push("# AI Configuration");
+    lines.push(`REPOLENS_AI_ENABLED=true`);
+    if (credentials.ai.provider) {
+      lines.push(`REPOLENS_AI_PROVIDER=${credentials.ai.provider}`);
+    }
+    if (credentials.ai.apiKey) {
+      lines.push(`REPOLENS_AI_API_KEY=${credentials.ai.apiKey}`);
+    }
+    if (credentials.ai.provider === "github") {
+      lines.push("# GitHub Models uses GITHUB_TOKEN (set separately or auto-available in Actions)");
+    }
+    lines.push("");
+  }
+  
+  if (credentials.discord) {
+    lines.push("# Discord Notifications");
+    lines.push(`DISCORD_WEBHOOK_URL=${credentials.discord.webhookUrl}`);
+    lines.push("");
+  }
+  
+  return lines.join("\n");
+}
+
 export async function runInit(targetDir = process.cwd(), options = {}) {
   const repoRoot = path.resolve(targetDir);
 
   // Ensure target directory exists
   await fs.mkdir(repoRoot, { recursive: true });
 
-  // Interactive wizard if --interactive flag is set
+  // Interactive wizard is now the default (--quick skips it)
   let wizardAnswers = null;
   if (options.interactive) {
     wizardAnswers = await runInteractiveWizard(repoRoot);
+    if (!wizardAnswers) {
+      // User cancelled the wizard
+      return;
+    }
   }
 
   // Prompt for Notion credentials interactively (only in non-wizard mode)
@@ -765,7 +1133,7 @@ export async function runInit(targetDir = process.cwd(), options = {}) {
     for (const root of detectedRoots) {
       info(`  - ${root}`);
     }
-  } else {
+  } else if (!wizardAnswers) {
     info(`No known roots detected. Falling back to default config.`);
   }
 
@@ -792,18 +1160,25 @@ export async function runInit(targetDir = process.cwd(), options = {}) {
     info(`Skipped existing ${envExamplePath}`);
   }
 
-  // Create .env file with collected credentials
-  if (notionCredentials && !envExists) {
+  // Create .env file with collected credentials (wizard mode)
+  if (wizardAnswers?.credentials && Object.keys(wizardAnswers.credentials).length > 0 && !envExists) {
+    const envContent = buildEnvFromCredentials(wizardAnswers.credentials);
+    if (envContent.trim()) {
+      await fs.writeFile(envPath, envContent, "utf8");
+      info(`✅ Created ${envPath} with your credentials`);
+      await ensureEnvInGitignore(repoRoot);
+    }
+  } 
+  // Legacy: Create .env file with Notion credentials (non-wizard mode)
+  else if (notionCredentials && !envExists) {
     const envContent = `NOTION_TOKEN=${notionCredentials.token}
 NOTION_PARENT_PAGE_ID=${notionCredentials.parentPageId}
 NOTION_VERSION=2022-06-28
 `;
     await fs.writeFile(envPath, envContent, "utf8");
     info(`✅ Created ${envPath} with your Notion credentials`);
-    
-    // Ensure .env is in .gitignore
     await ensureEnvInGitignore(repoRoot);
-  } else if (notionCredentials && envExists) {
+  } else if ((notionCredentials || wizardAnswers?.credentials) && envExists) {
     warn(`Skipped existing ${envPath} - your credentials were not overwritten`);
   }
 
@@ -815,7 +1190,36 @@ NOTION_VERSION=2022-06-28
   }
 
   info("\n✨ RepoLens initialization complete!\n");
-    if (hasGitHubToken && !wizardAnswers) {
+
+  // Wizard mode: Show tailored summary
+  if (wizardAnswers) {
+    info("📁 Files created:");
+    info("   • .repolens.yml — Configuration");
+    info("   • .github/workflows/repolens.yml — GitHub Actions workflow");
+    info("   • .env.example — Template for credentials");
+    if (wizardAnswers.credentials && Object.keys(wizardAnswers.credentials).length > 0) {
+      info("   • .env — Your credentials (gitignored)");
+    }
+    info("   • README.repolens.md — Getting started guide");
+
+    if (wizardAnswers.githubSecretsNeeded && wizardAnswers.githubSecretsNeeded.length > 0) {
+      info("\n🔐 GitHub Actions Secrets:");
+      info("   Add at: Settings → Secrets → Actions");
+      for (const secret of wizardAnswers.githubSecretsNeeded) {
+        info(`   • ${secret}`);
+      }
+    }
+
+    info("\n🚀 Next steps:");
+    info("   1. Test locally: npx @chappibunny/repolens publish");
+    info("   2. Add GitHub secrets (see above)");
+    info("   3. Commit and push to trigger workflow");
+    info("   4. Run 'npx @chappibunny/repolens doctor' to validate setup");
+    return;
+  }
+
+  // Non-wizard mode: Original output
+  if (hasGitHubToken && !wizardAnswers) {
     info("🤖 Detected GITHUB_TOKEN — AI-enhanced docs enabled via GitHub Models (free)");
     info("   Your workflow and config are pre-configured. No extra setup needed.\n");
   }

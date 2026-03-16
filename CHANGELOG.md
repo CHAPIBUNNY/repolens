@@ -2,6 +2,35 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.10.0
+
+### ✨ Interactive Init is Now Default
+
+- **`repolens init` is now fully interactive**: No more `--interactive` flag needed — the wizard runs by default
+- **Use `--quick` to skip the wizard**: For CI or minimal scaffolding, use `repolens init --quick`
+- **Comprehensive wizard**: Configures ALL publishers (Notion, Confluence, GitHub Wiki), not just Notion
+  - Collects credentials for each selected publisher
+  - Guides AI provider selection with environment validation
+  - Discord webhook configuration
+  - Branch filtering for Notion/Confluence publishing
+  - Shows clear summary of GitHub Actions secrets needed
+- **Credentials written to `.env`**: All collected credentials are saved locally (gitignored)
+- **Better validation**: Shows specific status for each credential (✓ set vs ○ needed)
+
+### 🤖 AI Setup from CLI
+
+- **Browser auto-open**: Wizard offers to open API key signup pages (OpenAI, Anthropic, Google) in your browser
+- **API key validation**: Tests your AI key immediately after you paste it — confirms it works before saving
+- **GitHub Token testing**: Validates existing `GITHUB_TOKEN` works with GitHub Models
+- **Clear feedback**: Shows ✓ valid / ⚠ invalid with specific error messages
+- **Writes all config**: `.env` now includes `REPOLENS_AI_ENABLED=true` and `REPOLENS_AI_PROVIDER=...`
+
+### 🔧 AI Diagnostics
+
+- **Better error messages**: AI failures now show the actual reason (e.g., "Missing API key (expected REPOLENS_AI_API_KEY)")
+- **Config logging**: First AI call logs the provider, model, and key prefix being used
+- **Workflow template updated**: Default workflow now shows both GitHub Models (free) AND OpenAI options with clear comments
+
 ## 1.9.12
 
 ### 🐛 Bug Fixes
@@ -149,7 +178,7 @@ Users without AI API keys now get production-quality documentation instead of sp
 - **Zero-config AI in CI**: When `ai.provider: github` is set in `.repolens.yml`, RepoLens uses the default `GITHUB_TOKEN` injected by GitHub Actions. No secrets to create or manage.
 - **Config-driven AI settings**: `ai.enabled`, `ai.provider`, `ai.model`, `ai.temperature`, and `ai.base_url` in `.repolens.yml` are now fully respected at runtime (env vars still take precedence). Previously these config values were ignored.
 - **Init wizard fixes**: Provider selection now uses correct runtime values (`github`, `openai_compatible`, `anthropic`, `google`) instead of mismatched labels. The wizard now emits `ai.provider` to the generated YAML. Added `github_wiki` to publisher choices.
-- **Demo AI upsell**: `repolens demo` now shows a hint about GitHub Models (free) when AI is not enabled, guiding users to `repolens init --interactive`.
+- **Demo AI upsell**: `repolens demo` now shows a hint about GitHub Models (free) when AI is not enabled, guiding users to `repolens init`.
 - **Uninstall command**: `repolens uninstall` removes all RepoLens-generated files (`.repolens/`, `.repolens.yml`, workflow, `.env.example`, `README.repolens.md`) with confirmation prompt and `--force` flag.
 - **Doctor validation**: `repolens doctor` now checks for `GITHUB_TOKEN` when provider is `github`, and `REPOLENS_AI_API_KEY` for other providers.
 
@@ -449,7 +478,7 @@ RepoLens v1.0.0 marks the first stable release with a frozen public API. All CLI
 ## 0.7.0
 
 ### ✨ New Features
-- **Interactive Init Wizard**: `repolens init --interactive` — step-by-step configuration wizard with scan presets (Next.js, Express, generic), publisher selection, AI provider setup, and branch filtering
+- **Interactive Init Wizard**: `repolens init` — step-by-step configuration wizard with scan presets (Next.js, Express, generic), publisher selection, AI provider setup, and branch filtering (now default behavior; use `--quick` to skip)
 - **Watch Mode**: `repolens watch` — watches source directories for changes and regenerates Markdown docs with 500ms debounce (no API calls)
 - **Enhanced Error Messages**: Centralized error catalog with actionable guidance — every error now shows what went wrong, why, and how to fix it
 - **Performance Monitoring**: Scan, render, and publish timing summary printed after every `publish` run

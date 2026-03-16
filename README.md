@@ -165,8 +165,8 @@ Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki,
 
 | Command | Description |
 |---|---|
-| `npx @chappibunny/repolens init` | Scaffold config + GitHub Actions workflow |
-| `npx @chappibunny/repolens init --interactive` | Step-by-step configuration wizard |
+| `npx @chappibunny/repolens init` | **Interactive wizard** — configure publishers, AI, credentials |
+| `npx @chappibunny/repolens init --quick` | Minimal setup, skip wizard |
 | `npx @chappibunny/repolens publish` | Scan, generate, and publish documentation |
 | `npx @chappibunny/repolens demo` | Quick local preview — no API keys needed |
 | `npx @chappibunny/repolens doctor` | Validate your setup |

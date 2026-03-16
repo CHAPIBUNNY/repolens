@@ -63,7 +63,7 @@ async function generateWithStructuredFallback(key, promptText, maxTokens, fallba
       if (md) return sanitizeAIOutput(md);
     }
     // If structured mode failed, fall through to plain-text
-    warn(`Structured AI failed for ${key}, trying plain-text mode...`);
+    warn(`Structured AI failed for ${key}: ${result.error || "invalid/empty response"}`);
   }
 
   // Plain-text AI fallback
@@ -76,7 +76,7 @@ async function generateWithStructuredFallback(key, promptText, maxTokens, fallba
   });
 
   if (!result.success) {
-    warn("AI generation failed, using fallback");
+    warn(`AI generation failed: ${result.error || "unknown error"}`);
     return fallbackFn();
   }
 
