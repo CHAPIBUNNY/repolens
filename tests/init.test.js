@@ -2,7 +2,106 @@ import { describe, it, expect, afterEach } from "vitest";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import { runInit } from "../src/init.js";
+import { runInit, parseConfluenceUrl, parseNotionInput } from "../src/init.js";
+
+describe("parseConfluenceUrl", () => {
+  it("extracts base URL, space key, and page ID from full URL", () => {
+    const result = parseConfluenceUrl(
+      "https://company.atlassian.net/wiki/spaces/DOCS/pages/123456/Page+Title"
+    );
+    expect(result.baseUrl).toBe("https://company.atlassian.net/wiki");
+    expect(result.spaceKey).toBe("DOCS");
+    expect(result.pageId).toBe("123456");
+    expect(result.isFullUrl).toBe(true);
+  });
+
+  it("extracts personal space key (~user format)", () => {
+    const result = parseConfluenceUrl(
+      "https://repolens.atlassian.net/wiki/spaces/~DOCS/pages/5505052/SAPP"
+    );
+    expect(result.baseUrl).toBe("https://repolens.atlassian.net/wiki");
+    expect(result.spaceKey).toBe("~DOCS");
+    expect(result.pageId).toBe("5505052");
+  });
+
+  it("handles URL with query params", () => {
+    const result = parseConfluenceUrl(
+      "https://company.atlassian.net/wiki/spaces/ENG/pages/789?atlOrigin=xyz"
+    );
+    expect(result.spaceKey).toBe("ENG");
+    expect(result.pageId).toBe("789");
+  });
+
+  it("handles base URL only", () => {
+    const result = parseConfluenceUrl("https://company.atlassian.net/wiki");
+    expect(result.baseUrl).toBe("https://company.atlassian.net/wiki");
+    expect(result.spaceKey).toBeNull();
+    expect(result.pageId).toBeNull();
+    expect(result.isFullUrl).toBe(false);
+  });
+
+  it("adds /wiki if missing from domain", () => {
+    const result = parseConfluenceUrl("https://company.atlassian.net");
+    expect(result.baseUrl).toBe("https://company.atlassian.net/wiki");
+  });
+
+  it("handles space URL without page", () => {
+    const result = parseConfluenceUrl(
+      "https://company.atlassian.net/wiki/spaces/DOCS"
+    );
+    expect(result.spaceKey).toBe("DOCS");
+    expect(result.pageId).toBeNull();
+  });
+
+  it("returns null values for empty input", () => {
+    const result = parseConfluenceUrl("");
+    expect(result.baseUrl).toBeNull();
+    expect(result.spaceKey).toBeNull();
+    expect(result.pageId).toBeNull();
+  });
+});
+
+describe("parseNotionInput", () => {
+  it("extracts page ID from full Notion URL", () => {
+    const result = parseNotionInput(
+      "https://www.notion.so/workspace/My-Page-abc123def456abc123def456abc12345"
+    );
+    expect(result.pageId).toBe("abc123def456abc123def456abc12345");
+    expect(result.isUrl).toBe(true);
+  });
+
+  it("extracts page ID from short URL", () => {
+    const result = parseNotionInput(
+      "https://notion.so/abc123def456abc123def456abc12345"
+    );
+    expect(result.pageId).toBe("abc123def456abc123def456abc12345");
+    expect(result.isUrl).toBe(true);
+  });
+
+  it("accepts raw 32-char page ID", () => {
+    const result = parseNotionInput("abc123def456abc123def456abc12345");
+    expect(result.pageId).toBe("abc123def456abc123def456abc12345");
+    expect(result.isUrl).toBe(false);
+  });
+
+  it("handles dashed format page ID", () => {
+    const result = parseNotionInput("abc12345-def4-56ab-c123-def456abc123");
+    expect(result.pageId).toBe("abc12345def456abc123def456abc123");
+    expect(result.isUrl).toBe(false);
+  });
+
+  it("returns null for invalid input", () => {
+    const result = parseNotionInput("not-a-valid-id");
+    expect(result.pageId).toBe("not-a-valid-id"); // passes through
+    expect(result.isUrl).toBe(false);
+  });
+
+  it("returns null for empty input", () => {
+    const result = parseNotionInput("");
+    expect(result.pageId).toBeNull();
+    expect(result.isUrl).toBe(false);
+  });
+});
 
 describe("runInit", () => {
   let tempDir;

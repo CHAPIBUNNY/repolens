@@ -5,14 +5,241 @@ import { exec } from "node:child_process";
 import { info, warn } from "./utils/logger.js";
 
 const PUBLISHER_CHOICES = ["markdown", "notion", "confluence", "github_wiki"];
+
+// ============================================================================
+// URL PARSING HELPERS
+// ============================================================================
+
+/**
+ * Parse a Confluence URL and extract base URL, space key, and page ID.
+ * Handles various URL formats:
+ *   - Full page URL: https://company.atlassian.net/wiki/spaces/DOCS/pages/123456/Page+Title
+ *   - Space URL: https://company.atlassian.net/wiki/spaces/DOCS
+ *   - Base URL: https://company.atlassian.net/wiki
+ * Returns: { baseUrl, spaceKey, pageId, isFullUrl }
+ */
+function parseConfluenceUrl(input) {
+  if (!input) return { baseUrl: null, spaceKey: null, pageId: null, isFullUrl: false };
+  
+  input = input.trim();
+  
+  // Remove query params and hash
+  const cleanUrl = input.split("?")[0].split("#")[0];
+  
+  try {
+    const url = new URL(cleanUrl);
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    
+    // Find '/wiki' position
+    const wikiIndex = pathParts.indexOf("wiki");
+    if (wikiIndex === -1) {
+      // No /wiki in path - might just be base domain
+      return { 
+        baseUrl: `${url.protocol}//${url.host}/wiki`, 
+        spaceKey: null, 
+        pageId: null, 
+        isFullUrl: false 
+      };
+    }
+    
+    const baseUrl = `${url.protocol}//${url.host}/wiki`;
+    let spaceKey = null;
+    let pageId = null;
+    
+    // Look for /spaces/SPACE_KEY pattern
+    const spacesIndex = pathParts.indexOf("spaces");
+    if (spacesIndex !== -1 && pathParts[spacesIndex + 1]) {
+      spaceKey = pathParts[spacesIndex + 1];
+    }
+    
+    // Look for /pages/PAGE_ID pattern
+    const pagesIndex = pathParts.indexOf("pages");
+    if (pagesIndex !== -1 && pathParts[pagesIndex + 1]) {
+      pageId = pathParts[pagesIndex + 1];
+    }
+    
+    return {
+      baseUrl,
+      spaceKey,
+      pageId,
+      isFullUrl: Boolean(spaceKey || pageId),
+    };
+  } catch {
+    // Not a valid URL - return as-is
+    return { baseUrl: input, spaceKey: null, pageId: null, isFullUrl: false };
+  }
+}
+
+/**
+ * Parse a Notion URL or page ID and extract the page ID.
+ * Handles various formats:
+ *   - Full URL: https://www.notion.so/workspace/Page-Title-abc123def456
+ *   - Short URL: https://notion.so/abc123def456
+ *   - Just the page ID: abc123def456 or abc123-def456-...
+ * Returns: { pageId, isUrl }
+ */
+function parseNotionInput(input) {
+  if (!input) return { pageId: null, isUrl: false };
+  
+  input = input.trim();
+  
+  // Check if it looks like a URL
+  if (input.includes("notion.so") || input.includes("notion.site")) {
+    try {
+      const url = new URL(input.startsWith("http") ? input : `https://${input}`);
+      const pathParts = url.pathname.split("/").filter(Boolean);
+      
+      // The last path segment typically contains the page ID
+      // Format: "Page-Title-abc123def456ghi789" - ID is the last 32 hex chars
+      const lastPart = pathParts[pathParts.length - 1] || "";
+      
+      // Try to extract the 32-char hex ID from the end
+      const idMatch = lastPart.match(/([a-f0-9]{32})$/i);
+      if (idMatch) {
+        return { pageId: idMatch[1], isUrl: true };
+      }
+      
+      // Try format with dashes: abc123-def456-...
+      const dashedMatch = lastPart.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/i);
+      if (dashedMatch) {
+        return { pageId: dashedMatch[1].replace(/-/g, ""), isUrl: true };
+      }
+      
+      // Last segment might be the ID directly
+      const cleanId = lastPart.replace(/-/g, "");
+      if (/^[a-f0-9]{32}$/i.test(cleanId)) {
+        return { pageId: cleanId, isUrl: true };
+      }
+      
+      return { pageId: null, isUrl: true };
+    } catch {
+      return { pageId: null, isUrl: false };
+    }
+  }
+  
+  // Not a URL - might be raw page ID
+  const cleanId = input.replace(/-/g, "");
+  if (/^[a-f0-9]{32}$/i.test(cleanId)) {
+    return { pageId: cleanId, isUrl: false };
+  }
+  
+  // Return as-is (might be invalid)
+  return { pageId: input, isUrl: false };
+}
+
+/**
+ * Test Confluence credentials by fetching space info.
+ */
+async function testConfluenceCredentials(url, email, apiToken, spaceKey) {
+  try {
+    const auth = Buffer.from(`${email}:${apiToken}`).toString("base64");
+    const endpoint = `${url}/rest/api/space/${spaceKey}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Authorization": `Basic ${auth}`,
+        "Accept": "application/json",
+      },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data = await response.json();
+      return { success: true, spaceName: data.name };
+    }
+    
+    if (response.status === 401) {
+      return { success: false, error: "Invalid email or API token" };
+    }
+    if (response.status === 404) {
+      return { success: false, error: `Space '${spaceKey}' not found` };
+    }
+    
+    return { success: false, error: `API error ${response.status}` };
+  } catch (err) {
+    if (err.name === "AbortError") {
+      return { success: false, error: "Connection timed out" };
+    }
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Test Notion credentials by fetching page info.
+ */
+async function testNotionCredentials(token, pageId) {
+  try {
+    const endpoint = `https://api.notion.com/v1/pages/${pageId}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Notion-Version": "2022-06-28",
+      },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      return { success: true };
+    }
+    
+    const errorBody = await response.json().catch(() => ({}));
+    
+    if (response.status === 401) {
+      return { success: false, error: "Invalid token" };
+    }
+    if (response.status === 404) {
+      return { success: false, error: "Page not found — make sure your integration has access to this page" };
+    }
+    if (errorBody.code === "object_not_found") {
+      return { success: false, error: "Page not found — share the page with your integration first" };
+    }
+    
+    return { success: false, error: `API error ${response.status}: ${errorBody.message || ""}` };
+  } catch (err) {
+    if (err.name === "AbortError") {
+      return { success: false, error: "Connection timed out" };
+    }
+    return { success: false, error: err.message };
+  }
+}
 const AI_PROVIDERS = [
   { value: "github",            label: "GitHub Models  (free in GitHub Actions)", signupUrl: null },
   { value: "openai_compatible", label: "OpenAI / Compatible  (GPT-5, GPT-4o, etc.)", signupUrl: "https://platform.openai.com/api-keys" },
   { value: "anthropic",         label: "Anthropic  (Claude)", signupUrl: "https://console.anthropic.com/settings/keys" },
   { value: "google",            label: "Google  (Gemini)", signupUrl: "https://aistudio.google.com/app/apikey" },
 ];
+
+// All file extensions we can analyze
+const ALL_EXTENSIONS = "js,ts,jsx,tsx,mjs,cjs,py,go,rs,java,rb,php,cs,swift,kt,scala,vue,svelte";
+
 const SCAN_PRESETS = {
+  // Universal preset - scans ALL supported languages
+  universal: {
+    label: "Universal (all languages)",
+    description: "Scans all supported file types — best for polyglot projects",
+    include: [
+      `**/*.{${ALL_EXTENSIONS}}`,
+    ],
+    roots: ["src", "lib", "app", "pkg", "internal", "cmd", "packages"],
+  },
+  
+  // JavaScript/TypeScript ecosystems
   nextjs: {
+    label: "Next.js / React",
+    description: "React, Next.js, and frontend TypeScript projects",
     include: [
       "src/**/*.{ts,tsx,js,jsx}",
       "app/**/*.{ts,tsx,js,jsx}",
@@ -23,20 +250,65 @@ const SCAN_PRESETS = {
     roots: ["src", "app", "pages", "lib", "components"],
   },
   express: {
+    label: "Express / Node.js",
+    description: "Node.js backend APIs and Express servers",
     include: [
-      "src/**/*.{ts,js}",
+      "src/**/*.{ts,js,mjs,cjs}",
       "routes/**/*.{ts,js}",
       "controllers/**/*.{ts,js}",
       "models/**/*.{ts,js}",
       "middleware/**/*.{ts,js}",
+      "services/**/*.{ts,js}",
     ],
-    roots: ["src", "routes", "controllers", "models"],
+    roots: ["src", "routes", "controllers", "models", "services"],
   },
-  generic: {
+  
+  // Python ecosystem
+  python: {
+    label: "Python",
+    description: "Django, Flask, FastAPI, and general Python projects",
     include: [
-      "src/**/*.{ts,tsx,js,jsx,md}",
-      "app/**/*.{ts,tsx,js,jsx,md}",
-      "lib/**/*.{ts,tsx,js,jsx,md}",
+      "**/*.py",
+    ],
+    roots: ["src", "app", "lib", "api", "core", "services", "models", "views", "utils"],
+  },
+  
+  // Go ecosystem
+  golang: {
+    label: "Go",
+    description: "Go modules with standard layout",
+    include: [
+      "**/*.go",
+    ],
+    roots: ["cmd", "pkg", "internal", "api", "server", "handlers"],
+  },
+  
+  // Rust ecosystem
+  rust: {
+    label: "Rust",
+    description: "Cargo projects and Rust libraries",
+    include: [
+      "**/*.rs",
+    ],
+    roots: ["src", "lib", "bin", "examples"],
+  },
+  
+  // Java/JVM ecosystem
+  java: {
+    label: "Java / Kotlin / Scala",
+    description: "JVM projects (Maven/Gradle)",
+    include: [
+      "**/*.{java,kt,scala}",
+    ],
+    roots: ["src/main/java", "src/main/kotlin", "src/main/scala", "app", "core", "service"],
+  },
+  
+  // Legacy "generic" preserved but improved
+  generic: {
+    label: "JavaScript/TypeScript only",
+    description: "Traditional JS/TS projects",
+    include: [
+      "**/*.{ts,tsx,js,jsx,mjs,cjs}",
     ],
     roots: ["src", "app", "lib"],
   },
@@ -709,20 +981,73 @@ async function runInteractiveWizard(repoRoot) {
     // Notion setup
     if (publishers.includes("notion")) {
       info("\n📝 Notion Setup");
-      info("   Get your integration token from: https://www.notion.so/my-integrations");
-      info("   Find page ID in the URL: notion.so/workspace/PAGE_ID_HERE\n");
+      info("   ┌────────────────────────────────────────────────────────────┐");
+      info("   │ Step 1: Get your Integration Token                          │");
+      info("   │   → https://www.notion.so/my-integrations                   │");
+      info("   │   → Create new integration → Copy 'Internal Integration Token'│");
+      info("   │                                                              │");
+      info("   │ Step 2: Share your page with the integration                │");
+      info("   │   → Open the page in Notion                                  │");
+      info("   │   → Click '...' → 'Add connections' → Select your integration│");
+      info("   └────────────────────────────────────────────────────────────┘");
       
-      const setupNow = (await ask("   Configure Notion credentials now? (Y/n): ")).trim().toLowerCase();
+      const setupNow = (await ask("\n   Configure Notion credentials now? (Y/n): ")).trim().toLowerCase();
       if (setupNow !== "n") {
-        credentials.notion = {
-          token: (await ask("   NOTION_TOKEN: ")).trim(),
-          parentPageId: (await ask("   NOTION_PARENT_PAGE_ID: ")).trim(),
-        };
-        if (!credentials.notion.token || !credentials.notion.parentPageId) {
-          warn("   Incomplete credentials. You'll need to set them manually.");
-          delete credentials.notion;
+        // Token first
+        const openNotionPage = (await ask("   Open Notion integrations page in browser? (Y/n): ")).trim().toLowerCase();
+        if (openNotionPage !== "n") {
+          await openUrl("https://www.notion.so/my-integrations");
+          info("   Opening browser... Create or copy your integration token.\n");
+        }
+        
+        const token = (await ask("   NOTION_TOKEN (paste your secret_... token): ")).trim();
+        
+        if (!token) {
+          warn("   No token provided. Skipping Notion setup.");
         } else {
-          info("   ✓ Notion credentials collected");
+          // Page ID - accept URL or ID
+          info("\n   Now paste either:");
+          info("   • The full Notion page URL, OR");
+          info("   • Just the 32-character page ID\n");
+          const pageInput = (await ask("   NOTION_PARENT_PAGE_ID (URL or ID): ")).trim();
+          
+          const { pageId, isUrl } = parseNotionInput(pageInput);
+          
+          if (!pageId) {
+            warn("   Could not extract page ID from input. Please enter the 32-char ID directly.");
+            const retryId = (await ask("   Page ID: ")).trim();
+            if (retryId) {
+              const retryParsed = parseNotionInput(retryId);
+              if (retryParsed.pageId) {
+                credentials.notion = { token, parentPageId: retryParsed.pageId };
+              }
+            }
+          } else {
+            if (isUrl) {
+              info(`   ✓ Extracted page ID: ${pageId}`);
+            }
+            
+            // Test credentials
+            info("   Testing Notion connection...");
+            const testResult = await testNotionCredentials(token, pageId);
+            
+            if (testResult.success) {
+              info("   ✓ Connection successful! Your integration can access this page.");
+              credentials.notion = { token, parentPageId: pageId };
+            } else {
+              warn(`   ⚠ Connection failed: ${testResult.error}`);
+              info("   Common fixes:");
+              info("   • Make sure you shared the page with your integration");
+              info("   • Check that the token is correct (starts with 'secret_')");
+              const saveAnyway = (await ask("   Save credentials anyway? (y/N): ")).trim().toLowerCase();
+              if (saveAnyway === "y") {
+                credentials.notion = { token, parentPageId: pageId };
+                info("   ✓ Credentials saved (verify manually later)");
+              } else {
+                warn("   Skipping Notion setup. Configure manually later.");
+              }
+            }
+          }
         }
       }
       githubSecretsNeeded.push("NOTION_TOKEN", "NOTION_PARENT_PAGE_ID");
@@ -731,24 +1056,107 @@ async function runInteractiveWizard(repoRoot) {
     // Confluence setup
     if (publishers.includes("confluence")) {
       info("\n📝 Confluence Setup");
-      info("   Get your API token from: https://id.atlassian.com/manage-profile/security/api-tokens");
-      info("   Find space key in the URL: confluence.atlassian.net/wiki/spaces/SPACE_KEY/...\n");
+      info("   ┌────────────────────────────────────────────────────────────┐");
+      info("   │ You'll need:                                                │");
+      info("   │  • Base URL (e.g., https://company.atlassian.net/wiki)      │");
+      info("   │  • Email address for your Atlassian account                 │");
+      info("   │  • API token from: id.atlassian.com/manage-profile/security │");
+      info("   │  • Space key (e.g., DOCS, ENG, ~username for personal)      │");
+      info("   └────────────────────────────────────────────────────────────┘");
       
-      const setupNow = (await ask("   Configure Confluence credentials now? (Y/n): ")).trim().toLowerCase();
+      const setupNow = (await ask("\n   Configure Confluence credentials now? (Y/n): ")).trim().toLowerCase();
       if (setupNow !== "n") {
-        credentials.confluence = {
-          url: (await ask("   CONFLUENCE_URL (e.g., https://company.atlassian.net/wiki): ")).trim(),
-          email: (await ask("   CONFLUENCE_EMAIL: ")).trim(),
-          apiToken: (await ask("   CONFLUENCE_API_TOKEN: ")).trim(),
-          spaceKey: (await ask("   CONFLUENCE_SPACE_KEY: ")).trim(),
-          parentPageId: (await ask("   CONFLUENCE_PARENT_PAGE_ID (optional): ")).trim(),
-        };
-        const conf = credentials.confluence;
-        if (!conf.url || !conf.email || !conf.apiToken || !conf.spaceKey) {
-          warn("   Incomplete credentials. You'll need to set them manually.");
-          delete credentials.confluence;
+        // Open API token page
+        const openAtlassian = (await ask("   Open Atlassian API token page in browser? (Y/n): ")).trim().toLowerCase();
+        if (openAtlassian !== "n") {
+          await openUrl("https://id.atlassian.com/manage-profile/security/api-tokens");
+          info("   Opening browser... Create an API token and copy it.\n");
+        }
+        
+        // Ask for URL first - it can contain space key and page ID
+        info("\n   Paste either:");
+        info("   • A full Confluence page URL (we'll extract the details), OR");
+        info("   • Just the base URL (e.g., https://company.atlassian.net/wiki)\n");
+        
+        const urlInput = (await ask("   CONFLUENCE_URL: ")).trim();
+        const parsed = parseConfluenceUrl(urlInput);
+        
+        let baseUrl = parsed.baseUrl;
+        let spaceKey = parsed.spaceKey;
+        let pageId = parsed.pageId;
+        
+        if (parsed.isFullUrl) {
+          info(`   ✓ Detected full URL! Extracted:`);
+          info(`     • Base URL: ${baseUrl}`);
+          if (spaceKey) info(`     • Space Key: ${spaceKey}`);
+          if (pageId) info(`     • Page ID: ${pageId}`);
+          
+          // Confirm extracted base URL
+          const confirmBase = (await ask(`\n   Use '${baseUrl}' as base URL? (Y/n): `)).trim().toLowerCase();
+          if (confirmBase === "n") {
+            baseUrl = (await ask("   Enter base URL: ")).trim();
+          }
+        } else if (!baseUrl || !baseUrl.includes("/wiki")) {
+          warn("   URL should include /wiki (e.g., https://company.atlassian.net/wiki)");
+          baseUrl = (await ask("   Enter base URL (with /wiki): ")).trim();
+        }
+        
+        // Email
+        const email = (await ask("   CONFLUENCE_EMAIL (your Atlassian email): ")).trim();
+        
+        // API Token
+        const apiToken = (await ask("   CONFLUENCE_API_TOKEN (paste from Atlassian): ")).trim();
+        
+        // Space Key - use extracted or ask
+        if (spaceKey) {
+          const confirmSpace = (await ask(`\n   Use space key '${spaceKey}'? (Y/n): `)).trim().toLowerCase();
+          if (confirmSpace === "n") {
+            info("   Space key examples: DOCS, ENG, DEV, ~username (personal)");
+            spaceKey = (await ask("   CONFLUENCE_SPACE_KEY: ")).trim();
+          }
         } else {
-          info("   ✓ Confluence credentials collected");
+          info("\n   Space key is in the URL: /wiki/spaces/SPACE_KEY/...");
+          info("   Examples: DOCS, ENG, DEV, ~username (for personal spaces)");
+          spaceKey = (await ask("   CONFLUENCE_SPACE_KEY: ")).trim();
+        }
+        
+        // Page ID - use extracted or ask
+        if (pageId) {
+          const confirmPage = (await ask(`   Use page ID '${pageId}' as parent? (Y/n): `)).trim().toLowerCase();
+          if (confirmPage === "n") {
+            pageId = (await ask("   CONFLUENCE_PARENT_PAGE_ID (optional, press Enter to skip): ")).trim() || null;
+          }
+        } else {
+          info("\n   Parent page ID is in the URL: /wiki/spaces/.../pages/PAGE_ID/...");
+          info("   (Optional - leave blank to publish at space root)");
+          pageId = (await ask("   CONFLUENCE_PARENT_PAGE_ID: ")).trim() || null;
+        }
+        
+        // Validate required fields
+        if (!baseUrl || !email || !apiToken || !spaceKey) {
+          warn("   Missing required fields. Skipping Confluence setup.");
+        } else {
+          // Test connection
+          info("\n   Testing Confluence connection...");
+          const testResult = await testConfluenceCredentials(baseUrl, email, apiToken, spaceKey);
+          
+          if (testResult.success) {
+            info(`   ✓ Connection successful! Found space: "${testResult.spaceName}"`);
+            credentials.confluence = { url: baseUrl, email, apiToken, spaceKey, parentPageId: pageId };
+          } else {
+            warn(`   ⚠ Connection failed: ${testResult.error}`);
+            info("   Common issues:");
+            info("   • API token is for your Atlassian account (not Confluence)");
+            info("   • Space key is case-sensitive (check URL)");
+            info("   • Make sure you have access to the space");
+            const saveAnyway = (await ask("   Save credentials anyway? (y/N): ")).trim().toLowerCase();
+            if (saveAnyway === "y") {
+              credentials.confluence = { url: baseUrl, email, apiToken, spaceKey, parentPageId: pageId };
+              info("   ✓ Credentials saved (verify manually later)");
+            } else {
+              warn("   Skipping Confluence setup. Configure manually later.");
+            }
+          }
         }
       }
       githubSecretsNeeded.push("CONFLUENCE_URL", "CONFLUENCE_EMAIL", "CONFLUENCE_API_TOKEN", "CONFLUENCE_SPACE_KEY", "CONFLUENCE_PARENT_PAGE_ID");
@@ -850,14 +1258,29 @@ async function runInteractiveWizard(repoRoot) {
       }
     }
 
-    // 5. Scan preset
-    info("\n📂 Scan Preset (determines which files to analyze):");
+    // 5. Scan preset - detect language from files in repo
+    info("\n📂 Language/Framework Preset");
+    info("   Determines which file types and directories to scan.\n");
+    
     const presetKeys = Object.keys(SCAN_PRESETS);
-    presetKeys.forEach((p, i) => info(`  ${i + 1}. ${p}`));
-    const presetInput = (await ask(`Preset [3] (default: 3 generic): `)).trim() || "3";
+    presetKeys.forEach((key, i) => {
+      const preset = SCAN_PRESETS[key];
+      const num = (i + 1).toString().padStart(2);
+      info(`   ${num}. ${preset.label}`);
+      info(`       ${preset.description}`);
+    });
+    
+    // Default to universal (index 0) since it works for everything
+    const defaultPresetIdx = 1;
+    const defaultPreset = presetKeys[defaultPresetIdx - 1];
+    const defaultLabel = SCAN_PRESETS[defaultPreset].label;
+    
+    const presetInput = (await ask(`\nPreset [${defaultPresetIdx}] (default: ${defaultPresetIdx} ${defaultLabel}): `)).trim() || String(defaultPresetIdx);
     const presetIdx = parseInt(presetInput, 10);
-    const presetKey = presetKeys[(presetIdx >= 1 && presetIdx <= presetKeys.length) ? presetIdx - 1 : 2];
+    const presetKey = presetKeys[(presetIdx >= 1 && presetIdx <= presetKeys.length) ? presetIdx - 1 : defaultPresetIdx - 1];
     const preset = SCAN_PRESETS[presetKey];
+    
+    info(`   ✓ Selected: ${preset.label}`);
 
     // 6. Branch filtering
     info("\n🌿 Branch Filtering");
@@ -886,7 +1309,7 @@ async function runInteractiveWizard(repoRoot) {
     info(`   Project:    ${projectName}`);
     info(`   Publishers: ${publishers.join(", ")}`);
     info(`   AI:         ${enableAi ? `Enabled (${aiProvider})` : "Disabled"}`);
-    info(`   Scan:       ${presetKey} preset`);
+    info(`   Scan:       ${preset.label}`);
     info(`   Branches:   ${branches.join(", ")}`);
     info(`   Discord:    ${enableDiscord ? "Enabled" : "Disabled"}`);
 
@@ -1083,6 +1506,9 @@ function buildEnvFromCredentials(credentials) {
   return lines.join("\n");
 }
 
+// Export helper functions for testing
+export { parseConfluenceUrl, parseNotionInput };
+
 export async function runInit(targetDir = process.cwd(), options = {}) {
   const repoRoot = path.resolve(targetDir);
 
@@ -1210,11 +1636,28 @@ NOTION_VERSION=2022-06-28
       }
     }
 
+    // Show .env sourcing instructions if credentials were collected
+    const hasLocalCredentials = wizardAnswers.credentials && Object.keys(wizardAnswers.credentials).length > 0;
+    
     info("\n🚀 Next steps:");
-    info("   1. Test locally: npx @chappibunny/repolens publish");
-    info("   2. Add GitHub secrets (see above)");
-    info("   3. Commit and push to trigger workflow");
-    info("   4. Run 'npx @chappibunny/repolens doctor' to validate setup");
+    if (hasLocalCredentials) {
+      info("   ┌────────────────────────────────────────────────────────────┐");
+      info("   │ IMPORTANT: Your credentials are in .env but not loaded yet │");
+      info("   │ Run this BEFORE 'repolens publish':                         │");
+      info("   │                                                              │");
+      info("   │   source .env                                               │");
+      info("   │                                                              │");
+      info("   │ This loads your credentials into the current shell.         │");
+      info("   └────────────────────────────────────────────────────────────┘");
+      info("");
+      info("   1. source .env                   ← Load your credentials");
+      info("   2. npx @chappibunny/repolens publish   ← Test locally");
+    } else {
+      info("   1. npx @chappibunny/repolens publish   ← Test locally");
+    }
+    info(`   ${hasLocalCredentials ? "3" : "2"}. Add GitHub secrets (see above)`);
+    info(`   ${hasLocalCredentials ? "4" : "3"}. Commit and push to trigger workflow`);
+    info(`   ${hasLocalCredentials ? "5" : "4"}. Run 'npx @chappibunny/repolens doctor' to validate setup`);
     return;
   }
 

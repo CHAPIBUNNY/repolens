@@ -2,6 +2,57 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.11.0
+
+### 🧙 Smart URL Parsing in Wizard
+
+The init wizard now intelligently parses URLs you paste, automatically extracting the right values:
+
+**Confluence:**
+- Paste a full page URL → wizard extracts base URL, space key, AND page ID
+- No more confusion between base URL vs page URL
+- Space key clearly explained (examples: `DOCS`, `ENG`, `~username` for personal)
+- Validates credentials immediately by testing connection to your space
+
+**Notion:**
+- Paste a full Notion page URL → wizard extracts the 32-char page ID automatically
+- Tests connection immediately and confirms your integration has access
+- Clear step-by-step instructions with browser auto-open for integrations page
+
+### 🌐 Multi-Language Scan Presets
+
+The wizard now supports **8 language/framework presets**:
+
+| # | Preset | Languages | Best For |
+|---|--------|-----------|----------|
+| 1 | **Universal** | All (JS, TS, Python, Go, Rust, Java, Ruby, PHP, C#, Swift, Kotlin, Scala, Vue, Svelte) | Polyglot projects |
+| 2 | Next.js / React | TypeScript, JavaScript | React frontends |
+| 3 | Express / Node.js | TypeScript, JavaScript | Node.js backends |
+| 4 | **Python** | Python | Django, Flask, FastAPI |
+| 5 | **Go** | Go | Standard Go layout |
+| 6 | **Rust** | Rust | Cargo projects |
+| 7 | **Java/Kotlin/Scala** | JVM languages | Maven/Gradle |
+| 8 | JavaScript/TypeScript | JS/TS only | Legacy JS projects |
+
+**Universal is now the default** — no more "0 modules detected" because of language mismatch!
+
+### 🔐 Critical .env Reminder
+
+After collecting credentials, the wizard now prominently displays:
+```
+┌────────────────────────────────────────────────────────────┐
+│ IMPORTANT: Your credentials are in .env but not loaded yet │
+│ Run this BEFORE 'repolens publish':                         │
+│                                                              │
+│   source .env                                               │
+└────────────────────────────────────────────────────────────┘
+```
+
+### 🧪 New Tests
+
+- 13 new tests for URL parsing functions (`parseConfluenceUrl`, `parseNotionInput`)
+- Total: 393 tests passing
+
 ## 1.10.0
 
 ### ✨ Interactive Init is Now Default
