@@ -487,7 +487,12 @@ async function main() {
       await publishDocs(cfg, renderedPages, scan, pluginManager);
       stopTimer(publishTimer);
       
-      await upsertPrComment(diffData);
+      // PR comment is best-effort - don't fail the whole run if it errors
+      try {
+        await upsertPrComment(diffData);
+      } catch (prCommentErr) {
+        warn(`PR comment failed (non-blocking): ${prCommentErr.message}`);
+      }
       info("✓ Documentation published successfully");
       
       const totalDuration = stopTimer(commandTimer);

@@ -2,6 +2,12 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.9.12
+
+### 🐛 Bug Fixes
+
+- **PR comment failure no longer crashes publish**: 403 errors from `upsertPrComment` are now caught and logged as warnings instead of crashing the entire workflow
+
 ## 1.9.11
 
 ### 🐛 Bug Fixes
