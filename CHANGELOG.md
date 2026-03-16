@@ -2,6 +2,12 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.9.9
+
+### 🐛 Bug Fixes
+
+- **Fixed cache age calculation**: Use `Math.max(0, ...)` to prevent negative age due to filesystem timestamp precision
+
 ## 1.9.8
 
 ### 📸 Documentation

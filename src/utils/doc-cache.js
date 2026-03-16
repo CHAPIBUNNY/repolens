@@ -28,7 +28,8 @@ export async function loadDocCache(cacheDir) {
       fs.readFile(cachePath, "utf8"),
       fs.stat(cachePath),
     ]);
-    const age = Date.now() - stat.mtimeMs;
+    // Math.max ensures age is never negative due to timing precision
+    const age = Math.max(0, Date.now() - stat.mtimeMs);
     return { cache: JSON.parse(raw), age };
   } catch {
     return { cache: {}, age: null };
