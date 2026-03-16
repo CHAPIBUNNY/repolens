@@ -2,6 +2,12 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.9.10
+
+### 📹 Documentation
+
+- **Fixed demo video link**: Use text link instead of thumbnail (Loom CDN requires specific sharing settings)
+
 ## 1.9.9
 
 ### 🐛 Bug Fixes

@@ -17,7 +17,7 @@
 
 RepoLens scans your repository, generates living architecture documentation, and publishes it to Notion, Confluence, GitHub Wiki, or Markdown — automatically on every push. Engineers get technical docs. Stakeholders get readable system overviews. Nobody writes a word.
 
-> Stable as of v1.0 — [API guarantees](docs/STABILITY.md) · [Security hardened](SECURITY.md) · v1.9.9
+> Stable as of v1.0 — [API guarantees](docs/STABILITY.md) · [Security hardened](SECURITY.md) · v1.9.10
 
 ---
 
@@ -25,9 +25,7 @@ RepoLens scans your repository, generates living architecture documentation, and
 
 > **Try it now** — no installation required. Run `npx @chappibunny/repolens demo` on any repo for an instant local preview.
 
-[![RepoLens Demo](https://cdn.loom.com/sessions/thumbnails/8e077624e69f41319fd93acbbe03871e-with-play.gif)](https://www.loom.com/share/8e077624e69f41319fd93acbbe03871e)
-
-▶️ *Click to watch demo*
+🎬 **[Watch Demo Video](https://www.loom.com/share/8e077624e69f41319fd93acbbe03871e)** — See RepoLens generate docs in 60 seconds
 
 <table>
 <tr>
