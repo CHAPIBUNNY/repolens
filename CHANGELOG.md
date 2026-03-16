@@ -2,6 +2,12 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.9.11
+
+### 🐛 Bug Fixes
+
+- **Fixed uninstall hang**: Refactored to use `promptYesNo` helper instead of raw readline (stdin was not properly closing)
+
 ## 1.9.10
 
 ### 📹 Documentation

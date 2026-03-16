@@ -672,13 +672,9 @@ async function main() {
       if (isCI || isTest) {
         info("\nCI/test environment detected — skipping confirmation (use --force to suppress this message).");
       } else {
-        const rl = createInterface({ input: process.stdin, output: process.stdout });
-        const answer = await new Promise((resolve) => {
-          rl.question(`\nRemove ${found.length} item${found.length === 1 ? "" : "s"}? This cannot be undone. (y/N): `, resolve);
-        });
-        rl.close();
+        const confirmed = await promptYesNo(`\nRemove ${found.length} item${found.length === 1 ? "" : "s"}? This cannot be undone.`, false);
         
-        if (!answer || answer.trim().toLowerCase() !== "y") {
+        if (!confirmed) {
           info("Uninstall cancelled.");
           await closeTelemetry();
           return;
