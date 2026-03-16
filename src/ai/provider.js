@@ -4,7 +4,7 @@ import { warn, info } from "../utils/logger.js";
 import { executeAIRequest } from "../utils/rate-limit.js";
 
 const DEFAULT_TIMEOUT_MS = 60000;
-const DEFAULT_MAX_TOKENS = 2500;
+const DEFAULT_MAX_TOKENS = 4000;
 
 /**
  * AI Provider Presets - one env var to configure common providers.
