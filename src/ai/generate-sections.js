@@ -94,7 +94,7 @@ export async function generateExecutiveSummary(context, enrichment = {}, config)
   return generateWithStructuredFallback(
     "executive_summary",
     createExecutiveSummaryPrompt(context),
-    1500,
+    3000,
     () => getFallbackExecutiveSummary(context, enrichment),
     config,
   );
@@ -104,7 +104,7 @@ export async function generateSystemOverview(context, enrichment = {}, config) {
   return generateWithStructuredFallback(
     "system_overview",
     createSystemOverviewPrompt(context),
-    1200,
+    2500,
     () => getFallbackSystemOverview(context, enrichment),
     config,
   );
@@ -114,7 +114,7 @@ export async function generateBusinessDomains(context, enrichment = {}, config) 
   return generateWithStructuredFallback(
     "business_domains",
     createBusinessDomainsPrompt(context),
-    2000,
+    3500,
     () => getFallbackBusinessDomains(context, enrichment),
     config,
   );
@@ -124,7 +124,7 @@ export async function generateArchitectureOverview(context, enrichment = {}, con
   return generateWithStructuredFallback(
     "architecture_overview",
     createArchitectureOverviewPrompt(context),
-    1800,
+    3500,
     () => getFallbackArchitectureOverview(context, enrichment),
     config,
   );
@@ -134,7 +134,7 @@ export async function generateDataFlows(flows, context, enrichment = {}, config)
   return generateWithStructuredFallback(
     "data_flows",
     createDataFlowsPrompt(flows, context),
-    1800,
+    3500,
     () => getFallbackDataFlows(flows, context, enrichment),
     config,
   );
@@ -144,7 +144,7 @@ export async function generateDeveloperOnboarding(context, enrichment = {}, conf
   return generateWithStructuredFallback(
     "developer_onboarding",
     createDeveloperOnboardingPrompt(context),
-    2200,
+    4000,
     () => getFallbackDeveloperOnboarding(context, enrichment),
     config,
   );

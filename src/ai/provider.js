@@ -289,11 +289,17 @@ async function callOpenAICompatibleAPI({ baseUrl, apiKey, model, system, user, t
       
       const choice = data.choices[0];
       const content = choice.message?.content;
+      const finishReason = choice.finish_reason || "unknown";
       
-      // Debug: log finish_reason if content is problematic
-      if (!content || content.trim().length === 0) {
-        const reason = choice.finish_reason || "unknown";
-        warn(`AI response empty (finish_reason: ${reason})`);
+      // Handle truncation - warn with actionable advice
+      if (finishReason === "length") {
+        if (!content || content.trim().length === 0) {
+          warn(`AI response truncated (hit ${maxTokens} token limit). Increase REPOLENS_AI_MAX_TOKENS or the per-document limit.`);
+        } else {
+          warn(`AI response may be incomplete (finish_reason: length). Consider increasing token limits.`);
+        }
+      } else if (!content || content.trim().length === 0) {
+        warn(`AI response empty (finish_reason: ${finishReason})`);
       }
       
       // Handle null/undefined content (some models return null in certain cases)
