@@ -36,6 +36,7 @@
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `REPOLENS_AI_ENABLED` | No | Enable AI-powered sections (`true`/`false`) |
+| `REPOLENS_AI_PRESET` | No | Quick setup preset: `github`, `openai`, `anthropic`, `google` (overrides provider/baseUrl/model) |
 | `REPOLENS_AI_PROVIDER` | No | Provider: `openai_compatible` (default), `anthropic`, `google`, `github` |
 | `REPOLENS_AI_API_KEY` | No | API key for AI provider (not needed for `github` provider) |
 | `REPOLENS_AI_BASE_URL` | No | API base URL (auto-set per provider; override for custom endpoints) |
@@ -43,7 +44,28 @@
 | `REPOLENS_AI_TEMPERATURE` | No | Generation temperature (omitted by default for GPT-5 compatibility) |
 | `REPOLENS_AI_MAX_TOKENS` | No | Max completion tokens per request (default: `2000`) |
 
-> **GitHub Models (free):** Set `REPOLENS_AI_PROVIDER=github` in GitHub Actions — uses `GITHUB_TOKEN` automatically, no separate API key required. See [AI.md](AI.md) for details.
+### AI Presets (Quick Setup)
+
+Instead of configuring provider, base URL, and model separately, use a preset:
+
+```bash
+# GitHub Models (free in GitHub Actions)
+REPOLENS_AI_PRESET=github
+
+# OpenAI
+REPOLENS_AI_PRESET=openai
+REPOLENS_AI_API_KEY=sk-...
+
+# Anthropic
+REPOLENS_AI_PRESET=anthropic
+REPOLENS_AI_API_KEY=sk-ant-...
+
+# Google Gemini
+REPOLENS_AI_PRESET=google
+REPOLENS_AI_API_KEY=...
+```
+
+> **GitHub Models (free):** Set `REPOLENS_AI_PRESET=github` in GitHub Actions — uses `GITHUB_TOKEN` automatically, no separate API key required. See [AI.md](AI.md) for details.
 
 ## Telemetry
 

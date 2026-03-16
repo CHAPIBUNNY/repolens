@@ -99,7 +99,12 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
   }
 
   // Generate each document
+  const totalDocs = activeDocuments.length;
+  let docIndex = 0;
+  
   for (const docPlan of activeDocuments) {
+    docIndex++;
+    info(`[${docIndex}/${totalDocs}] Generating ${docPlan.key}...`);
     let content = null;
     
     try {

@@ -6,6 +6,33 @@ import { executeAIRequest } from "../utils/rate-limit.js";
 const DEFAULT_TIMEOUT_MS = 60000;
 const DEFAULT_MAX_TOKENS = 2500;
 
+/**
+ * AI Provider Presets - one env var to configure common providers.
+ * REPOLENS_AI_PRESET takes precedence over individual settings.
+ */
+const AI_PRESETS = {
+  github: {
+    provider: "github",
+    baseUrl: "https://models.inference.ai.azure.com",
+    model: "gpt-4o-mini",
+  },
+  openai: {
+    provider: "openai_compatible",
+    baseUrl: "https://api.openai.com/v1",
+    model: "gpt-4o-mini",
+  },
+  anthropic: {
+    provider: "anthropic",
+    baseUrl: "https://api.anthropic.com",
+    model: "claude-sonnet-4-20250514",
+  },
+  google: {
+    provider: "google",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+    model: "gemini-2.0-flash",
+  },
+};
+
 export async function generateText({ system, user, temperature, maxTokens, config, jsonMode, jsonSchema }) {
   // Check if AI is enabled (env var takes precedence, then config)
   const aiConfig = config?.ai || {};
@@ -19,13 +46,21 @@ export async function generateText({ system, user, temperature, maxTokens, confi
     };
   }
   
-  // Get provider configuration (env vars take precedence, then config, then defaults)
-  const provider = process.env.REPOLENS_AI_PROVIDER || aiConfig.provider || "openai_compatible";
-  const baseUrl = process.env.REPOLENS_AI_BASE_URL || aiConfig.base_url;
+  // Check for preset (takes precedence over individual settings)
+  const preset = process.env.REPOLENS_AI_PRESET?.toLowerCase();
+  const presetConfig = preset ? AI_PRESETS[preset] : null;
+  
+  if (preset && !presetConfig) {
+    warn(`Unknown AI preset "${preset}". Valid presets: ${Object.keys(AI_PRESETS).join(", ")}`);
+  }
+  
+  // Get provider configuration (preset > env vars > config > defaults)
+  const provider = presetConfig?.provider || process.env.REPOLENS_AI_PROVIDER || aiConfig.provider || "openai_compatible";
+  const baseUrl = presetConfig?.baseUrl || process.env.REPOLENS_AI_BASE_URL || aiConfig.base_url;
   // For "github" provider, fall back to GITHUB_TOKEN when no explicit AI key is set
   const apiKey = process.env.REPOLENS_AI_API_KEY
     || (provider === "github" ? process.env.GITHUB_TOKEN : undefined);
-  const model = process.env.REPOLENS_AI_MODEL || aiConfig.model || getDefaultModel(provider);
+  const model = presetConfig?.model || process.env.REPOLENS_AI_MODEL || aiConfig.model || getDefaultModel(provider);
   const timeoutMs = parseInt(process.env.REPOLENS_AI_TIMEOUT_MS || aiConfig.timeout_ms || DEFAULT_TIMEOUT_MS);
   
   // Use config values as fallback for maxTokens; temperature only when explicitly set

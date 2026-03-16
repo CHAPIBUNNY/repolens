@@ -28,9 +28,9 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
 
   // --- Hash-based caching: skip unchanged documents ---
   const cacheDir = path.join(process.cwd(), cfg.documentation?.output_dir || ".repolens");
-  const previousCache = await loadDocCache(cacheDir);
+  const { cache: previousCache, age: cacheAge } = await loadDocCache(cacheDir);
   const { changedPages, unchangedKeys, newCache } = filterChangedDocs(renderedPages, previousCache);
-  logCacheStats(Object.keys(changedPages).length, unchangedKeys.length);
+  logCacheStats(Object.keys(changedPages).length, unchangedKeys.length, cacheAge);
 
   // Use changedPages for API publishers (Notion / Confluence / Wiki), full set for Markdown
   const pagesForAPIs = Object.keys(changedPages).length > 0 ? changedPages : renderedPages;

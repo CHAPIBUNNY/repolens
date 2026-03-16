@@ -367,3 +367,89 @@ export function isFeatureEnabled(config, featureName, defaultValue = true) {
     ? config.features[featureName] 
     : defaultValue;
 }
+
+// Valid top-level config keys
+const VALID_CONFIG_KEYS = [
+  "configVersion",
+  "project",
+  "publishers",
+  "scan",
+  "module_roots",
+  "outputs",
+  "notion",
+  "confluence",
+  "github_wiki",
+  "discord",
+  "features",
+  "ai",
+  "documentation",
+  "domains",
+  "plugins",
+];
+
+/**
+ * Calculate Levenshtein distance between two strings.
+ */
+function levenshteinDistance(a, b) {
+  const matrix = Array.from({ length: a.length + 1 }, (_, i) =>
+    Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,      // deletion
+        matrix[i][j - 1] + 1,      // insertion
+        matrix[i - 1][j - 1] + cost // substitution
+      );
+    }
+  }
+  
+  return matrix[a.length][b.length];
+}
+
+/**
+ * Find closest matching valid key for a typo.
+ * @param {string} typo - The potentially misspelled key
+ * @param {string[]} validKeys - Array of valid keys
+ * @param {number} maxDistance - Maximum Levenshtein distance to consider (default: 3)
+ * @returns {string|null} - Suggestion or null if no close match
+ */
+function findClosestKey(typo, validKeys, maxDistance = 3) {
+  let closest = null;
+  let minDist = Infinity;
+  
+  for (const key of validKeys) {
+    const dist = levenshteinDistance(typo.toLowerCase(), key.toLowerCase());
+    if (dist < minDist && dist <= maxDistance) {
+      minDist = dist;
+      closest = key;
+    }
+  }
+  
+  return closest;
+}
+
+/**
+ * Check config for typos in top-level keys.
+ * @param {object} config - The parsed config object
+ * @returns {Array<{key: string, suggestion: string}>} - List of detected typos with suggestions
+ */
+export function detectConfigTypos(config) {
+  const typos = [];
+  
+  for (const key of Object.keys(config)) {
+    if (!VALID_CONFIG_KEYS.includes(key)) {
+      const suggestion = findClosestKey(key, VALID_CONFIG_KEYS);
+      if (suggestion) {
+        typos.push({ key, suggestion });
+      }
+    }
+  }
+  
+  return typos;
+}
+
+// Export constants for use in doctor
+export { SUPPORTED_PUBLISHERS, SUPPORTED_PAGE_KEYS, VALID_CONFIG_KEYS };

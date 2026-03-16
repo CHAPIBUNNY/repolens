@@ -2,6 +2,25 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.9.5
+
+### ✨ UX Improvements
+
+- **AI Provider Presets**: New `REPOLENS_AI_PRESET` environment variable for one-line AI setup. Supports `github`, `openai`, `anthropic`, and `google` presets that automatically configure provider, base URL, and model.
+
+- **Progress Indicator**: Document generation now shows step-by-step progress: `[1/15] Generating executive_summary...`, `[2/15] Generating business_domains...`, etc.
+
+- **Config Typo Detection**: `repolens doctor` now detects typos in config keys and suggests corrections using Levenshtein distance. For example: `Unknown config key "projet" — did you mean "project"?`
+
+- **Cache Age Display**: Publishing shows when the cache was last updated: `Cache: 5/15 documents unchanged (last run: 2h ago)`.
+
+- **Verbose Export**: The `--verbose` flag and `isVerbose` constant are now exported from logger for use by plugins and custom scripts.
+
+### 🧪 Tests
+
+- Updated doc-cache tests to verify new `{ cache, age }` return format
+- **380 tests passing** across 22 test files
+
 ## 1.9.3
 
 ### ✨ Premium Deterministic Documentation

@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import yaml from "js-yaml";
 import { loadConfig } from "./core/config.js";
+import { detectConfigTypos } from "./core/config-schema.js";
 import { info } from "./utils/logger.js";
 import { forceCheckForUpdates } from "./utils/update-check.js";
 
@@ -112,12 +114,33 @@ export async function runDoctor(targetDir = process.cwd()) {
   let cfg = null;
 
   if (await fileExists(repolensConfigPath)) {
+    // First parse YAML to check for typos (before full validation)
+    let rawConfig = null;
     try {
-      cfg = await loadConfig(repolensConfigPath);
-      ok("RepoLens config parsed successfully");
-    } catch (error) {
-      fail(`RepoLens config is invalid: ${error.message}`);
+      const rawYaml = await fs.readFile(repolensConfigPath, "utf8");
+      rawConfig = yaml.load(rawYaml);
+      
+      // Check for config key typos before validation
+      if (rawConfig && typeof rawConfig === "object") {
+        const typos = detectConfigTypos(rawConfig);
+        for (const { key, suggestion } of typos) {
+          warn(`Unknown config key "${key}" — did you mean "${suggestion}"?`);
+        }
+      }
+    } catch (yamlError) {
+      fail(`RepoLens config has invalid YAML syntax: ${yamlError.message}`);
       hasFailures = true;
+    }
+    
+    // Now run full validation
+    if (rawConfig) {
+      try {
+        cfg = await loadConfig(repolensConfigPath);
+        ok("RepoLens config parsed successfully");
+      } catch (error) {
+        fail(`RepoLens config is invalid: ${error.message}`);
+        hasFailures = true;
+      }
     }
   }
 

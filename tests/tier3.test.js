@@ -23,21 +23,24 @@ describe("Doc Cache", () => {
   });
 
   it("returns empty cache when no file exists", async () => {
-    const cache = await loadDocCache(tempDir);
+    const { cache, age } = await loadDocCache(tempDir);
     expect(cache).toEqual({});
+    expect(age).toBe(null);
   });
 
   it("saves and loads cache round-trip", async () => {
-    const cache = { system_overview: "abc123", module_catalog: "def456" };
-    await saveDocCache(tempDir, cache);
-    const loaded = await loadDocCache(tempDir);
-    expect(loaded).toEqual(cache);
+    const cacheData = { system_overview: "abc123", module_catalog: "def456" };
+    await saveDocCache(tempDir, cacheData);
+    const { cache: loaded, age } = await loadDocCache(tempDir);
+    expect(loaded).toEqual(cacheData);
+    expect(typeof age).toBe("number");
+    expect(age).toBeGreaterThanOrEqual(0);
   });
 
   it("creates directory if missing when saving", async () => {
     const nested = path.join(tempDir, "sub", "dir");
     await saveDocCache(nested, { key: "hash" });
-    const loaded = await loadDocCache(nested);
+    const { cache: loaded } = await loadDocCache(nested);
     expect(loaded).toEqual({ key: "hash" });
   });
 

@@ -6,7 +6,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { info } from "./logger.js";
+import { info, verbose } from "./logger.js";
 
 const CACHE_FILENAME = "doc-hashes.json";
 
@@ -19,14 +19,19 @@ function hashContent(content) {
 
 /**
  * Load the previous cache from disk.
- * @returns {Record<string, string>} Map of docKey → contentHash
+ * @returns {{ cache: Record<string, string>, age: number|null }} Map of docKey → contentHash and cache age in ms
  */
 export async function loadDocCache(cacheDir) {
+  const cachePath = path.join(cacheDir, CACHE_FILENAME);
   try {
-    const raw = await fs.readFile(path.join(cacheDir, CACHE_FILENAME), "utf8");
-    return JSON.parse(raw);
+    const [raw, stat] = await Promise.all([
+      fs.readFile(cachePath, "utf8"),
+      fs.stat(cachePath),
+    ]);
+    const age = Date.now() - stat.mtimeMs;
+    return { cache: JSON.parse(raw), age };
   } catch {
-    return {};
+    return { cache: {}, age: null };
   }
 }
 
@@ -66,13 +71,24 @@ export function filterChangedDocs(renderedPages, previousCache) {
 }
 
 /**
+ * Format duration in human-readable form.
+ */
+function formatAge(ms) {
+  if (ms < 60000) return `${Math.round(ms / 1000)}s ago`;
+  if (ms < 3600000) return `${Math.round(ms / 60000)}m ago`;
+  if (ms < 86400000) return `${Math.round(ms / 3600000)}h ago`;
+  return `${Math.round(ms / 86400000)}d ago`;
+}
+
+/**
  * Log cache statistics.
  */
-export function logCacheStats(changedCount, unchangedCount) {
+export function logCacheStats(changedCount, unchangedCount, cacheAge = null) {
   const total = changedCount + unchangedCount;
+  const ageStr = cacheAge ? ` (last run: ${formatAge(cacheAge)})` : "";
   if (unchangedCount > 0) {
-    info(`Cache: ${unchangedCount}/${total} documents unchanged, skipping. ${changedCount} to publish.`);
+    info(`Cache: ${unchangedCount}/${total} documents unchanged, skipping. ${changedCount} to publish.${ageStr}`);
   } else {
-    info(`Cache: All ${total} documents changed or new.`);
+    info(`Cache: All ${total} documents changed or new.${ageStr}`);
   }
 }

@@ -1,6 +1,6 @@
 import { sanitizeSecrets } from "./secrets.js";
 
-const isVerbose = process.argv.includes("--verbose");
+export const isVerbose = process.argv.includes("--verbose");
 const isTest = process.env.NODE_ENV === "test";
 
 // Terminal color support detection
@@ -66,6 +66,16 @@ function sanitizeArgs(args) {
 }
 
 export function log(...args) {
+  if (!isTest && isVerbose) {
+    console.log("[RepoLens]", ...sanitizeArgs(args));
+  }
+}
+
+/**
+ * Verbose-only logging (alias for log, for semantic clarity).
+ * Only outputs when --verbose flag is present.
+ */
+export function verbose(...args) {
   if (!isTest && isVerbose) {
     console.log("[RepoLens]", ...sanitizeArgs(args));
   }
