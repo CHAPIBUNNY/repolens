@@ -136,7 +136,7 @@ async function migrateConfigFile(targetDir, options = {}) {
   }
 
   const filename = path.basename(configPath);
-  console.log(`\n📄 Checking config: ${filename}`);
+  info(`\n📄 Checking config: ${filename}`);
 
   const raw = await fs.readFile(configPath, "utf8");
   let parsed;
@@ -204,8 +204,8 @@ function showDiff(oldContent, newContent) {
   const newLines = newContent.split("\n");
   const maxLines = Math.max(oldLines.length, newLines.length);
 
-  console.log("\n📋 Changes Preview:");
-  console.log("─".repeat(60));
+  info("\n📋 Changes Preview:");
+  info("─".repeat(60));
 
   let changesShown = 0;
   for (let i = 0; i < maxLines; i++) {
@@ -214,20 +214,20 @@ function showDiff(oldContent, newContent) {
 
     if (oldLine !== newLine) {
       if (oldLine) {
-        console.log(`  - ${oldLine}`);
+        info(`  - ${oldLine}`);
       }
       if (newLine) {
-        console.log(`  + ${newLine}`);
+        info(`  + ${newLine}`);
       }
       changesShown++;
       if (changesShown > 20) {
-        console.log(`  ... (${maxLines - i} more lines)`);
+        info(`  ... (${maxLines - i} more lines)`);
         break;
       }
     }
   }
 
-  console.log("─".repeat(60));
+  info("─".repeat(60));
 }
 
 /**
