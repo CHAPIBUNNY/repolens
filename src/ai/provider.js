@@ -245,7 +245,8 @@ async function callOpenAICompatibleAPI({ baseUrl, apiKey, model, system, user, t
           { role: "system", content: system },
           { role: "user", content: user }
         ],
-        max_completion_tokens: maxTokens
+        // Use both max_tokens (legacy) and max_completion_tokens (newer) for compatibility
+        max_tokens: maxTokens,
       };
       // Only send temperature when explicitly configured — some models
       // (e.g. gpt-5-mini) reject any non-default value
@@ -279,7 +280,17 @@ async function callOpenAICompatibleAPI({ baseUrl, apiKey, model, system, user, t
         throw new Error("No completion returned from API");
       }
       
-      return data.choices[0].message.content;
+      const choice = data.choices[0];
+      const content = choice.message?.content;
+      
+      // Debug: log finish_reason if content is problematic
+      if (!content || content.trim().length === 0) {
+        const reason = choice.finish_reason || "unknown";
+        warn(`AI response empty (finish_reason: ${reason})`);
+      }
+      
+      // Handle null/undefined content (some models return null in certain cases)
+      return content ?? "";
       
     } catch (error) {
       clearTimeout(timeoutId);
