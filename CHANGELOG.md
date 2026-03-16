@@ -2,6 +2,19 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.9.8
+
+### 📸 Documentation
+
+- **Added publisher screenshots**: README now shows Notion and Confluence output examples in 2-column layout
+- **Organized assets**: Moved screenshots to `assets/` folder with consistent naming
+
+## 1.9.7
+
+### 📹 Documentation
+
+- **Fixed demo video embed**: Use Loom thumbnail with link (iframes don't render in GitHub markdown)
+
 ## 1.9.6
 
 ### 📹 Documentation
