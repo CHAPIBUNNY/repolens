@@ -245,9 +245,16 @@ async function callOpenAICompatibleAPI({ baseUrl, apiKey, model, system, user, t
           { role: "system", content: system },
           { role: "user", content: user }
         ],
-        // Use both max_tokens (legacy) and max_completion_tokens (newer) for compatibility
-        max_tokens: maxTokens,
       };
+      
+      // GPT-5+ and o-series models require max_completion_tokens; older models use max_tokens
+      const usesNewTokenParam = /^(gpt-5|gpt-4\.1|o[34]-|o3)/.test(model);
+      if (usesNewTokenParam) {
+        body.max_completion_tokens = maxTokens;
+      } else {
+        body.max_tokens = maxTokens;
+      }
+      
       // Only send temperature when explicitly configured — some models
       // (e.g. gpt-5-mini) reject any non-default value
       if (temperature != null) {
