@@ -9,9 +9,6 @@ import {
   createArchitectureOverviewPrompt,
   createDataFlowsPrompt,
   createDeveloperOnboardingPrompt,
-  createModuleSummaryPrompt,
-  createRouteSummaryPrompt,
-  createAPIDocumentationPrompt,
   AI_SCHEMAS,
   renderStructuredToMarkdown,
 } from "./prompts.js";
@@ -83,7 +80,14 @@ async function generateWithStructuredFallback(key, promptText, maxTokens, fallba
     return fallbackFn();
   }
 
-  return sanitizeAIOutput(result.text);
+  // Guard against empty AI responses — fall back to deterministic
+  const text = sanitizeAIOutput(result.text);
+  if (!text || text.trim().length === 0) {
+    warn("AI returned empty response, using fallback");
+    return fallbackFn();
+  }
+
+  return text;
 }
 
 export async function generateExecutiveSummary(context, enrichment = {}, config) {

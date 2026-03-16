@@ -98,6 +98,11 @@ export async function generateText({ system, user, temperature, maxTokens, confi
       return { success: true, text: result, parsed, fallback: false };
     }
     
+    // Guard against empty responses
+    if (!result || (typeof result === "string" && result.trim().length === 0)) {
+      return { success: false, error: "AI returned empty response", fallback: true };
+    }
+    
     return {
       success: true,
       text: result,
