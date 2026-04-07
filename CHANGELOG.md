@@ -2,6 +2,48 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.12.0
+
+### 🛡️ Security Pattern Detection
+
+New static analysis for security anti-patterns with CWE classification:
+
+- **16 anti-patterns** across 8 categories: Code Injection (eval), XSS (innerHTML), SQL Injection, Command Injection, Path Traversal, Prototype Pollution, Hardcoded Credentials, Insecure Randomness, ReDoS
+- Each finding includes severity (high/medium/low), file location, code snippet, and CWE ID
+- New renderer: `renderSecurityHotspots()` with severity breakdown, category grouping, and remediation guidance
+- New document type: **Security Hotspots** (`security_hotspots`)
+- Skips test files, build outputs, configs, `.min.js`, `.d.ts` to reduce noise
+- 30 new tests in `security-patterns.test.js`
+
+### 📊 Complexity & Code Health Scoring
+
+Cyclomatic complexity analysis with unified health scoring:
+
+- **Per-file and per-function complexity**: Counts if/else/for/while/case/catch/&&/||/??/ternary with comment and string stripping
+- **Unified health score** (0–100, A–F grades) per module synthesizing:
+  - Cyclomatic complexity penalties
+  - Coupling metrics (fan-in × fan-out from dependency graph)
+  - JSDoc documentation coverage
+  - Security findings severity
+- New renderer: `renderCodeHealth()` with grade distribution, hotspot table, top complex functions, and scoring methodology
+- New document type: **Code Health** (`code_health`)
+- 41 new tests in `code-health.test.js`
+
+### 📝 JSDoc/TSDoc Extraction
+
+API Surface enrichment with documentation extraction:
+
+- Parses `@param`, `@returns`, `@deprecated`, `@example`, `@throws`, `@since` tags
+- Enriches API Surface document with parameter types, descriptions, and deprecation notices
+- Coverage reporting (e.g., "89/167 exports documented (53%)")
+- 16 new tests in `jsdoc-analyzer.test.js`
+
+### 📈 Numbers
+
+- **17 document types** (up from 15): added Security Hotspots + Code Health
+- **480 tests** passing across 25 test files (up from 393 across 22)
+- **12 analyzers** in the pipeline
+
 ## 1.11.0
 
 ### 🧙 Smart URL Parsing in Wizard

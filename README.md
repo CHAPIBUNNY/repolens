@@ -10,14 +10,14 @@
 
 [![npm version](https://img.shields.io/npm/v/@chappibunny/repolens)](https://www.npmjs.com/package/@chappibunny/repolens)
 [![VS Code Extension](https://img.shields.io/visual-studio-marketplace/v/CHAPIBUNNY.repolens-architecture?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture)
-[![Tests](https://img.shields.io/badge/tests-380%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
+[![Tests](https://img.shields.io/badge/tests-480%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **Your architecture docs are already outdated.** RepoLens fixes that.
 
 RepoLens scans your repository, generates living architecture documentation, and publishes it to Notion, Confluence, GitHub Wiki, or Markdown — automatically on every push. Engineers get technical docs. Stakeholders get readable system overviews. Nobody writes a word.
 
-> Stable as of v1.0 — [API guarantees](docs/STABILITY.md) · [Security hardened](SECURITY.md) · v1.9.12
+> Stable as of v1.0 — [API guarantees](docs/STABILITY.md) · [Security hardened](SECURITY.md) · v1.12.0
 
 ---
 
@@ -92,13 +92,13 @@ Run `npx @chappibunny/repolens migrate` to automatically update your workflow fi
 
 ## 📋 What It Generates
 
-**15 document types** for three audiences — no manual writing required:
+**17 document types** for three audiences — no manual writing required:
 
 | Audience | Documents |
 |---|---|
 | **Stakeholders** (founders, PMs, ops) | Executive Summary · Business Domains · Data Flows |
-| **Everyone** | System Overview · Developer Onboarding · Change Impact · Architecture Drift |
-| **Engineers** | Architecture Overview · Module Catalog · API Surface · Route Map · System Map · GraphQL Schema · TypeScript Type Graph · Dependency Graph |
+| **Everyone** | System Overview · Developer Onboarding · Change Impact · Architecture Drift · Code Health |
+| **Engineers** | Architecture Overview · Module Catalog · API Surface · Route Map · System Map · GraphQL Schema · TypeScript Type Graph · Dependency Graph · Security Hotspots |
 
 **Two modes:** Deterministic (free, fast, always works) or AI-Enhanced (optional — GitHub Models, OpenAI, Anthropic, Google, Azure, Ollama).
 

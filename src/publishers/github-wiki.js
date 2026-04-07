@@ -37,6 +37,8 @@ const PAGE_ORDER = [
   "dependency_graph",
   "architecture_drift",
   "arch_diff",
+  "security_hotspots",
+  "code_health",
 ];
 
 const PAGE_TITLES = {
@@ -56,6 +58,8 @@ const PAGE_TITLES = {
   dependency_graph: "Dependency Graph",
   architecture_drift: "Architecture Drift",
   arch_diff: "Architecture Diff",
+  security_hotspots: "Security Hotspots",
+  code_health: "Code Health",
 };
 
 const PAGE_DESCRIPTIONS = {
@@ -75,6 +79,8 @@ const PAGE_DESCRIPTIONS = {
   dependency_graph: "Module and package dependency relationships.",
   architecture_drift: "Detected drift between intended and current architecture patterns.",
   arch_diff: "Architecture-level diff across branches or revisions.",
+  security_hotspots: "Security anti-patterns detected with CWE classification and severity ratings.",
+  code_health: "Cyclomatic complexity analysis with unified health scores per module.",
 };
 
 // Audience-based grouping for Home page
@@ -90,7 +96,7 @@ const AUDIENCE_GROUPS = [
     keys: [
       "architecture_overview", "module_catalog", "api_surface",
       "route_map", "system_map", "graphql_schema", "type_graph",
-      "dependency_graph", "architecture_drift",
+      "dependency_graph", "architecture_drift", "security_hotspots", "code_health",
     ],
   },
   {
@@ -120,6 +126,7 @@ const SIDEBAR_GROUPS = [
       "architecture_overview", "module_catalog", "route_map",
       "api_surface", "system_map", "graphql_schema", "type_graph",
       "dependency_graph", "architecture_drift", "arch_diff", "change_impact",
+      "security_hotspots", "code_health",
     ],
   },
 ];
@@ -142,6 +149,8 @@ const PAGE_AUDIENCE = {
   dependency_graph: "Engineers",
   architecture_drift: "Engineers · Tech Leads",
   arch_diff: "Engineers · Tech Leads",
+  security_hotspots: "Engineers · Security",
+  code_health: "All Audiences",
 };
 
 /**
