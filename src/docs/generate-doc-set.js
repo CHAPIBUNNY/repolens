@@ -5,6 +5,7 @@ import { inferDataFlows } from "../analyzers/flow-inference.js";
 import { analyzeGraphQL } from "../analyzers/graphql-analyzer.js";
 import { analyzeTypeScript } from "../analyzers/typescript-analyzer.js";
 import { analyzeDependencyGraph } from "../analyzers/dependency-graph.js";
+import { analyzeJSDoc } from "../analyzers/jsdoc-analyzer.js";
 import { buildSnapshot, loadBaseline, saveBaseline, detectDrift } from "../analyzers/drift-detector.js";
 import { parseCodeowners, buildOwnershipMap } from "../analyzers/codeowners.js";
 import { getActiveDocuments } from "../ai/document-plan.js";
@@ -46,9 +47,11 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
   let graphqlResult = { detected: false };
   let tsResult = { detected: false };
   let depGraph = { stats: {}, graph: {} };
+  let jsdocResult = { detected: false, exports: [], summary: null };
   try { graphqlResult = await analyzeGraphQL(scanFiles, repoRoot); } catch (e) { warn(`GraphQL analysis failed: ${e.message}`); }
   try { tsResult = await analyzeTypeScript(scanFiles, repoRoot); } catch (e) { warn(`TypeScript analysis failed: ${e.message}`); }
   try { depGraph = await analyzeDependencyGraph(scanFiles, repoRoot); } catch (e) { warn(`Dependency graph analysis failed: ${e.message}`); }
+  try { jsdocResult = await analyzeJSDoc(scanFiles, repoRoot); } catch (e) { warn(`JSDoc analysis failed: ${e.message}`); }
   
   // Architecture drift detection
   const outputDir = path.join(repoRoot, ".repolens");
@@ -86,6 +89,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
     flows,
     graphql: graphqlResult.detected ? graphqlResult : undefined,
     typescript: tsResult.detected ? tsResult : undefined,
+    jsdoc: jsdocResult.detected ? jsdocResult : undefined,
     dependencyGraph: depGraph.stats,
     drift: driftResult,
     codeowners: codeowners.found ? { file: codeowners.file, ruleCount: codeowners.rules.length } : undefined,
@@ -117,6 +121,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
         diffData,
         graphqlResult,
         tsResult,
+        jsdocResult,
         depGraph,
         driftResult,
         ownershipMap,
@@ -167,6 +172,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
           diffData,
           graphqlResult,
           tsResult,
+          jsdocResult,
           depGraph,
           driftResult,
         });
@@ -203,7 +209,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
 
 async function generateDocument(docPlan, context) {
   const { key } = docPlan;
-  const { scanResult, config, aiContext, moduleContext, flows, diffData, graphqlResult, tsResult, depGraph, driftResult, ownershipMap, pluginManager } = context;
+  const { scanResult, config, aiContext, moduleContext, flows, diffData, graphqlResult, tsResult, jsdocResult, depGraph, driftResult, ownershipMap, pluginManager } = context;
   
   switch (key) {
     case "executive_summary":
@@ -227,8 +233,8 @@ async function generateDocument(docPlan, context) {
       return renderRouteMapOriginal(config, scanResult, aiContext);
       
     case "api_surface":
-      // Hybrid: deterministic skeleton + AI enhancement (for now, just deterministic)
-      return renderApiSurfaceOriginal(config, scanResult);
+      // Hybrid: deterministic skeleton + JSDoc documentation
+      return renderApiSurfaceOriginal(config, scanResult, jsdocResult);
       
     case "data_flows":
       return await generateDataFlows(flows, aiContext, { depGraph, scanResult, moduleContext }, config);

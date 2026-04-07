@@ -215,7 +215,7 @@ export function renderModuleCatalog(cfg, scan, ownershipMap = {}, depGraph = nul
   return lines.join("\n");
 }
 
-export function renderApiSurface(cfg, scan) {
+export function renderApiSurface(cfg, scan, jsdocResult = null) {
   const lines = [
     `# API Surface`,
     ``,
@@ -284,6 +284,101 @@ export function renderApiSurface(cfg, scan) {
       }
       lines.push(``);
     }
+  }
+
+  // Section 3: Documented Exports (from JSDoc analysis)
+  if (jsdocResult && jsdocResult.detected && jsdocResult.exports.length > 0) {
+    lines.push(
+      `---`,
+      ``,
+      `## Documented Exports`,
+      ``,
+      `Exported functions with JSDoc/TSDoc documentation. Documentation coverage: **${jsdocResult.summary?.coverage || "N/A"}**`,
+      ``
+    );
+
+    // Show deprecated functions first as warnings
+    if (jsdocResult.deprecated && jsdocResult.deprecated.length > 0) {
+      lines.push(`### ⚠️ Deprecated Functions`, ``);
+      for (const dep of jsdocResult.deprecated) {
+        lines.push(`- \`${dep.name}\` in \`${dep.source}\`: ${dep.reason}`);
+      }
+      lines.push(``);
+    }
+
+    // Group by file and show documented exports
+    const documentedExports = jsdocResult.exports.filter(e => e.jsdoc);
+    if (documentedExports.length > 0) {
+      lines.push(`### Function Documentation`, ``);
+      
+      // Group by file for better organization
+      const byFile = {};
+      for (const exp of documentedExports) {
+        if (!byFile[exp.source]) byFile[exp.source] = [];
+        byFile[exp.source].push(exp);
+      }
+
+      // Show up to 30 documented functions to avoid overwhelming output
+      let shown = 0;
+      const maxToShow = 30;
+      
+      for (const [file, exports] of Object.entries(byFile)) {
+        if (shown >= maxToShow) break;
+        
+        lines.push(`#### \`${file}\``, ``);
+        
+        for (const exp of exports) {
+          if (shown >= maxToShow) break;
+          shown++;
+          
+          const jsdoc = exp.jsdoc;
+          const isDeprecated = jsdoc.deprecated ? " ⚠️" : "";
+          
+          lines.push(`**\`${exp.name}()\`**${isDeprecated}`, ``);
+          
+          if (jsdoc.description) {
+            lines.push(jsdoc.description, ``);
+          }
+          
+          if (jsdoc.params.length > 0) {
+            lines.push(`**Parameters:**`);
+            for (const param of jsdoc.params) {
+              const opt = param.optional ? " *(optional)*" : "";
+              lines.push(`- \`${param.name}\` (\`${param.type}\`)${opt}${param.description ? `: ${param.description}` : ""}`);
+            }
+            lines.push(``);
+          }
+          
+          if (jsdoc.returns) {
+            lines.push(`**Returns:** \`${jsdoc.returns.type}\`${jsdoc.returns.description ? ` — ${jsdoc.returns.description}` : ""}`, ``);
+          }
+          
+          if (jsdoc.throws.length > 0) {
+            lines.push(`**Throws:**`);
+            for (const t of jsdoc.throws) {
+              lines.push(`- ${t}`);
+            }
+            lines.push(``);
+          }
+        }
+      }
+
+      if (documentedExports.length > maxToShow) {
+        lines.push(``, `> *Showing ${maxToShow} of ${documentedExports.length} documented exports.*`, ``);
+      }
+    }
+
+    // Summary stats
+    lines.push(
+      `---`,
+      ``,
+      `**Documentation Summary:**`,
+      `- Total exports: ${jsdocResult.summary?.totalExports || 0}`,
+      `- Documented: ${jsdocResult.summary?.documented || 0}`,
+      `- Undocumented: ${jsdocResult.summary?.undocumented || 0}`,
+      `- Coverage: ${jsdocResult.summary?.coverage || "0%"}`,
+      ``
+    );
   }
 
   lines.push(

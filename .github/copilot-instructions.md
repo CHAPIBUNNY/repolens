@@ -15,11 +15,12 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.11.0  
+**Version:** 1.11.1  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
-**Author:** Charl van Zyl
+**Author:** Charl van Zyl  
+**Last Audit:** April 2026
 
 ## Core Value Proposition
 
@@ -98,7 +99,7 @@ src/
   plugins/
     loader.js             # Plugin resolution and dynamic import
     manager.js            # Plugin registry and lifecycle orchestration
-tests/                    # Vitest test suite (380 tests across 22 files)
+tests/                    # Vitest test suite (393 tests across 22 files)
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
   config-discovery.test.js # Config auto-discovery tests
@@ -260,7 +261,7 @@ scripts/                  # Helper scripts
 - Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
 - Test config discovery, validation, rendering, branch detection, migration, security fuzzing
-- **Coverage**: 380 tests passing across 22 test files
+- **Coverage**: 393 tests passing across 22 test files
 - Run: `npm test`
 
 ### Configuration
@@ -427,7 +428,7 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - `REPOLENS_AI_BASE_URL` - API base URL (auto-set per provider; override for custom endpoints)
 - `REPOLENS_AI_MODEL` - Model name (e.g., gpt-5-mini, gpt-4o-mini)
 - `REPOLENS_AI_TEMPERATURE` - Generation temperature (only sent when explicitly set; omitted by default for GPT-5 compatibility)
-- `REPOLENS_AI_MAX_TOKENS` - Max completion tokens per request (default: 2000)
+- `REPOLENS_AI_MAX_TOKENS` - Max completion tokens per request (default: 4000)
 
 ### Telemetry (optional)
 - `REPOLENS_TELEMETRY_ENABLED` - Enable Sentry error tracking (true/false)
@@ -445,23 +446,29 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 
 ## Future Enhancements
 
+### Planned
+- JSDoc/TSDoc extraction for API Surface enrichment
+- Function-level symbol export analysis
+- Security pattern detection (eval, innerHTML, SQL concatenation)
+- Test coverage integration (coverage % per module)
+- Breaking change detection (export signature comparison)
+- Complexity metrics (cyclomatic complexity)
 - Obsidian vault publisher
-- Enhanced diff visualization with visual diffs
 - VS Code extension for architecture visualization
 - Cross-repository architecture analysis
+
+### Shipped
+- ~~GPT-5 / o-series API compatibility (max_completion_tokens)~~ ✅ Shipped in v1.11.1
+- ~~Smart URL parsing in wizard~~ ✅ Shipped in v1.11.0
+- ~~Multi-language scan presets~~ ✅ Shipped in v1.11.0
 - ~~Plugin system for custom renderers~~ ✅ Shipped in v0.9.0
 - ~~GitHub Wiki publisher~~ ✅ Shipped in v1.1.0
 - ~~Interactive configuration wizard~~ ✅ Shipped (now default for `repolens init`)
-- ~~Watch mode for local development (`repolens watch`)~~ ✅ Shipped
-- ~~Generic domain defaults (replace fintech bias)~~ ✅ Shipped in v1.4.0
+- ~~Watch mode for local development~~ ✅ Shipped
+- ~~Generic domain defaults~~ ✅ Shipped in v1.4.0
 - ~~Real import-based system map~~ ✅ Shipped in v1.4.0
-- ~~AI context size limiting~~ ✅ Shipped in v1.4.0
-- ~~Doctor env var validation~~ ✅ Shipped in v1.4.0
-- ~~Renderer truncation warnings~~ ✅ Shipped in v1.4.0
-- ~~Confluence CDATA injection fix~~ ✅ Shipped in v1.4.0
-- ~~Relative link rewriting (Notion + Confluence)~~ ✅ Shipped in v1.4.0
-- ~~Document caching (skip-unchanged publishing)~~ ✅ Shipped in v1.5.0
-- ~~Structured AI output (JSON mode + schema validation)~~ ✅ Shipped in v1.5.0
-- ~~Multi-provider AI (Anthropic, Google Gemini)~~ ✅ Shipped in v1.5.0
+- ~~Document caching~~ ✅ Shipped in v1.5.0
+- ~~Structured AI output (JSON mode)~~ ✅ Shipped in v1.5.0
+- ~~Multi-provider AI (Anthropic, Google, GitHub Models)~~ ✅ Shipped in v1.5.0
 - ~~Monorepo workspace detection~~ ✅ Shipped in v1.5.0
 - ~~CODEOWNERS integration~~ ✅ Shipped in v1.5.0
