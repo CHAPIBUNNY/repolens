@@ -22,7 +22,8 @@ function pageFileName(key) {
     graphql_schema: "graphql_schema.md",
     type_graph: "type_graph.md",
     dependency_graph: "dependency_graph.md",
-    architecture_drift: "architecture_drift.md"
+    architecture_drift: "architecture_drift.md",
+    security_hotspots: "security_hotspots.md"
   };
 
   return mapping[key] || `${key}.md`;

@@ -6,6 +6,7 @@ import { analyzeGraphQL } from "../analyzers/graphql-analyzer.js";
 import { analyzeTypeScript } from "../analyzers/typescript-analyzer.js";
 import { analyzeDependencyGraph } from "../analyzers/dependency-graph.js";
 import { analyzeJSDoc } from "../analyzers/jsdoc-analyzer.js";
+import { analyzeSecurityPatterns } from "../analyzers/security-patterns.js";
 import { buildSnapshot, loadBaseline, saveBaseline, detectDrift } from "../analyzers/drift-detector.js";
 import { parseCodeowners, buildOwnershipMap } from "../analyzers/codeowners.js";
 import { getActiveDocuments } from "../ai/document-plan.js";
@@ -26,7 +27,8 @@ import {
   renderGraphQLSchema,
   renderTypeGraph,
   renderDependencyGraph,
-  renderArchitectureDrift as renderDriftReport
+  renderArchitectureDrift as renderDriftReport,
+  renderSecurityHotspots
 } from "../renderers/renderAnalysis.js";
 import { info, warn } from "../utils/logger.js";
 import path from "node:path";
@@ -52,6 +54,8 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
   try { tsResult = await analyzeTypeScript(scanFiles, repoRoot); } catch (e) { warn(`TypeScript analysis failed: ${e.message}`); }
   try { depGraph = await analyzeDependencyGraph(scanFiles, repoRoot); } catch (e) { warn(`Dependency graph analysis failed: ${e.message}`); }
   try { jsdocResult = await analyzeJSDoc(scanFiles, repoRoot); } catch (e) { warn(`JSDoc analysis failed: ${e.message}`); }
+  let securityResult = { detected: false, findings: [], bySeverity: { high: 0, medium: 0, low: 0 } };
+  try { securityResult = await analyzeSecurityPatterns(scanFiles, repoRoot); } catch (e) { warn(`Security pattern analysis failed: ${e.message}`); }
   
   // Architecture drift detection
   const outputDir = path.join(repoRoot, ".repolens");
@@ -92,6 +96,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
     jsdoc: jsdocResult.detected ? jsdocResult : undefined,
     dependencyGraph: depGraph.stats,
     drift: driftResult,
+    security: securityResult.detected ? securityResult : undefined,
     codeowners: codeowners.found ? { file: codeowners.file, ruleCount: codeowners.rules.length } : undefined,
     ownershipMap: Object.keys(ownershipMap).length > 0 ? ownershipMap : undefined,
   };
@@ -124,6 +129,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
         jsdocResult,
         depGraph,
         driftResult,
+        securityResult,
         ownershipMap,
         pluginManager,
       });
@@ -175,6 +181,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
           jsdocResult,
           depGraph,
           driftResult,
+          securityResult,
         });
 
         documents.push({
@@ -209,7 +216,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
 
 async function generateDocument(docPlan, context) {
   const { key } = docPlan;
-  const { scanResult, config, aiContext, moduleContext, flows, diffData, graphqlResult, tsResult, jsdocResult, depGraph, driftResult, ownershipMap, pluginManager } = context;
+  const { scanResult, config, aiContext, moduleContext, flows, diffData, graphqlResult, tsResult, jsdocResult, depGraph, driftResult, securityResult, ownershipMap, pluginManager } = context;
   
   switch (key) {
     case "executive_summary":
@@ -263,6 +270,9 @@ async function generateDocument(docPlan, context) {
       
     case "architecture_drift":
       return renderDriftReport(driftResult);
+      
+    case "security_hotspots":
+      return renderSecurityHotspots(securityResult);
       
     default: {
       // Check if a plugin provides this renderer

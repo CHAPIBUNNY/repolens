@@ -120,6 +120,14 @@ export const DOCUMENT_PLAN = [
     audience: "mixed",
     ai: false,
     description: "Structural changes compared to baseline snapshot"
+  },
+  {
+    key: "security_hotspots",
+    filename: "15-security-hotspots.md",
+    title: "Security Hotspots",
+    audience: "technical",
+    ai: false,
+    description: "Security anti-pattern detection with CWE classification"
   }
 ];
 
