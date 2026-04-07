@@ -348,6 +348,6 @@ describe("document-plan integration", () => {
     expect(entry.filename).toBe("15-security-hotspots.md");
     expect(entry.audience).toBe("technical");
     expect(entry.ai).toBe(false);
-    expect(DOCUMENT_PLAN.length).toBe(16);
+    expect(DOCUMENT_PLAN.length).toBe(17);
   });
 });

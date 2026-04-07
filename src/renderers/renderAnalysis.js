@@ -494,6 +494,120 @@ export function renderArchitectureDrift(driftResult) {
   return lines.join("\n");
 }
 
+export function renderCodeHealth(healthResult) {
+  if (!healthResult?.modules?.length) {
+    return [
+      "# Code Health Report",
+      "",
+      "> No source files were available for health analysis.",
+      "",
+      "RepoLens computes a health score (0–100) per module by synthesizing cyclomatic complexity, coupling (fan-in × fan-out), documentation coverage, and security findings. Ensure your `scan.include` patterns cover the relevant source directories.",
+      ""
+    ].join("\n");
+  }
+
+  const lines = [];
+  const { stats, hotspots, topComplexFunctions, modules } = healthResult;
+
+  lines.push("# Code Health Report");
+  lines.push("");
+  lines.push(`> ${healthResult.summary}`);
+  lines.push("");
+  lines.push("This report synthesizes complexity, coupling, documentation, and security signals into a single health score per module. Lower scores indicate higher risk and maintenance burden.");
+  lines.push("");
+
+  // Overall stats
+  lines.push("## Overview");
+  lines.push("");
+  lines.push("| Metric | Value |");
+  lines.push("|--------|-------|");
+  lines.push(`| Files analyzed | ${stats.totalFiles} |`);
+  lines.push(`| Average health score | ${stats.avgScore}/100 |`);
+  lines.push(`| Average complexity | ${stats.avgComplexity} |`);
+  lines.push(`| Hotspots (score < 60) | ${hotspots.length} |`);
+  lines.push("");
+
+  // Grade distribution
+  lines.push("## Grade Distribution");
+  lines.push("");
+  lines.push("| Grade | Count | Meaning |");
+  lines.push("|-------|-------|---------|");
+  lines.push(`| 🟢 A (80–100) | ${stats.gradeDistribution.A} | Healthy — low complexity, well-documented |`);
+  lines.push(`| 🔵 B (60–79) | ${stats.gradeDistribution.B} | Acceptable — minor improvements possible |`);
+  lines.push(`| 🟡 C (40–59) | ${stats.gradeDistribution.C} | Needs attention — elevated complexity or coupling |`);
+  lines.push(`| 🟠 D (20–39) | ${stats.gradeDistribution.D} | At risk — multiple quality signals degraded |`);
+  lines.push(`| 🔴 F (0–19) | ${stats.gradeDistribution.F} | Critical — immediate refactoring recommended |`);
+  lines.push("");
+
+  // Hotspots (worst modules)
+  if (hotspots.length > 0) {
+    lines.push("## Hotspots — Priority Refactoring Targets");
+    lines.push("");
+    lines.push("These modules have the lowest health scores and should be prioritized for improvement:");
+    lines.push("");
+    lines.push("| Module | Score | Grade | Complexity | Coupling | Doc% | Security |");
+    lines.push("|--------|-------|-------|------------|----------|------|----------|");
+    for (const m of hotspots) {
+      const gradeIcon = m.grade === "C" ? "🟡" : m.grade === "D" ? "🟠" : "🔴";
+      const docCol = m.docCoverage !== null ? `${m.docCoverage}%` : "—";
+      const secCol = m.securityFindings > 0 ? `${m.securityFindings} (${m.highSecurityFindings} high)` : "—";
+      lines.push(`| \`${m.file}\` | ${m.score} | ${gradeIcon} ${m.grade} | ${m.complexity} | ${m.fanIn}↓ ${m.fanOut}↑ | ${docCol} | ${secCol} |`);
+    }
+    lines.push("");
+  }
+
+  // Most complex functions
+  if (topComplexFunctions.length > 0) {
+    lines.push("## Most Complex Functions");
+    lines.push("");
+    lines.push("These functions have the highest cyclomatic complexity and are the most likely sources of bugs:");
+    lines.push("");
+    lines.push("| Function | File | Line | Complexity |");
+    lines.push("|----------|------|------|------------|");
+    for (const fn of topComplexFunctions) {
+      lines.push(`| \`${fn.name}()\` | \`${fn.file}\` | ${fn.line} | ${fn.complexity} |`);
+    }
+    lines.push("");
+  }
+
+  // Full module listing (top 50, sorted by score)
+  const displayModules = modules.slice(0, 50);
+  lines.push("## All Modules by Health Score");
+  lines.push("");
+  if (modules.length > 50) {
+    lines.push(`*Showing 50 of ${modules.length} modules (sorted worst-first)*`);
+    lines.push("");
+  }
+  lines.push("| Module | Score | Grade | Lines | Complexity | Fan-In | Fan-Out |");
+  lines.push("|--------|-------|-------|-------|------------|--------|---------|");
+  for (const m of displayModules) {
+    const gradeIcon = m.grade === "A" ? "🟢" : m.grade === "B" ? "🔵" : m.grade === "C" ? "🟡" : m.grade === "D" ? "🟠" : "🔴";
+    lines.push(`| \`${m.file}\` | ${m.score} | ${gradeIcon} ${m.grade} | ${m.lines} | ${m.complexity} | ${m.fanIn} | ${m.fanOut} |`);
+  }
+  lines.push("");
+
+  // Scoring methodology
+  lines.push("## Scoring Methodology");
+  lines.push("");
+  lines.push("The health score (0–100) is computed from four dimensions:");
+  lines.push("");
+  lines.push("| Factor | Weight | How It's Measured |");
+  lines.push("|--------|--------|-------------------|");
+  lines.push("| Complexity | –1/pt above 10, –2/pt above 30 | Cyclomatic complexity (if/else/for/while/case/&&/\\|\\|/ternary) |");
+  lines.push("| Function complexity | –2/pt above 8 per function | Highest complexity function in the file |");
+  lines.push("| Coupling | –1/5 units above 20 | Fan-in × Fan-out (import connections) |");
+  lines.push("| Documentation | –10 if <50%, –5 if <80% | JSDoc/TSDoc coverage of exports |");
+  lines.push("| Security | –10/high, –5/medium finding | Security anti-pattern findings in file |");
+  lines.push("");
+
+  lines.push("---");
+  lines.push("");
+  lines.push("*Generated by RepoLens code health analysis. Complexity is regex-based and may differ from AST-based tools. Scores are relative indicators, not absolute quality measures.*");
+  lines.push("");
+
+  return lines.join("\n");
+}
+
 export function renderSecurityHotspots(secResult) {
   if (!secResult?.detected) {
     return [

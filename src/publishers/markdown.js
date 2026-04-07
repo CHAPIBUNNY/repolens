@@ -23,7 +23,8 @@ function pageFileName(key) {
     type_graph: "type_graph.md",
     dependency_graph: "dependency_graph.md",
     architecture_drift: "architecture_drift.md",
-    security_hotspots: "security_hotspots.md"
+    security_hotspots: "security_hotspots.md",
+    code_health: "code_health.md"
   };
 
   return mapping[key] || `${key}.md`;

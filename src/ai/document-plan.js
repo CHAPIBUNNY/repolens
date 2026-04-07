@@ -128,6 +128,14 @@ export const DOCUMENT_PLAN = [
     audience: "technical",
     ai: false,
     description: "Security anti-pattern detection with CWE classification"
+  },
+  {
+    key: "code_health",
+    filename: "16-code-health.md",
+    title: "Code Health Report",
+    audience: "mixed",
+    ai: false,
+    description: "Per-module health scores from complexity, coupling, docs, and security"
   }
 ];
 

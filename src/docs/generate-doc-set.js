@@ -7,6 +7,7 @@ import { analyzeTypeScript } from "../analyzers/typescript-analyzer.js";
 import { analyzeDependencyGraph } from "../analyzers/dependency-graph.js";
 import { analyzeJSDoc } from "../analyzers/jsdoc-analyzer.js";
 import { analyzeSecurityPatterns } from "../analyzers/security-patterns.js";
+import { analyzeComplexity, computeCodeHealth } from "../analyzers/complexity-analyzer.js";
 import { buildSnapshot, loadBaseline, saveBaseline, detectDrift } from "../analyzers/drift-detector.js";
 import { parseCodeowners, buildOwnershipMap } from "../analyzers/codeowners.js";
 import { getActiveDocuments } from "../ai/document-plan.js";
@@ -28,6 +29,7 @@ import {
   renderTypeGraph,
   renderDependencyGraph,
   renderArchitectureDrift as renderDriftReport,
+  renderCodeHealth,
   renderSecurityHotspots
 } from "../renderers/renderAnalysis.js";
 import { info, warn } from "../utils/logger.js";
@@ -56,6 +58,8 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
   try { jsdocResult = await analyzeJSDoc(scanFiles, repoRoot); } catch (e) { warn(`JSDoc analysis failed: ${e.message}`); }
   let securityResult = { detected: false, findings: [], bySeverity: { high: 0, medium: 0, low: 0 } };
   try { securityResult = await analyzeSecurityPatterns(scanFiles, repoRoot); } catch (e) { warn(`Security pattern analysis failed: ${e.message}`); }
+  let complexityResult = { files: [], functions: [], filesAnalyzed: 0 };
+  try { complexityResult = await analyzeComplexity(scanFiles, repoRoot); } catch (e) { warn(`Complexity analysis failed: ${e.message}`); }
   
   // Architecture drift detection
   const outputDir = path.join(repoRoot, ".repolens");
@@ -80,6 +84,10 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
   const ownershipMap = codeowners.found
     ? buildOwnershipMap(scanResult.modules, scanFiles, codeowners.rules)
     : {};
+
+  // Compute unified code health scores (synthesizes complexity + coupling + docs + security)
+  let codeHealthResult = { modules: [], summary: "No health data", stats: { totalFiles: 0, avgScore: 100, avgComplexity: 0, gradeDistribution: { A: 0, B: 0, C: 0, D: 0, F: 0 } }, hotspots: [], topComplexFunctions: [] };
+  try { codeHealthResult = computeCodeHealth(complexityResult, depGraph, jsdocResult, securityResult); } catch (e) { warn(`Code health computation failed: ${e.message}`); }
   
   // Get active documents based on config
   const activeDocuments = getActiveDocuments(config);
@@ -97,6 +105,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
     dependencyGraph: depGraph.stats,
     drift: driftResult,
     security: securityResult.detected ? securityResult : undefined,
+    codeHealth: complexityResult.files.length > 0 ? true : undefined,
     codeowners: codeowners.found ? { file: codeowners.file, ruleCount: codeowners.rules.length } : undefined,
     ownershipMap: Object.keys(ownershipMap).length > 0 ? ownershipMap : undefined,
   };
@@ -130,6 +139,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
         depGraph,
         driftResult,
         securityResult,
+        codeHealthResult,
         ownershipMap,
         pluginManager,
       });
@@ -182,6 +192,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
           depGraph,
           driftResult,
           securityResult,
+          codeHealthResult,
         });
 
         documents.push({
@@ -216,7 +227,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
 
 async function generateDocument(docPlan, context) {
   const { key } = docPlan;
-  const { scanResult, config, aiContext, moduleContext, flows, diffData, graphqlResult, tsResult, jsdocResult, depGraph, driftResult, securityResult, ownershipMap, pluginManager } = context;
+  const { scanResult, config, aiContext, moduleContext, flows, diffData, graphqlResult, tsResult, jsdocResult, depGraph, driftResult, securityResult, codeHealthResult, ownershipMap, pluginManager } = context;
   
   switch (key) {
     case "executive_summary":
@@ -273,6 +284,9 @@ async function generateDocument(docPlan, context) {
       
     case "security_hotspots":
       return renderSecurityHotspots(securityResult);
+      
+    case "code_health":
+      return renderCodeHealth(codeHealthResult);
       
     default: {
       // Check if a plugin provides this renderer

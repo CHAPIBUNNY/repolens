@@ -61,6 +61,7 @@ src/
     monorepo-detector.js  # Monorepo workspace detection (npm/yarn/pnpm/Lerna)
     codeowners.js         # CODEOWNERS file parser + ownership mapping
     security-patterns.js  # Security anti-pattern detection (eval, XSS, SQL injection, CWE classification)
+    complexity-analyzer.js # Cyclomatic complexity + unified code health scoring
   ai/
     provider.js           # Multi-provider AI text generation (OpenAI, Anthropic, Google, GitHub Models)
     prompts.js            # Strict prompt templates + JSON schemas + structured renderers
@@ -100,7 +101,7 @@ src/
   plugins/
     loader.js             # Plugin resolution and dynamic import
     manager.js            # Plugin registry and lifecycle orchestration
-tests/                    # Vitest test suite (439 tests across 24 files)
+tests/                    # Vitest test suite (480 tests across 25 files)
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
   config-discovery.test.js # Config auto-discovery tests
@@ -123,6 +124,7 @@ tests/                    # Vitest test suite (439 tests across 24 files)
   tier3.test.js           # T3 feature tests (cache, monorepo, codeowners, AI providers, structured output)
   robustness.test.js      # Robustness tests (rate-limit, context-builder, flow-inference, discord, telemetry, timeout, partial-publish)
   security-patterns.test.js # Security pattern analyzer tests (30 tests: detection, severity, categories, renderer)
+  code-health.test.js     # Code health tests (41 tests: complexity, functions, health scores, renderer)
   e2e/
     migration.test.js     # End-to-end migration tests
 docs/                     # Secondary documentation (moved from root)
@@ -166,7 +168,7 @@ scripts/                  # Helper scripts
 ### AI-Assisted Documentation Intelligence
 - **Philosophy**: Not a "flashy code intelligence toy" — a documentation intelligence system for engineers AND stakeholders
 - **Two Modes**: Deterministic (default, free, fast) or AI-Enhanced (optional, provider-agnostic)
-- **16 Document Types**: 3 non-technical, 4 mixed-audience, 4 technical, 5 extended-analysis
+- **17 Document Types**: 3 non-technical, 4 mixed-audience, 4 technical, 6 extended-analysis
 - **Zero Hallucination**: AI receives only structured JSON context, never raw code
 - **Context Size Limiting**: `truncateContext()` enforces 12K char cap with progressive field pruning (routes→15, domains→8, modules→10)
 - **Strict Prompts**: Word limits, required sections, concrete prose, no speculation
@@ -179,7 +181,7 @@ scripts/                  # Helper scripts
 - **Notion**: Create/update pages with branch-aware namespacing; relative link rewriting (strips `./` and `../` links)
 - **Confluence**: Atlassian Cloud REST API v1, storage format (HTML-like), Basic Auth (email + API token); CDATA-safe code blocks; relative link rewriting
 - **GitHub Wiki**: Audience-grouped Home page, grouped sidebar, page metadata headers, `master` branch push for compatibility
-- **Markdown**: Write to `.repolens/` directory; all 16 document types mapped to filenames
+- **Markdown**: Write to `.repolens/` directory; all 17 document types mapped to filenames
 - **Discord**: Rich embed notifications via webhooks (publish metrics, coverage stats)
 
 ### Business Domain Inference
@@ -264,7 +266,7 @@ scripts/                  # Helper scripts
 - Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
 - Test config discovery, validation, rendering, branch detection, migration, security fuzzing
-- **Coverage**: 439 tests passing across 24 test files
+- **Coverage**: 480 tests passing across 25 test files
 - Run: `npm test`
 
 ### Configuration
@@ -272,7 +274,7 @@ scripts/                  # Helper scripts
 - YAML format with js-yaml parser
 - Schema version: `configVersion: 1` (for future migrations)
 - Supported publishers: `notion`, `markdown`, `confluence`, `github_wiki`
-- Supported page keys: `system_overview`, `module_catalog`, `api_surface`, `arch_diff`, `route_map`, `system_map`, `executive_summary`, `business_domains`, `architecture_overview`, `data_flows`, `change_impact`, `developer_onboarding`, `security_hotspots`
+- Supported page keys: `system_overview`, `module_catalog`, `api_surface`, `arch_diff`, `route_map`, `system_map`, `executive_summary`, `business_domains`, `architecture_overview`, `data_flows`, `change_impact`, `developer_onboarding`, `security_hotspots`, `code_health`
 
 ### Async/Await
 - Use async/await throughout (not callbacks or raw promises)
@@ -453,12 +455,12 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - Function-level symbol export analysis
 - Test coverage integration (coverage % per module)
 - Breaking change detection (export signature comparison)
-- Complexity metrics (cyclomatic complexity)
 - Obsidian vault publisher
 - VS Code extension for architecture visualization
 - Cross-repository architecture analysis
 
 ### Shipped
+- ~~Complexity metrics & code health scoring~~ ✅ Shipped in v1.12.0
 - ~~Security pattern detection (eval, XSS, SQL injection, CWE classification)~~ ✅ Shipped in v1.12.0
 - ~~JSDoc/TSDoc extraction for API Surface enrichment~~ ✅ Shipped in v1.12.0
 - ~~GPT-5 / o-series API compatibility (max_completion_tokens)~~ ✅ Shipped in v1.11.1
