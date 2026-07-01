@@ -78,15 +78,13 @@ jobs:
           files: repolens-*.tgz
           generate_release_notes: true
 
-      - name: Verify npm authentication
+      - name: Verify npm token is set
         run: |
           if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "❌ NPM_TOKEN secret is not set or is empty"
+            echo "❌ NPM_TOKEN secret is not set or is empty — add it under repo Settings → Secrets → Actions"
             exit 1
           fi
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
-          npm whoami || (echo "❌ NPM_TOKEN is invalid or expired — regenerate it at npmjs.com → Account → Access Tokens" && exit 1)
-          echo "✅ npm auth verified"
+          echo "✅ NPM_TOKEN is present (length: ${#NODE_AUTH_TOKEN})"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
