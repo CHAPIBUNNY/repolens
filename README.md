@@ -12,6 +12,8 @@
 [![VS Code Extension](https://img.shields.io/visual-studio-marketplace/v/repolensdox.repolensdox?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox)
 [![Tests](https://img.shields.io/github/actions/workflow/status/CHAPIBUNNY/repolens/test.yml?label=tests)](https://github.com/CHAPIBUNNY/repolens/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=repolens&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBjaGFwcGlidW5ueS9yZXBvbGVucyIsIm1jcCJdfQ%3D%3D)
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=repolens&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40chappibunny%2Frepolens%22%2C%22mcp%22%5D%7D)
 
 **Your architecture docs are already outdated.** RepoLens fixes that.
 
@@ -175,9 +177,68 @@ Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki,
 | `npx @chappibunny/repolens uninstall` | Remove all RepoLens files (config, docs, workflow) |
 | `npx @chappibunny/repolens uninstall --force` | Remove without confirmation prompt |
 | `npx @chappibunny/repolens feedback` | Send feedback to the team |
+| `npx @chappibunny/repolens mcp` | Start the stdio MCP server (`repolens-mcp` is the same server) |
 
 > **Note:** If you installed globally with `npm install -g @chappibunny/repolens`, you can use the shorter `repolens <command>` form.
 > **Warning:** Do not run bare `npx repolens` — there is an unrelated `repolens@0.0.1` placeholder package on npm. Always use the scoped name `@chappibunny/repolens`.
+
+---
+
+## MCP server
+
+Cursor, Claude Desktop, Claude Code, and VS Code Copilot can call RepoLens over stdio. The server is read-only except for `generate_docs`, which writes Markdown inside the workspace. Deterministic mode does not use the network. Paths cannot leave the workspace root.
+
+[![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=repolens&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBjaGFwcGlidW5ueS9yZXBvbGVucyIsIm1jcCJdfQ%3D%3D)
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=repolens&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40chappibunny%2Frepolens%22%2C%22mcp%22%5D%7D)
+
+Copy-paste configs for Cursor, Claude Desktop, and VS Code are in [docs/MCP.md](docs/MCP.md).
+
+```json
+{
+  "mcpServers": {
+    "repolens": {
+      "command": "npx",
+      "args": ["-y", "@chappibunny/repolens", "mcp"]
+    }
+  }
+}
+```
+
+## GitHub Action
+
+`action.yml` is a composite action named **RepoLens Architecture Docs**. It runs the published npm package (`npx --yes @chappibunny/repolens@1.14.0`). Inputs are `command` (`publish`, `demo`, or `doctor`), `config`, `node-version`, `pr-comment`, and `version`.
+
+```yaml
+name: Architecture docs
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+      - uses: CHAPIBUNNY/repolens@v1.14.0
+        with:
+          command: publish
+          config: .repolens.yml
+          node-version: "20"
+          pr-comment: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
+```
+
+The action is listed on the GitHub Marketplace only after a release is published with **Publish this Action to the GitHub Marketplace** checked. Those steps are in [docs/RELEASE.md](docs/RELEASE.md). The tag `v1.14.0` has to exist before `uses: CHAPIBUNNY/repolens@v1.14.0` resolves, and `@chappibunny/repolens@1.14.0` has to be on npm before the action can install it.
+
+## Add the badge to your repo
+
+Generated Markdown includes this line unless `.repolens.yml` sets `branding: false` (or `branding.badge: false`). Add the same badge to a repository README:
+
+```markdown
+[![Docs by RepoLens](https://img.shields.io/badge/Docs%20by-RepoLens-0B5FFF)](https://github.com/CHAPIBUNNY/repolens)
+```
 
 ---
 
@@ -187,7 +248,7 @@ Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki,
 
 Published system maps are Unicode diagrams drawn from import edges. RepoLens does not emit Mermaid.
 
-The publisher set in 1.13.0 is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The publisher set is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). 1.14.0 adds the MCP server, the Marketplace action, and the docs badge. Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ### System Overview (Technical Profile)
 
@@ -248,6 +309,7 @@ When you open a pull request, RepoLens posts:
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common issues and fixes |
 | [Migration](docs/MIGRATION.md) | Upgrading from v0.3.0 or earlier |
 | [Stability](docs/STABILITY.md) | API contract and semver guarantees |
+| [MCP server](docs/MCP.md) | stdio server for Cursor, Claude, and VS Code |
 
 ---
 
@@ -269,6 +331,9 @@ v1.0+ features complete — CLI, config schema, and plugin interface are frozen.
 **Completed:**
 - [x] VS Code extension ([available on Marketplace](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox))
 - [x] Obsidian vault publisher (local notes with wikilinks and frontmatter)
+- [x] MCP server (`repolens mcp`) for Cursor, Claude, and VS Code
+- [x] GitHub Action `RepoLens Architecture Docs` (`action.yml`)
+- [x] Docs by RepoLens badge on generated Markdown
 
 **Next:**
 - [ ] GitHub App for automated setup and status checks

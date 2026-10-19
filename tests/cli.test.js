@@ -51,6 +51,7 @@ describe("cli", () => {
     expect(stdout).toContain("watch");
     expect(stdout).toContain("uninstall");
     expect(stdout).toContain("feedback");
+    expect(stdout).toContain("mcp");
     expect(stdout).toContain("version");
     expect(stdout).toContain("--quick");  // Interactive is now the default
     expect(stdout).toContain("Exit codes:");

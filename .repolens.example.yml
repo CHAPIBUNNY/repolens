@@ -28,6 +28,9 @@ ai:
   temperature: 0.2 # Lower = more deterministic, higher = more creative
   max_tokens: 2500
 
+# Docs by RepoLens badge on generated Markdown. Omit or set true to keep it.
+# branding: false
+
 # Documentation output configuration
 documentation:
   output_dir: ".repolens" # Where to write markdown files

@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.13.0  
+**Current Version:** 1.14.0  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.13.0)
+## What's Shipped (v0.1.0 → v1.14.0)
 
 Everything below is live, tested, and available on npm.
 
@@ -158,6 +158,12 @@ Everything below is live, tested, and available on npm.
 - ✅ Idempotent in-place updates (unchanged notes are not rewritten; stale managed notes are removed)
 - ✅ Path containment inside the vault, including symlink escapes. No network calls
 - ✅ Optional `obsidian` config fields on schema v1 (existing configs keep working)
+
+## v1.14.0 — Discoverability
+- ✅ stdio MCP server: `repolens mcp` and `repolens-mcp`, official SDK, read-only tools plus `generate_docs`
+- ✅ `server.json` for the MCP Registry (`io.github.chapibunny/repolens`) and `smithery.yaml`
+- ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
+- ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
 
 ## Integrations
 - ✅ VS Code extension for in-editor architecture visualization ([Marketplace](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox))

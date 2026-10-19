@@ -34,6 +34,7 @@ import {
 } from "../renderers/renderAnalysis.js";
 import { info, warn } from "../utils/logger.js";
 import path from "node:path";
+import { applyBrandingFooter } from "./branding.js";
 
 export async function generateDocumentSet(scanResult, config, diffData = null, pluginManager = null) {
   info("Building structured context for AI...");
@@ -152,7 +153,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
       
       documents.push({
         ...docPlan,
-        content,
+        content: applyBrandingFooter(content, config),
         generated: new Date().toISOString()
       });
       
@@ -163,7 +164,10 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
       // Add placeholder document so publishers know about the failure
       documents.push({
         ...docPlan,
-        content: `# ${docPlan.title}\n\n> **Generation Error:** ${error.message}\n\nPlease check the RepoLens logs for details.\n`,
+        content: applyBrandingFooter(
+          `# ${docPlan.title}\n\n> **Generation Error:** ${error.message}\n\nPlease check the RepoLens logs for details.\n`,
+          config
+        ),
         generated: new Date().toISOString(),
         error: true
       });
@@ -201,7 +205,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
           filename: renderer.filename || `${key}.md`,
           category: renderer.category || "custom",
           audience: renderer.audience || ["technical"],
-          content,
+          content: applyBrandingFooter(content, config),
           generated: new Date().toISOString(),
         });
 

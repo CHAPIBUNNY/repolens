@@ -16,7 +16,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "../src/core/config.js";
 import { resolveOutputDir } from "../src/utils/safe-path.js";
-import { getGitDiff } from "../src/core/diff.js";
+import { getGitDiff, isSafeGitRef } from "../src/core/diff.js";
+import { applyBrandingFooter, brandingEnabled } from "../src/docs/branding.js";
+import { resolveInsideWorkspace } from "../src/mcp/workspace.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin/repolens.js");
@@ -61,7 +63,18 @@ test("rejects an output directory outside the repository", () => {
 });
 
 test("ignores an unsafe git diff ref", () => {
+  assert.equal(isSafeGitRef("origin/main; id"), false);
   assert.deepEqual(getGitDiff("origin/main; id"), { added: [], removed: [], modified: [] });
+  assert.deepEqual(getGitDiff("HEAD", root, "HEAD; id"), { added: [], removed: [], modified: [] });
+});
+
+test("docs badge and workspace paths stay inside the repository", () => {
+  assert.equal(brandingEnabled({}), true);
+  assert.equal(brandingEnabled({ branding: false }), false);
+  const branded = applyBrandingFooter("# Doc\n", {});
+  assert.match(branded, /Docs by RepoLens/);
+  assert.match(branded, /https:\/\/github\.com\/CHAPIBUNNY\/repolens/);
+  assert.throws(() => resolveInsideWorkspace(root, "../outside"), /escapes/);
 });
 
 test("demo of another directory does not publish this repository's config", async () => {

@@ -2,6 +2,35 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.14.0
+
+### MCP server
+
+AI coding tools can call RepoLens over stdio.
+
+- New command: `repolens mcp`. The package also installs `repolens-mcp`
+- Official `@modelcontextprotocol/sdk` server. Tools: `get_system_overview`, `list_modules`, `get_api_surface` (includes routes), `get_dependency_graph`, `get_architecture_diff`, `generate_docs`
+- Read-only except `generate_docs`, which writes Markdown inside the workspace
+- Every path stays inside the workspace root (`REPOLENS_WORKSPACE` or the working directory), using the existing `isInsideRoot` and `resolveOutputDir` helpers
+- Deterministic mode is the default and does not make network calls. Logs go to stderr so they do not corrupt the protocol
+- `get_architecture_diff` uses the existing git diff. `baseRef` compares against the working tree. `headRef` diffs two refs. Unsafe refs are rejected
+- `package.json` `mcpName` is `io.github.chapibunny/repolens`. Root `server.json` matches it for the MCP Registry. `smithery.yaml` starts `npx -y @chappibunny/repolens mcp`
+- Client setup, including Cursor and VS Code install badges, is in `docs/MCP.md`
+
+### GitHub Action
+
+- Root `action.yml`: composite action **RepoLens Architecture Docs** (icon `book-open`, color `blue`)
+- Inputs: `command` (`publish`, `demo`, `doctor`), `config`, `node-version`, `pr-comment`, `version`
+- Runs the published package with `npx --yes @chappibunny/repolens@<version>`. Inputs are passed as environment variables and checked before they are placed on the npx argument list
+- `REPOLENS_PR_COMMENT=false` skips the architecture diff comment even when `GITHUB_EVENT_NAME` is `pull_request`
+- Marketplace listing is a checkbox on a GitHub Release. The steps are in `docs/RELEASE.md`. This release does not publish the action, the npm package, or a tag
+
+### Docs badge
+
+- Generated Markdown ends with a shields.io badge linking to https://github.com/CHAPIBUNNY/repolens
+- On by default. Set `branding: false` or `branding.badge: false` to turn it off. Schema v1 stays at `configVersion: 1`
+- README section **Add the badge to your repo** has the snippet
+
 ## 1.13.1
 
 ### Docs

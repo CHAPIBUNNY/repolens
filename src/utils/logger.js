@@ -69,9 +69,14 @@ function sanitizeArgs(args) {
   });
 }
 
+function logSink() {
+  // The MCP stdio transport owns stdout. Logs go to stderr in that mode.
+  return process.env.REPOLENS_LOG_STDERR === "1" ? console.error : console.log;
+}
+
 export function log(...args) {
   if (!isTest && isVerbose) {
-    console.log("[RepoLens]", ...sanitizeArgs(args));
+    logSink()("[RepoLens]", ...sanitizeArgs(args));
   }
 }
 
@@ -81,13 +86,13 @@ export function log(...args) {
  */
 export function verbose(...args) {
   if (!isTest && isVerbose) {
-    console.log("[RepoLens]", ...sanitizeArgs(args));
+    logSink()("[RepoLens]", ...sanitizeArgs(args));
   }
 }
 
 export function info(...args) {
   if (!isTest) {
-    console.log("[RepoLens]", ...sanitizeArgs(args));
+    logSink()("[RepoLens]", ...sanitizeArgs(args));
   }
 }
 

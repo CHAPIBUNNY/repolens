@@ -71,6 +71,15 @@ describe("git diff safety", () => {
 
       expect(getGitDiff("HEAD", repo).modified).toEqual(["tracked.js"]);
       expect(getGitDiff("HEAD", missing)).toEqual({ added: [], removed: [], modified: [] });
+
+      execFileSync("git", ["add", "tracked.js"], { cwd: repo, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "second"], { cwd: repo, stdio: "ignore" });
+      const base = execFileSync("git", ["rev-parse", "HEAD~1"], { cwd: repo, encoding: "utf8" }).trim();
+      await fs.writeFile(path.join(repo, "added.js"), "export const added = 1;\n");
+      execFileSync("git", ["add", "added.js"], { cwd: repo, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "added"], { cwd: repo, stdio: "ignore" });
+      expect(getGitDiff(base, repo, "HEAD").added).toContain("added.js");
+      expect(getGitDiff(base, repo, "HEAD; id")).toEqual({ added: [], removed: [], modified: [] });
     } finally {
       await fs.rm(repo, { recursive: true, force: true });
       await fs.rm(missing, { recursive: true, force: true });
