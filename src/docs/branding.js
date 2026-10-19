@@ -24,6 +24,6 @@ export function applyBrandingFooter(content, config) {
   if (typeof content !== "string") return content;
   if (!brandingEnabled(config)) return content;
   if (content.includes(DOCS_BADGE_MARKER)) return content;
-  const trimmed = content.replace(/\s*$/, "");
+  const trimmed = content.trimEnd();
   return `${trimmed}\n\n${DOCS_BADGE_MARKER}\n${DOCS_BADGE_MARKDOWN}\n`;
 }
