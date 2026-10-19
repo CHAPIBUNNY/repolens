@@ -71,7 +71,9 @@ The `release.yml` workflow publishes to npm automatically when a `v*` tag is pus
 
 The workflow checks that the secret is present and then runs `npm publish --provenance --access public`. Provenance also needs the workflow `id-token: write` permission, which `release.yml` already sets. If `NPM_TOKEN` is missing, the publish job fails with a message pointing at this secret and does not publish.
 
-Local preflight is `npm run release:check` (`npm test` and `npm pack --dry-run`).
+Local preflight is `npm run release:check` (`npm test`, `npm run audit:runtime`, and `npm pack --dry-run`).
+
+The release audit runs `npm audit --omit=dev` and fails on high or critical production findings. `braces` GHSA-vfj7-8cjw-p6xm is waived because no patched version is published. The waiver, and the `micromatch` / `fast-glob` findings that exist only because of it, is recorded in `scripts/audit-waivers.json` and explained in `SECURITY.md`. A different high or critical advisory on those packages still fails the job.
 
 ## Testing Upgrade Path
 

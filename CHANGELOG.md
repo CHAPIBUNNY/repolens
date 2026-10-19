@@ -10,6 +10,7 @@ All notable changes to RepoLens will be documented in this file.
 - Bump transitive `source-map-js` to 1.2.2 (CVE-2026-93749)
 - Bump transitive `postcss` to 8.5.31 (Dependabot #8 requested 8.5.25; 8.5.31 includes those fixes)
 - Bump `vitest` and `@vitest/mocker` to 4.1.12 (Dependabot #10 requested 4.1.11; 4.1.12 is the current 4.1 release and includes that fix)
+- No patched `braces` release exists for GHSA-vfj7-8cjw-p6xm (latest is 3.0.3, which the advisory covers). The release audit now checks production dependencies only and waives that one advisory. Any other high or critical runtime finding still fails the job. See `scripts/audit-waivers.json` and `SECURITY.md`.
 
 ### Packaging
 

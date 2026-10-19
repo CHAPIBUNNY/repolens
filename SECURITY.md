@@ -322,6 +322,20 @@ RepoLens follows industry best practices:
 - [ ] **Trivy Scanning**: Container/filesystem vulnerability scanning
 - [ ] **Bug Bounty Program**: Community security testing incentives
 
+## Dependency audit waiver
+
+The release workflow audits **production dependencies** (`npm audit --omit=dev`) and fails on high or critical findings. Dev-only advisories do not fail that job.
+
+One runtime advisory has no patched release, so it is waived:
+
+| Advisory | Package | Affected | Why it is waived |
+|---|---|---|---|
+| [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) (CVE-2026-93687) | `braces` | `<=3.0.3` | npm `braces` latest is 3.0.3, which the advisory includes. `fast-glob@3.3.3` (latest) depends on `micromatch@4.0.8`, which depends on `braces@^3.0.3`. No fixed release exists. |
+
+The gate also ignores `micromatch` and `fast-glob` when their only high finding is this `braces` advisory. A second high or critical advisory on either package still fails the build. The machine-readable record is `scripts/audit-waivers.json`. Remove the waiver when `braces` publishes a version outside `<=3.0.3`, or when the runtime tree no longer reaches `braces`.
+
+Exposure: `src/core/scan.js` passes `scan.include` / `scan.ignore` from the repository's own `.repolens.yml` to `fast-glob`. A deeply nested brace pattern in that config can crash the Node process. It does not grant code execution, and the pattern is chosen by the person who writes the config.
+
 ## Contact
 
 - **Security Issues**: trades@rabitaitrades.com
