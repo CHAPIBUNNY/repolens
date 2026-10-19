@@ -202,9 +202,11 @@ Edit `.github/workflows/*.yml`:
 
 ```yaml
 permissions:
-  contents: write  # For PR comments (future: reduce to read)
-  pull-requests: write  # If using PR comment delivery
+  contents: read
+  pull-requests: write  # Architecture Diff comment on pull requests
 ```
+
+`pull-requests: write` is enough for the Architecture Diff conversation comment. Do not grant `contents: write` for that comment. Add `contents: write` only on a job that publishes the GitHub Wiki.
 
 **Verify:**
 - [ ] Permissions match your security policy

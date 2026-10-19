@@ -338,8 +338,14 @@ on:
       - main
   pull_request:
 
+# contents: read checks out the repository.
+# pull-requests: write creates and updates the Architecture Diff
+# comment on pull requests (Issues comments API). Repository write
+# is not required for that comment. Add it only on a job that
+# publishes the GitHub Wiki.
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   publish:
@@ -461,6 +467,8 @@ For automated publishing on every push:
    - \`CONFLUENCE_PARENT_PAGE_ID\` (optional)
 
 3. Push to main branch
+
+The workflow token is \`contents: read\` plus \`pull-requests: write\`. That is enough for checkout and the Architecture Diff comment. It cannot push commits. GitHub Wiki publishing pushes a separate wiki repository, so add \`contents: write\` on that job only when you enable the wiki publisher.
 
 ## 📊 Generated Documentation
 

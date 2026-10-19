@@ -337,6 +337,8 @@ git push
 - Pull requests get architecture diff comments
 - Documentation stays evergreen automatically
 
+The generated workflow requests `contents: read` and `pull-requests: write`. That checks out the repo and posts the Architecture Diff comment. It does not grant permission to push commits. Enable `contents: write` on the publish job only if you publish to GitHub Wiki.
+
 **Pro Tip:** Add `.repolens/` to `.gitignore` if you don't want to commit local Markdown files.
 
 ---
