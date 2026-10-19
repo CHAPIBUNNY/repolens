@@ -10,14 +10,14 @@
 
 [![npm version](https://img.shields.io/npm/v/@chappibunny/repolens)](https://www.npmjs.com/package/@chappibunny/repolens)
 [![VS Code Extension](https://img.shields.io/visual-studio-marketplace/v/CHAPIBUNNY.repolens-architecture?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture)
-[![Tests](https://img.shields.io/badge/tests-480%20passing-brightgreen)](https://github.com/CHAPIBUNNY/repolens/actions)
+[![Tests](https://img.shields.io/github/actions/workflow/status/CHAPIBUNNY/repolens/test.yml?label=tests)](https://github.com/CHAPIBUNNY/repolens/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **Your architecture docs are already outdated.** RepoLens fixes that.
 
 RepoLens scans your repository, generates living architecture documentation, and publishes it to Notion, Confluence, GitHub Wiki, or Markdown — automatically on every push. Engineers get technical docs. Stakeholders get readable system overviews. Nobody writes a word.
 
-> Stable as of v1.0 — [API guarantees](docs/STABILITY.md) · [Security hardened](SECURITY.md) · v1.12.3
+> Stable as of v1.0 — [API guarantees](docs/STABILITY.md) · [Security hardened](SECURITY.md) · version from [`package.json`](package.json)
 
 ---
 
@@ -259,7 +259,7 @@ When you open a pull request, RepoLens posts:
 | [Configuration](docs/CONFIGURATION.md) | Complete `.repolens.yml` schema and examples |
 | [Environment Variables](docs/ENVIRONMENT.md) | All env vars by publisher and feature |
 | [Architecture](docs/ARCHITECTURE.md) | Pipeline diagram, project structure |
-| [Development](docs/DEVELOPMENT.md) | Setup, tests (380 across 22 files), release process |
+| [Development](docs/DEVELOPMENT.md) | Setup, tests, and the release process |
 | [Security](SECURITY.md) | Threat model, secret detection, validation layers |
 | [Telemetry](docs/TELEMETRY.md) | Opt-in privacy-first usage analytics |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common issues and fixes |

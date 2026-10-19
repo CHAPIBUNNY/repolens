@@ -2,6 +2,17 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## Unreleased
+
+### Security
+
+- `repolens init` workflows grant `contents: read` and `pull-requests: write`. Architecture Diff comments use the Issues comments API on the pull request, which accepts `pull-requests: write`. `contents: write` is not granted. GitHub Wiki pushes still need `contents: write` on that job only
+
+### Docs
+
+- The README no longer hard-codes the release version. It points at `package.json`, which is the source of the version
+- Test totals are no longer hard-coded in the README, development guide, or security guide. The tests badge follows the `test.yml` workflow status
+
 ## 1.12.4
 
 ### Security

@@ -141,6 +141,28 @@ describe("runInit", () => {
     expect(env).toContain("gpt-4o-mini");
   });
 
+  it("workflow grants least privilege for checkout and Architecture Diff comments", async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "repolens-init-perms-"));
+    await runInit(tempDir);
+
+    const wf = await fs.readFile(
+      path.join(tempDir, ".github", "workflows", "repolens.yml"),
+      "utf8"
+    );
+    const permissions = wf.match(/^permissions:\n((?:  \S.*\n)+)/m);
+    expect(permissions).toBeTruthy();
+    const granted = permissions[1]
+      .trim()
+      .split("\n")
+      .map((line) => line.trim())
+      .sort();
+    expect(granted).toEqual(["contents: read", "pull-requests: write"]);
+
+    const readme = await fs.readFile(path.join(tempDir, "README.repolens.md"), "utf8");
+    expect(readme).toContain("pull-requests: write");
+    expect(readme).toContain("contents: write");
+  });
+
   it("workflow template contains GitHub Models env vars enabled by default", async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "repolens-init-wf-"));
     await runInit(tempDir);

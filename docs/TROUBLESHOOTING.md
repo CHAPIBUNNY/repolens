@@ -328,6 +328,22 @@ Or install from the repo directly:
 
 ---
 
+### Architecture Diff comment missing, or GitHub API `403`
+
+**Cause:** The workflow token cannot create an issue comment on the pull request. `contents: read` alone is not enough, and `contents: write` is the wrong scope for that comment.
+
+**Fix:** Use the permissions written by `repolens init`:
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+```
+
+Pull requests opened from a fork still run with a read-only token. RepoLens logs the comment failure and continues publishing.
+
+---
+
 ### `Permission denied` writing files
 
 **Cause:** The CI runner or local user doesn't have write access to the output directory.

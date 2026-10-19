@@ -135,7 +135,7 @@ repolens/
 │       ├── telemetry.js     # Opt-in error tracking + performance timers
 │       ├── errors.js        # Enhanced error messages with guidance
 │       └── update-check.js  # Version update notifications
-├── tests/                   # Vitest test suite (185 tests across 15 files)
+├── tests/                   # Vitest test suite
 ├── .repolens.yml            # Dogfooding config
 ├── package.json
 ├── CHANGELOG.md

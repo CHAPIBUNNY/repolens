@@ -101,7 +101,7 @@ src/
   plugins/
     loader.js             # Plugin resolution and dynamic import
     manager.js            # Plugin registry and lifecycle orchestration
-tests/                    # Vitest test suite (480 tests across 25 files)
+tests/                    # Vitest test suite
   branch.test.js          # Branch detection tests
   cli.test.js             # CLI command tests
   config-discovery.test.js # Config auto-discovery tests
@@ -267,8 +267,7 @@ scripts/                  # Helper scripts
 - Test files: `tests/*.test.js` and `tests/e2e/*.test.js`
 - Mock file system operations using Vitest mocks
 - Test config discovery, validation, rendering, branch detection, migration, security fuzzing
-- **Coverage**: 480 tests passing across 25 test files
-- Run: `npm test`
+- Run: `npm test` (prints the current pass count)
 
 ### Configuration
 - Config file: `.repolens.yml` (auto-discovered from cwd or parent directories)

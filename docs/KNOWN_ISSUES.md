@@ -203,17 +203,25 @@ npx @chappibunny/repolens@latest publish --config ../shared/.repolens.yml
 **Best Practice:** Use `REPOLENS_TELEMETRY_ENABLED=false` (default) if handling extremely sensitive data.
 
 ### GitHub Token Permissions
-**Issue:** GitHub Actions workflows need `contents: write` for PR comments, but this grants broad repository access.
+**Issue:** Architecture Diff comments are easy to over-permission. The comment is an issue comment on a pull request (`GET` and `POST /repos/{owner}/{repo}/issues/{number}/comments`, `PATCH /repos/{owner}/{repo}/issues/comments/{id}` in `src/delivery/comment.js`). `contents: write` does not grant that API, and it does allow pushing commits.
 
-**Current Requirement:**
+**Requirement:** GitHub accepts either `issues: write` or `pull-requests: write` for those three endpoints. `repolens init` grants only the pull request scope, because the comment runs only when `GITHUB_EVENT_NAME` is `pull_request`:
+
 ```yaml
 permissions:
-  contents: write
+  contents: read
+  pull-requests: write
 ```
 
-**Status:** Fixed in 1.12.4 for this repository's workflows. Test and security jobs use `contents: read`. The documentation publish job keeps `contents: write` because wiki pushes use that job's `GITHUB_TOKEN`. The release job is the only one with `id-token: write` (npm provenance). Pull request comments are not posted by the main-branch publish workflow.
+`contents: read` checks out the repository. `pull-requests: write` lists, creates, and updates the conversation comment. `issues: write` is not granted. `contents: write` is not granted.
 
-Generated user workflows may still request `contents: write`. That template is unchanged in this release.
+`repolens init` does not overwrite an existing workflow file. Add `pull-requests: write` by hand if `.github/workflows/repolens.yml` is already present.
+
+**Wiki:** GitHub Wiki publishing pushes `{repo}.wiki.git` and still needs `contents: write` on the job that publishes the wiki. Add that permission only when the `github_wiki` publisher is enabled.
+
+**This repository:** Test and security jobs use `contents: read`. The documentation publish job keeps `contents: write` because wiki pushes use that job's `GITHUB_TOKEN`. The release job is the only one with `id-token: write` (npm provenance). The main-branch publish workflow does not run on `pull_request`, so it does not post Architecture Diff comments.
+
+**Fork pull requests:** A `pull_request` workflow from a fork receives a read-only token even when the file requests `pull-requests: write`. The comment logs a warning and publish continues.
 
 ---
 
@@ -291,7 +299,7 @@ Know a workaround? Found a fix? Submit a PR:
 2. Create branch: `git checkout -b fix/your-issue`
 3. Add test case to `tests/` covering the issue
 4. Implement fix
-5. Verify `npm test` passes (185 tests)
+5. Verify `npm test` passes
 6. Submit PR with clear description
 
 We prioritize issues with:

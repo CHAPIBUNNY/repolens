@@ -115,13 +115,13 @@ RepoLens implements defense-in-depth security:
 
 **Supply Chain Protection**:
 - Actions pinned to commit SHAs (not tags)
-- Minimal permissions (`contents: read` or `contents: write` only)
+- Minimal permissions (`contents: read` by default, `pull-requests: write` only for Architecture Diff comments, `contents: write` only for wiki or release publishes)
 - Separate security job (fail early strategy)
 
 **Security Checks (CI/CD)**:
 1. **Dependency Audit**: Fails on critical/high vulnerabilities
 2. **Secrets Scanning**: Detects hardcoded credentials
-3. **Test Suite**: 185 tests across 15 test files (including security fuzzing)
+3. **Test Suite**: Vitest, including security fuzzing (`npm test`)
 
 **Workflow Hardening**:
 ```yaml
