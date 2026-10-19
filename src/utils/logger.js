@@ -59,7 +59,11 @@ function sanitizeArgs(args) {
       return sanitizeSecrets(arg);
     }
     if (typeof arg === "object" && arg !== null) {
-      return JSON.parse(sanitizeSecrets(JSON.stringify(arg)));
+      try {
+        return JSON.parse(sanitizeSecrets(JSON.stringify(arg)));
+      } catch {
+        return "[unserializable]";
+      }
     }
     return arg;
   });

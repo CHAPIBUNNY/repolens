@@ -6,9 +6,15 @@ import os from "node:os";
 // Mock child_process to avoid real git operations
 vi.mock("node:child_process", () => ({
   execSync: vi.fn(),
+  execFileSync: vi.fn(),
 }));
 
-import { execSync } from "node:child_process";
+import { execSync, execFileSync } from "node:child_process";
+
+function mockGit(impl) {
+  execSync.mockImplementation((cmd, opts) => impl(cmd, opts));
+  execFileSync.mockImplementation((bin, args = [], opts) => impl(`${bin} ${(args || []).join(" ")}`, opts));
+}
 
 describe("GitHub Wiki Publisher", () => {
   let tmpDir;
@@ -59,7 +65,7 @@ describe("GitHub Wiki Publisher", () => {
       delete process.env.GITHUB_REPOSITORY;
       
       // Mock git remote failing
-      execSync.mockImplementation((cmd) => {
+      mockGit((cmd) => {
         if (cmd.includes("remote get-url")) {
           throw new Error("not a git repository");
         }
@@ -77,7 +83,7 @@ describe("GitHub Wiki Publisher", () => {
 
       // Track git commands issued
       const gitCommands = [];
-      execSync.mockImplementation((cmd, opts) => {
+      mockGit((cmd, opts) => {
         gitCommands.push(cmd);
         
         // git clone: create a fake .git dir so it looks like a repo
@@ -114,8 +120,10 @@ describe("GitHub Wiki Publisher", () => {
 
       await publishToGitHubWiki(cfg, pages);
 
-      // Verify clone was called with wiki URL
+      // Verify clone was called with wiki URL and the token stayed out of argv
       expect(gitCommands.some(c => c.includes("clone") && c.includes(".wiki.git"))).toBe(true);
+      expect(gitCommands.join("\n")).not.toContain("ghp_testtoken123");
+      expect(gitCommands.join("\n")).not.toContain("x-access-token");
 
       // Verify add, commit, push were called
       expect(gitCommands.some(c => c.includes("add -A"))).toBe(true);
@@ -127,7 +135,7 @@ describe("GitHub Wiki Publisher", () => {
       const { publishToGitHubWiki } = await import("../src/publishers/github-wiki.js");
 
       const gitCommands = [];
-      execSync.mockImplementation((cmd, opts) => {
+      mockGit((cmd, opts) => {
         gitCommands.push(cmd);
 
         // git diff --cached --quiet: NO throw = no changes
@@ -156,7 +164,7 @@ describe("GitHub Wiki Publisher", () => {
       const { publishToGitHubWiki } = await import("../src/publishers/github-wiki.js");
 
       const gitCommands = [];
-      execSync.mockImplementation((cmd, opts) => {
+      mockGit((cmd, opts) => {
         gitCommands.push(cmd);
 
         // Clone fails (wiki not yet initialized)
@@ -192,7 +200,7 @@ describe("GitHub Wiki Publisher", () => {
       const { publishToGitHubWiki } = await import("../src/publishers/github-wiki.js");
       process.env.GITHUB_TOKEN = "ghp_supersecrettoken123";
 
-      execSync.mockImplementation((cmd) => {
+      mockGit((cmd) => {
         if (cmd.includes("clone")) {
           const err = new Error("clone failed");
           err.stderr = "fatal: could not access x-access-token:ghp_supersecrettoken123@github.com";
@@ -223,7 +231,7 @@ describe("GitHub Wiki Publisher", () => {
       const { publishToGitHubWiki } = await import("../src/publishers/github-wiki.js");
 
       let writtenFiles = {};
-      execSync.mockImplementation((cmd, opts) => {
+      mockGit((cmd, opts) => {
         if (cmd.includes("diff --cached --quiet")) {
           throw new Error("changes exist");
         }

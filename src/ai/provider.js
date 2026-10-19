@@ -83,8 +83,7 @@ export async function generateText({ system, user, temperature, maxTokens, confi
   
   // Log configuration once per run
   if (!hasLoggedConfig) {
-    const keyPreview = apiKey.substring(0, 8) + "...";
-    info(`AI Config: provider=${provider}, model=${model}, key=${keyPreview}`);
+    info(`AI Config: provider=${provider}, model=${model}, key=set`);
     hasLoggedConfig = true;
   }
   

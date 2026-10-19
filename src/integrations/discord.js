@@ -4,6 +4,7 @@
  */
 
 import { info, warn, error } from "../utils/logger.js";
+import { sanitizeSecrets } from "../utils/secrets.js";
 
 /**
  * Send a notification to Discord webhook
@@ -25,15 +26,29 @@ export async function sendDiscordNotification(webhookUrl, payload) {
       embeds: [embed],
     };
 
+    let webhook;
+    try {
+      webhook = new URL(webhookUrl);
+    } catch {
+      warn("Discord webhook URL is not a valid URL, skipping notification");
+      return false;
+    }
+    if (webhook.protocol !== "https:") {
+      warn("Discord webhook URL must use https, skipping notification");
+      return false;
+    }
+
     const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000),
+      redirect: "error",
     });
 
     if (!response.ok) {
       const text = await response.text();
-      error(`Discord webhook failed (${response.status}): ${text}`);
+      error(`Discord webhook failed (${response.status}): ${sanitizeSecrets(String(text).slice(0, 300))}`);
       return false;
     }
 

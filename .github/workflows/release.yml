@@ -7,14 +7,16 @@ on:
 
 # Tag pushes (v*) publish to npm. NPM_TOKEN must be set under
 # Settings → Secrets and variables → Actions before a tag will publish.
-# id-token: write lets npm attach a provenance attestation.
+# id-token: write lets npm attach a provenance attestation. It is limited
+# to the release job. There is no pull_request_target trigger.
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 jobs:
   security:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6.0.3
@@ -44,6 +46,9 @@ jobs:
   release:
     needs: security
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6.0.3
@@ -73,7 +78,7 @@ jobs:
             echo "❌ NPM_TOKEN secret is not set or is empty — add it under repo Settings → Secrets → Actions"
             exit 1
           fi
-          echo "✅ NPM_TOKEN is present (length: ${#NPM_TOKEN})"
+          echo "✅ NPM_TOKEN is present"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 

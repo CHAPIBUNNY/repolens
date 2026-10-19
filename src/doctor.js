@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import yaml from "js-yaml";
+import { loadYaml } from "./utils/yaml.js";
 import { loadConfig } from "./core/config.js";
 import { detectConfigTypos } from "./core/config-schema.js";
 import { info } from "./utils/logger.js";
@@ -118,7 +118,7 @@ export async function runDoctor(targetDir = process.cwd()) {
     let rawConfig = null;
     try {
       const rawYaml = await fs.readFile(repolensConfigPath, "utf8");
-      rawConfig = yaml.load(rawYaml);
+      rawConfig = loadYaml(rawYaml);
       
       // Check for config key typos before validation
       if (rawConfig && typeof rawConfig === "object") {

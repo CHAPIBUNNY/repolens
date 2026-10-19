@@ -4,6 +4,7 @@ import path from "node:path";
 import { info, warn } from "../utils/logger.js";
 import { trackScan } from "../utils/telemetry.js";
 import { detectMonorepo } from "../analyzers/monorepo-detector.js";
+import { isInsideRoot } from "../utils/safe-path.js";
 
 const norm = (p) => p.replace(/\\/g, "/");
 
@@ -71,8 +72,20 @@ function isNextPage(file) {
   return false;
 }
 
+const MAX_SOURCE_BYTES = 1_000_000;
+
 async function readFileSafe(file) {
   try {
+    const stat = await fs.stat(file);
+    if (!stat.isFile() || stat.size > MAX_SOURCE_BYTES) return "";
+    const fh = await fs.open(file, "r");
+    try {
+      const sample = Buffer.alloc(Math.min(8192, stat.size));
+      await fh.read(sample, 0, sample.length, 0);
+      if (sample.includes(0)) return "";
+    } finally {
+      await fh.close();
+    }
     return await fs.readFile(file, "utf8");
   } catch {
     return "";
@@ -466,11 +479,18 @@ function isValidRoutePath(p) {
 export async function scanRepo(cfg) {
   const repoRoot = cfg.__repoRoot;
 
-  const files = await fg(cfg.scan.include, {
-    cwd: repoRoot,
+  const rootResolved = path.resolve(repoRoot);
+  const files = (await fg(cfg.scan.include, {
+    cwd: rootResolved,
     ignore: cfg.scan.ignore,
-    onlyFiles: true
-  });
+    onlyFiles: true,
+    followSymbolicLinks: false,
+    absolute: false
+  })).filter((file) => isInsideRoot(rootResolved, path.resolve(rootResolved, file)));
+
+  if (files.length === 0) {
+    warn("No files matched the scan patterns. Documentation will be mostly empty. Check scan.include in .repolens.yml.");
+  }
 
   // Performance guardrails
   if (files.length > MAX_FILES_LIMIT) {

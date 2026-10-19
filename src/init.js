@@ -1,8 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
-import { exec } from "node:child_process";
+import { spawn } from "node:child_process";
 import { info, warn } from "./utils/logger.js";
+import { isNonInteractiveEnvironment } from "./utils/interactive.js";
 
 const PUBLISHER_CHOICES = ["markdown", "notion", "confluence", "github_wiki"];
 
@@ -564,24 +565,27 @@ async function dirExists(dirPath) {
  * Open a URL in the default browser (cross-platform).
  */
 function openUrl(url) {
-  const platform = process.platform;
-  let cmd;
-  if (platform === "darwin") {
-    cmd = `open "${url}"`;
-  } else if (platform === "win32") {
-    cmd = `start "" "${url}"`;
-  } else {
-    cmd = `xdg-open "${url}"`;
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return Promise.resolve(false);
   }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    return Promise.resolve(false);
+  }
+
+  const platform = process.platform;
+  const cmd = platform === "darwin" ? "open" : platform === "win32" ? "rundll32" : "xdg-open";
+  const args = platform === "win32" ? ["url.dll,FileProtocolHandler", url] : [url];
+
   return new Promise((resolve) => {
-    exec(cmd, (err) => {
-      if (err) {
-        warn(`Could not open browser: ${err.message}`);
-        resolve(false);
-      } else {
-        resolve(true);
-      }
+    const child = spawn(cmd, args, { stdio: "ignore" });
+    child.on("error", (err) => {
+      warn(`Could not open browser: ${err.message}`);
+      resolve(false);
     });
+    child.on("close", (code) => resolve(code === 0));
   });
 }
 
@@ -844,23 +848,10 @@ function detectProjectName(repoRoot) {
 }
 
 async function promptNotionCredentials() {
-  // Skip prompts in CI environments or test mode
-  const isCI = process.env.CI || 
-               process.env.GITHUB_ACTIONS || 
-               process.env.GITLAB_CI || 
-               process.env.CIRCLECI ||
-               process.env.JENKINS_HOME ||
-               process.env.CODEBUILD_BUILD_ID;
-  
-  const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST;
-  
-  if (isCI) {
-    info("⏭️  Skipping interactive prompts (CI environment detected)");
-    return null;
-  }
-  
-  if (isTest) {
-    // Skip silently in test mode
+  if (isNonInteractiveEnvironment()) {
+    if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {
+      info("⏭️  Skipping interactive prompts (non-interactive environment)");
+    }
     return null;
   }
 
@@ -943,11 +934,6 @@ async function ensureEnvInGitignore(repoRoot) {
  * Returns a structured config that replaces the auto-detected defaults.
  */
 async function runInteractiveWizard(repoRoot) {
-  const isCI = process.env.CI || process.env.GITHUB_ACTIONS || process.env.GITLAB_CI ||
-               process.env.CIRCLECI || process.env.JENKINS_HOME || process.env.CODEBUILD_BUILD_ID;
-  const isTest = process.env.NODE_ENV === "test" || process.env.VITEST;
-  if (isCI || isTest) return null;
-
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const ask = (q) => rl.question(q);
 
@@ -1515,14 +1501,17 @@ export async function runInit(targetDir = process.cwd(), options = {}) {
   // Ensure target directory exists
   await fs.mkdir(repoRoot, { recursive: true });
 
-  // Interactive wizard is now the default (--quick skips it)
+  // Interactive wizard is the default (--quick skips it).
+  // CI, tests, and closed stdin used to return null from the wizard and
+  // abort before any files were written. Fall through to quick setup instead.
   let wizardAnswers = null;
-  if (options.interactive) {
+  if (options.interactive && !isNonInteractiveEnvironment()) {
     wizardAnswers = await runInteractiveWizard(repoRoot);
     if (!wizardAnswers) {
-      // User cancelled the wizard
       return;
     }
+  } else if (options.interactive) {
+    info("Non-interactive environment detected — running quick setup instead of the wizard.");
   }
 
   // Prompt for Notion credentials interactively (only in non-wizard mode)

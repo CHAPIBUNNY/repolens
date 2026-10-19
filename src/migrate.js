@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import yaml from "js-yaml";
+import { loadYaml } from "./utils/yaml.js";
 import { info, warn, error as logError } from "./utils/logger.js";
 import { trackMigration } from "./utils/telemetry.js";
 
@@ -141,7 +141,7 @@ async function migrateConfigFile(targetDir, options = {}) {
   const raw = await fs.readFile(configPath, "utf8");
   let parsed;
   try {
-    parsed = yaml.load(raw);
+    parsed = loadYaml(raw);
   } catch {
     warn(`   ⚠️  Could not parse ${filename} — skipping config migration`);
     return { migrated: false, filePath: configPath, reason: "parse-error" };

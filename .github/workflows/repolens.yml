@@ -9,8 +9,11 @@ on:
       - main
   workflow_dispatch:
 
+# contents: write is only required by the publish job (wiki pushes use
+# the job's GITHUB_TOKEN). Security and test stay read-only.
+# This workflow does not use pull_request_target.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   security:
@@ -71,6 +74,8 @@ jobs:
     # Dependabot-triggered runs do not receive publisher secrets.
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout repository

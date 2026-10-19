@@ -4,6 +4,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { info } from "../utils/logger.js";
+import { isInsideRoot } from "../utils/safe-path.js";
+import { loadYaml } from "../utils/yaml.js";
 
 /**
  * Detect monorepo workspaces in a repository.
@@ -68,24 +70,8 @@ async function detectPnpmWorkspaces(repoRoot) {
   try {
     const yamlPath = path.join(repoRoot, "pnpm-workspace.yaml");
     const raw = await fs.readFile(yamlPath, "utf8");
-
-    // Simple YAML parsing for packages array (avoid adding js-yaml dependency for this)
-    const patterns = [];
-    let inPackages = false;
-    for (const line of raw.split("\n")) {
-      const trimmed = line.trim();
-      if (trimmed === "packages:") {
-        inPackages = true;
-        continue;
-      }
-      if (inPackages) {
-        if (trimmed.startsWith("- ")) {
-          patterns.push(trimmed.slice(2).replace(/['"]/g, "").trim());
-        } else if (trimmed && !trimmed.startsWith("#")) {
-          break; // End of packages list
-        }
-      }
-    }
+    const doc = loadYaml(raw);
+    const patterns = Array.isArray(doc?.packages) ? doc.packages.filter((item) => typeof item === "string") : [];
 
     return await resolveWorkspacePatterns(repoRoot, patterns);
   } catch {
@@ -116,8 +102,10 @@ async function resolveWorkspacePatterns(repoRoot, patterns) {
   for (const pattern of patterns) {
     // Convert glob pattern to directory search
     // e.g. "packages/*" → list dirs in packages/
-    const basePath = pattern.replace(/\/?\*.*$/, "");
-    const searchDir = path.join(repoRoot, basePath);
+    if (typeof pattern !== "string" || pattern.includes("\0")) continue;
+    const basePath = pattern.replace(/\/?\*.*$/, "") || ".";
+    const searchDir = path.resolve(repoRoot, basePath);
+    if (!isInsideRoot(repoRoot, searchDir)) continue;
 
     try {
       const entries = await fs.readdir(searchDir, { withFileTypes: true });

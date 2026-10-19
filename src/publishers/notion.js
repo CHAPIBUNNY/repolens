@@ -4,6 +4,7 @@ import { log, warn } from "../utils/logger.js";
 import { fetchWithRetry } from "../utils/retry.js";
 import { executeNotionRequest } from "../utils/rate-limit.js";
 import { createRepoLensError } from "../utils/errors.js";
+import { sanitizeSecrets } from "../utils/secrets.js";
 
 function notionHeaders() {
   const token = process.env.NOTION_TOKEN;
@@ -35,7 +36,8 @@ async function notionRequest(method, url, body) {
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Notion API error ${res.status}: ${text}`);
+      const clipped = sanitizeSecrets(String(text || "").replace(/\s+/g, " ").slice(0, 500));
+      throw new Error(`Notion API error ${res.status}: ${clipped}`);
     }
 
     return await res.json();
@@ -61,10 +63,15 @@ async function writeCache(cache) {
 
 async function getChildBlocks(blockId) {
   const results = [];
+  const seenCursors = new Set();
   let cursor = undefined;
 
-  while (true) {
-    const suffix = cursor ? `?start_cursor=${cursor}` : "";
+  while (results.length < 10000) {
+    if (cursor) {
+      if (seenCursors.has(cursor)) break;
+      seenCursors.add(cursor);
+    }
+    const suffix = cursor ? `?start_cursor=${encodeURIComponent(cursor)}` : "";
     const response = await notionRequest("GET", `/blocks/${blockId}/children${suffix}`);
 
     if (response.results?.length) {

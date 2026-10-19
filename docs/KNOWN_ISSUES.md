@@ -157,10 +157,10 @@ AZURE_OPENAI_DEPLOYMENT_NAME=your-deployment
 
 ### Config Discovery
 
-#### Search Stops at Git Root
-**Issue:** `.repolens.yml` discovery walks up directories until hitting git root, then stops.
+#### Search Walks to the Filesystem Root
+**Issue:** `.repolens.yml` discovery walks parent directories until the filesystem root. It does not stop at the git root.
 
-**Impact:** If config is outside repository root, it won't be found.
+**Impact:** A config in a parent directory outside the repository can be selected.
 
 **Workaround:** Use `--config` flag explicitly:
 ```bash
@@ -211,12 +211,9 @@ permissions:
   contents: write
 ```
 
-**Planned:** Reduce to minimum required permissions:
-```yaml
-permissions:
-  contents: read
-  pull-requests: write  # Only for PR comments
-```
+**Status:** Fixed in 1.12.4 for this repository's workflows. Test and security jobs use `contents: read`. The documentation publish job keeps `contents: write` because wiki pushes use that job's `GITHUB_TOKEN`. The release job is the only one with `id-token: write` (npm provenance). Pull request comments are not posted by the main-branch publish workflow.
+
+Generated user workflows may still request `contents: write`. That template is unchanged in this release.
 
 ---
 

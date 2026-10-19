@@ -1,9 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { info } from "../utils/logger.js";
+import { resolveOutputDir, safeFileName } from "../utils/safe-path.js";
 
 function outputDir(cfg) {
-  return path.join(cfg.__repoRoot, ".repolens");
+  return resolveOutputDir(cfg.__repoRoot, ".repolens");
 }
 
 function pageFileName(key) {
@@ -27,7 +28,7 @@ function pageFileName(key) {
     code_health: "code_health.md"
   };
 
-  return mapping[key] || `${key}.md`;
+  return safeFileName(mapping[key] || `${key}.md`);
 }
 
 export async function publishToMarkdown(cfg, renderedPages) {

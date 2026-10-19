@@ -3,13 +3,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { info } from "../utils/logger.js";
+import { resolveOutputDir, safeFileName } from "../utils/safe-path.js";
 
 export async function writeDocumentSet(docSet, targetDir = process.cwd()) {
   const { documents, artifacts, config } = docSet;
   
-  // Determine output directory
-  const outputDir = path.join(
-    targetDir, 
+  // Determine output directory. Reject absolute paths and `..` escapes.
+  const outputDir = resolveOutputDir(
+    targetDir,
     config.documentation?.output_dir || ".repolens"
   );
   
@@ -20,9 +21,10 @@ export async function writeDocumentSet(docSet, targetDir = process.cwd()) {
   
   // Write each document
   for (const doc of documents) {
-    const filePath = path.join(outputDir, doc.filename);
+    const fileName = safeFileName(doc.filename);
+    const filePath = path.join(outputDir, fileName);
     await fs.writeFile(filePath, doc.content, "utf8");
-    info(`✓ Wrote ${doc.filename}`);
+    info(`✓ Wrote ${fileName}`);
   }
   
   // Write artifacts if enabled
@@ -59,12 +61,12 @@ export async function writeDocumentSet(docSet, targetDir = process.cwd()) {
   return {
     outputDir,
     documentCount: documents.length,
-    files: documents.map(d => d.filename)
+    files: documents.map(d => safeFileName(d.filename))
   };
 }
 
 export async function readPreviousDocumentSet(targetDir = process.cwd(), config) {
-  const outputDir = path.join(
+  const outputDir = resolveOutputDir(
     targetDir,
     config.documentation?.output_dir || ".repolens"
   );
