@@ -13,6 +13,7 @@ project:
 publishers:
   - notion
   - confluence
+  - obsidian
   - markdown
 
 # Notion-specific settings (optional)
@@ -27,6 +28,16 @@ notion:
 confluence:
   branches:
     - main              # Only main branch publishes to Confluence
+
+# Obsidian vault (optional, local files only — no network)
+obsidian:
+  vault: "/path/to/vault"       # Absolute, or relative to the repository
+  folder: "RepoLens/my-app"     # Subdirectory inside the vault
+  branches:
+    - main
+  index: true                   # Map-of-content note (default: true)
+  frontmatter: true             # YAML properties (default: true)
+  wikilinks: true               # Rewrite markdown links (default: true)
 
 # Discord notifications (optional)
 discord:
@@ -96,7 +107,7 @@ features:
 | `configVersion` | number | **Yes** | Schema version (must be `1`) |
 | `project.name` | string | Yes | Project name |
 | `project.docs_title_prefix` | string | No | Prefix for documentation titles (default: project name) |
-| `publishers` | array | Yes | Output targets: `notion`, `confluence`, `github_wiki`, `markdown` (+ plugin publishers) |
+| `publishers` | array | Yes | Output targets: `notion`, `confluence`, `github_wiki`, `obsidian`, `markdown` (+ plugin publishers) |
 | `plugins` | array | No | Plugin paths or npm package names |
 | `notion.branches` | array | No | Branch whitelist for Notion publishing. Supports globs. |
 | `notion.includeBranchInTitle` | boolean | No | Add `[branch-name]` to titles (default: `true`) |
@@ -104,6 +115,12 @@ features:
 | `github_wiki.branches` | array | No | Branch whitelist for GitHub Wiki publishing. Supports globs. |
 | `github_wiki.sidebar` | boolean | No | Generate `_Sidebar.md` navigation (default: `true`) |
 | `github_wiki.footer` | boolean | No | Generate `_Footer.md` (default: `true`) |
+| `obsidian.vault` | string | No | Obsidian vault path. Absolute, or relative to the repo. Required when the `obsidian` publisher runs. |
+| `obsidian.folder` | string | No | Folder inside the vault (default: `RepoLens/<project>`). Must stay inside the vault. |
+| `obsidian.branches` | array | No | Branch whitelist for Obsidian publishing. Supports globs. |
+| `obsidian.index` | boolean | No | Write a `RepoLens.md` index note with links to every page (default: `true`) |
+| `obsidian.frontmatter` | boolean | No | Add YAML frontmatter (title, aliases, tags) (default: `true`) |
+| `obsidian.wikilinks` | boolean | No | Rewrite markdown links to Obsidian wikilinks and use note titles as filenames (default: `true`) |
 | `discord.enabled` | boolean | No | Enable Discord notifications (default: `true` if webhook set) |
 | `discord.notifyOn` | string | No | Notification policy: `always`, `significant`, `never` (default: `significant`) |
 | `discord.significantThreshold` | number | No | Change % threshold for notifications (default: `10`) |

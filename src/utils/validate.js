@@ -49,6 +49,12 @@ export function validateConfig(config) {
     warnings.push(...notionWarnings);
   }
   
+  // Validate Obsidian configuration (local vault path; no credentials)
+  if (config.obsidian) {
+    const obsidianErrors = validateObsidianConfig(config.obsidian);
+    errors.push(...obsidianErrors);
+  }
+
   // Validate domains (if present)
   if (config.domains) {
     const domainErrors = validateDomains(config.domains);
@@ -142,7 +148,7 @@ function validatePublishers(publishers) {
     return errors;
   }
   
-  const validPublishers = ["notion", "markdown", "confluence", "github_wiki"];
+  const validPublishers = ["notion", "markdown", "confluence", "github_wiki", "obsidian"];
   
   if (Array.isArray(publishers)) {
     for (const pub of publishers) {
@@ -193,6 +199,62 @@ function validateNotionConfig(notion) {
     }
   }
   
+  return errors;
+}
+
+/**
+ * Validate Obsidian vault configuration.
+ * The vault may be absolute (it lives outside the repo). The folder must
+ * stay inside that vault.
+ */
+function validateObsidianConfig(obsidian) {
+  const errors = [];
+
+  if (typeof obsidian !== "object" || Array.isArray(obsidian)) {
+    errors.push("obsidian must be an object");
+    return errors;
+  }
+
+  if (obsidian.vault !== undefined) {
+    if (typeof obsidian.vault !== "string" || obsidian.vault.trim() === "") {
+      errors.push("obsidian.vault must be a non-empty string");
+    } else if (obsidian.vault.includes("\0")) {
+      errors.push("obsidian.vault contains a null byte");
+    }
+  }
+
+  if (obsidian.folder !== undefined) {
+    if (typeof obsidian.folder !== "string" || obsidian.folder.trim() === "") {
+      errors.push("obsidian.folder must be a non-empty string");
+    } else if (obsidian.folder.includes("\0")) {
+      errors.push("obsidian.folder contains a null byte");
+    } else if (
+      path.isAbsolute(obsidian.folder) ||
+      /^[A-Za-z]:[\\/]/.test(obsidian.folder) ||
+      obsidian.folder.split(/[\\/]/).some((part) => part === "..")
+    ) {
+      errors.push("obsidian.folder must be a relative path inside the vault");
+    }
+  }
+
+  if (obsidian.branches !== undefined) {
+    if (!Array.isArray(obsidian.branches)) {
+      errors.push("obsidian.branches must be an array");
+    } else {
+      for (const branch of obsidian.branches) {
+        if (typeof branch !== "string") {
+          errors.push(`Invalid branch name: ${branch} (must be string)`);
+        }
+      }
+    }
+  }
+
+  for (const flag of ["index", "frontmatter", "wikilinks"]) {
+    if (obsidian[flag] !== undefined && typeof obsidian[flag] !== "boolean") {
+      errors.push(`obsidian.${flag} must be a boolean`);
+    }
+  }
+
   return errors;
 }
 

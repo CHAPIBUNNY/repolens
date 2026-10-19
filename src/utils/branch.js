@@ -119,6 +119,22 @@ export function shouldPublishToGitHubWiki(config, currentBranch = getCurrentBran
 }
 
 /**
+ * Check if current branch should publish to an Obsidian vault.
+ * Based on config.obsidian.branches setting.
+ */
+export function shouldPublishToObsidian(config, currentBranch = getCurrentBranch()) {
+  if (!config.obsidian) {
+    return true;
+  }
+
+  if (!config.obsidian.branches || config.obsidian.branches.length === 0) {
+    return true;
+  }
+
+  return matchesAnyBranch(config.obsidian.branches, currentBranch);
+}
+
+/**
  * Get branch-qualified page title
  */
 export function getBranchQualifiedTitle(baseTitle, branch = getCurrentBranch(), includeBranch = true) {

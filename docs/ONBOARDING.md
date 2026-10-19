@@ -91,6 +91,18 @@ publishers:
 ```
 Docs live alongside your code — accessible from the repo's Wiki tab. Requires `GITHUB_TOKEN`.
 
+**Obsidian vault** (local notes, no API keys):
+```yaml
+publishers:
+  - obsidian
+  - markdown
+
+obsidian:
+  vault: "/path/to/vault"     # absolute, or relative to the repo
+  folder: "RepoLens/my-app"   # created inside the vault if missing
+```
+Each publish rewrites notes in that folder with YAML frontmatter and `[[wikilinks]]`. Unchanged notes are left untouched. Files you added yourself are not deleted.
+
 ---
 
 ## Step 3: Enable AI Features (Optional)

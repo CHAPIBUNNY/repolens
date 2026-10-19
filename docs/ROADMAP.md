@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.5.0  
+**Current Version:** 1.13.0  
 **npm Package:** `@chappibunny/repolens`  
-**Last Updated:** March 2026
+**Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.1.0)
+## What's Shipped (v0.1.0 → v1.13.0)
 
 Everything below is live, tested, and available on npm.
 
@@ -115,21 +115,64 @@ Everything below is live, tested, and available on npm.
 
 ---
 
-## v1.2.0+ — Growth & Scale
+## v1.1.0 – v1.3.1 — Wiki UX, migration, and demo
+- ✅ GitHub Wiki publisher (v1.0.0) with audience-grouped Home, sidebar, page descriptions, and metadata headers (v1.1.0)
+- ✅ `repolens migrate` patches legacy configs to `configVersion: 1`
+- ✅ `repolens demo` for a zero-config local preview
+- ✅ README and onboarding docs split into a shorter landing page plus `ONBOARDING.md`
 
-### Publishers
-- [x] GitHub Wiki publisher (shipped v1.1.0)
-- [ ] Obsidian vault publisher
+## v1.4.0 – v1.5.3 — Production hardening and differentiation
+- ✅ Confluence CDATA safety, relative-link rewriting, and complete Markdown filename mappings
+- ✅ Generic business-domain defaults, import-based system map, and capped AI context
+- ✅ Document hash cache, structured JSON AI output, and Anthropic + Google Gemini adapters
+- ✅ Monorepo workspace detection (npm, yarn, pnpm, Lerna) and CODEOWNERS ownership
+- ✅ Fetch timeouts, per-document error isolation, and partial-success publishing
+- ✅ CI runs the test suite before publish
+
+## v1.6.0 – v1.7.1 — Deterministic docs and AI guardrails
+- ✅ Richer deterministic fallbacks for all six AI document types (health scores, flows, onboarding)
+- ✅ Dependency-weighted module roles, import-chain data flows, and CLI-aware labels
+- ✅ GraphQL false-positive filtering and change-impact noise filtering
+- ✅ AI output sanitizer strips conversational follow-ups from structured and plain-text responses
+
+## v1.8.0 – v1.11.0 — GitHub Models and the init wizard
+- ✅ GitHub Models as a first-class AI provider (`GITHUB_TOKEN`, no extra API key in Actions)
+- ✅ `repolens uninstall`, doctor checks for the active AI provider, and config-driven AI settings
+- ✅ Notion page dedupe, non-empty Confluence pages, and AI provider presets
+- ✅ Config typo hints, publish progress, and cache-age display
+- ✅ Interactive `repolens init` by default (`--quick` to skip), with credential checks
+- ✅ Smart Notion and Confluence URL parsing, eight language scan presets (Universal default)
+
+## v1.12.0 – v1.12.4 — Analysis depth, packaging, and hardening
+- ✅ JSDoc/TSDoc extraction on the API Surface
+- ✅ Security hotspots (16 anti-patterns, CWE ids) and cyclomatic complexity with A–F code health
+- ✅ 17 document types
+- ✅ Node.js `>=18`, package `exports`, optional Sentry, built-in `fetch`
+- ✅ Test workflow on Node 18, 20, and 22; runtime dependency audit
+- ✅ Path containment for output dirs and wiki page names, redacted publisher errors, safer git and YAML parsing
+- ✅ CLI flag handling, non-TTY `init`, and scoped npm update checks
+
+## v1.13.0 — Obsidian vault publisher
+- ✅ Local Obsidian publisher: writes notes into a configured vault folder
+- ✅ YAML frontmatter, wikilinks, and an index note
+- ✅ Idempotent in-place updates (unchanged notes are not rewritten; stale managed notes are removed)
+- ✅ Path containment inside the vault, including symlink escapes. No network calls
+- ✅ Optional `obsidian` config fields on schema v1 (existing configs keep working)
+
+## Integrations
+- ✅ VS Code extension for in-editor architecture visualization ([Marketplace](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture))
+
+---
+
+## What's Next
 
 ### Integrations
-- [ ] VS Code extension for in-editor architecture visualization
 - [ ] GitHub App for automated setup and status checks
 - [ ] Slack notifications
 - [ ] Custom webhook support
 
 ### Analysis
 - [ ] Cross-repository architecture analysis
-- [ ] Monorepo-aware module detection
 - [ ] Security boundary validation
 
 ### Developer Experience

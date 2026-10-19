@@ -99,6 +99,13 @@ outputs:
 | `github_wiki.branches` | string[] | Branch filter for GitHub Wiki publishing |
 | `github_wiki.sidebar` | boolean | Generate `_Sidebar.md` (default: `true`) |
 | `github_wiki.footer` | boolean | Generate `_Footer.md` (default: `true`) |
+| `obsidian` | object | Obsidian vault publisher configuration (local files, no network) |
+| `obsidian.vault` | string | Vault path. Absolute, or relative to the repository |
+| `obsidian.folder` | string | Folder inside the vault (default: `RepoLens/<project>`) |
+| `obsidian.branches` | string[] | Branch filter for Obsidian publishing |
+| `obsidian.index` | boolean | Write an index note (default: `true`) |
+| `obsidian.frontmatter` | boolean | YAML frontmatter on each note (default: `true`) |
+| `obsidian.wikilinks` | boolean | Wikilinks and title filenames (default: `true`) |
 | `discord` | object | Discord notification configuration |
 | `discord.enabled` | boolean | Enable/disable Discord notifications |
 | `discord.notifyOn` | string | `"always"`, `"significant"`, or `"never"` |

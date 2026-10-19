@@ -1,6 +1,6 @@
 {
   "name": "@chappibunny/repolens",
-  "version": "1.12.4",
+  "version": "1.13.0",
   "description": "AI-assisted documentation intelligence system for technical and non-technical audiences",
   "license": "MIT",
   "type": "module",
@@ -36,6 +36,7 @@
     "metrics",
     "team-collaboration",
     "discord",
+    "obsidian",
     "ai-documentation"
   ],
   "repository": {

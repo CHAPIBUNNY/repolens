@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { info, warn } from "./utils/logger.js";
 import { isNonInteractiveEnvironment } from "./utils/interactive.js";
 
-const PUBLISHER_CHOICES = ["markdown", "notion", "confluence", "github_wiki"];
+const PUBLISHER_CHOICES = ["markdown", "notion", "confluence", "github_wiki", "obsidian"];
 
 // ============================================================================
 // URL PARSING HELPERS
@@ -754,6 +754,17 @@ function buildRepoLensConfig(projectName, detectedRoots, options = {}) {
     `#     - main        # Only publish from main branch`,
     `#     - develop     # Or add specific branches`,
     ``,
+    `# Optional: Publish into a local Obsidian vault (no network)`,
+    `# publishers also needs: - obsidian`,
+    `# obsidian:`,
+    `#   vault: "/path/to/vault"     # absolute, or relative to this repo`,
+    `#   folder: "RepoLens/my-app"   # stays inside the vault`,
+    `#   branches:`,
+    `#     - main`,
+    `#   index: true`,
+    `#   frontmatter: true`,
+    `#   wikilinks: true`,
+    ``,
     `# Optional: GitHub integration for SVG diagram hosting`,
     `# github:`,
     `#   owner: "your-username"`,
@@ -1156,6 +1167,20 @@ async function runInteractiveWizard(repoRoot) {
       githubSecretsNeeded.push("CONFLUENCE_URL", "CONFLUENCE_EMAIL", "CONFLUENCE_API_TOKEN", "CONFLUENCE_SPACE_KEY", "CONFLUENCE_PARENT_PAGE_ID");
     }
 
+    // Obsidian vault (local path only — no credentials)
+    let obsidian = null;
+    if (publishers.includes("obsidian")) {
+      info("\n📝 Obsidian Vault");
+      info("   Notes are written into a folder in your vault. Nothing is uploaded.");
+      const vault = (await ask("   Vault path (absolute, or relative to the repo): ")).trim();
+      const folderDefault = `RepoLens/${projectName}`;
+      const folder = (await ask(`   Folder inside the vault (${folderDefault}): `)).trim();
+      obsidian = { vault, folder: folder || folderDefault };
+      if (!vault) {
+        warn("   No vault path yet. Add obsidian.vault to .repolens.yml before publishing.");
+      }
+    }
+
     // GitHub Wiki setup
     if (publishers.includes("github_wiki")) {
       info("\n📝 GitHub Wiki Setup");
@@ -1278,7 +1303,7 @@ async function runInteractiveWizard(repoRoot) {
 
     // 6. Branch filtering
     info("\n🌿 Branch Filtering");
-    info("   Limits which branches can publish to Notion/Confluence.");
+    info("   Limits which branches can publish to Notion, Confluence, and Obsidian.");
     const branchInput = (await ask("   Allowed branches (comma-separated, default: main): ")).trim() || "main";
     const branches = branchInput.split(",").map((b) => b.trim()).filter(Boolean);
 
@@ -1336,7 +1361,8 @@ async function runInteractiveWizard(repoRoot) {
       branches, 
       enableDiscord,
       credentials,
-      githubSecretsNeeded: uniqueSecrets
+      githubSecretsNeeded: uniqueSecrets,
+      obsidian,
     };
   } finally {
     rl.close();
@@ -1348,6 +1374,7 @@ const PUBLISHER_DESCRIPTIONS = {
   notion: "Notion workspace pages",
   confluence: "Atlassian Confluence pages",
   github_wiki: "Repository wiki pages",
+  obsidian: "Local Obsidian vault folder",
 };
 
 /**
@@ -1379,6 +1406,22 @@ function buildWizardConfig(answers) {
     lines.push(`confluence:`);
     lines.push(`  branches:`);
     for (const b of answers.branches) lines.push(`    - ${b}`);
+  }
+  if (answers.publishers.includes("obsidian")) {
+    lines.push(``);
+    lines.push(`obsidian:`);
+    if (answers.obsidian?.vault) {
+      lines.push(`  vault: ${JSON.stringify(answers.obsidian.vault)}`);
+    }
+    const folder = answers.obsidian?.folder || `RepoLens/${answers.projectName}`;
+    lines.push(`  folder: ${JSON.stringify(folder)}`);
+    if (answers.branches?.length) {
+      lines.push(`  branches:`);
+      for (const b of answers.branches) lines.push(`    - ${b}`);
+    }
+    lines.push(`  index: true`);
+    lines.push(`  frontmatter: true`);
+    lines.push(`  wikilinks: true`);
   }
 
   if (answers.enableDiscord) {

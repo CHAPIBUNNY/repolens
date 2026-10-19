@@ -8,7 +8,7 @@
  */
 
 const CURRENT_SCHEMA_VERSION = 1;
-const SUPPORTED_PUBLISHERS = ["notion", "markdown", "confluence", "github_wiki"];
+const SUPPORTED_PUBLISHERS = ["notion", "markdown", "confluence", "github_wiki", "obsidian"];
 const SUPPORTED_PAGE_KEYS = [
   "system_overview",
   "module_catalog",
@@ -218,6 +218,51 @@ export function validateConfig(config) {
     }
   }
 
+  // Validate Obsidian configuration (optional, local vault — no network)
+  if (config.obsidian !== undefined) {
+    if (typeof config.obsidian !== "object" || Array.isArray(config.obsidian) || config.obsidian === null) {
+      errors.push("obsidian must be an object");
+    } else {
+      if (config.obsidian.vault !== undefined) {
+        if (typeof config.obsidian.vault !== "string" || config.obsidian.vault.trim() === "") {
+          errors.push("obsidian.vault must be a non-empty string");
+        } else if (config.obsidian.vault.includes("\0")) {
+          errors.push("obsidian.vault contains a null byte");
+        }
+      }
+      if (config.obsidian.folder !== undefined) {
+        if (typeof config.obsidian.folder !== "string" || config.obsidian.folder.trim() === "") {
+          errors.push("obsidian.folder must be a non-empty string");
+        } else if (config.obsidian.folder.includes("\0")) {
+          errors.push("obsidian.folder contains a null byte");
+        } else if (
+          config.obsidian.folder.startsWith("/") ||
+          config.obsidian.folder.startsWith("\\") ||
+          /^[A-Za-z]:[\\/]/.test(config.obsidian.folder) ||
+          config.obsidian.folder.split(/[\\/]/).some((part) => part === "..")
+        ) {
+          errors.push("obsidian.folder must be a relative path inside the vault");
+        }
+      }
+      if (config.obsidian.branches !== undefined) {
+        if (!Array.isArray(config.obsidian.branches)) {
+          errors.push("obsidian.branches must be an array");
+        } else {
+          config.obsidian.branches.forEach((branch, idx) => {
+            if (typeof branch !== "string") {
+              errors.push(`obsidian.branches[${idx}] must be a string`);
+            }
+          });
+        }
+      }
+      for (const flag of ["index", "frontmatter", "wikilinks"]) {
+        if (config.obsidian[flag] !== undefined && typeof config.obsidian[flag] !== "boolean") {
+          errors.push(`obsidian.${flag} must be a boolean`);
+        }
+      }
+    }
+  }
+
   // Validate Discord configuration (optional)
   if (config.discord !== undefined) {
     if (typeof config.discord !== "object" || Array.isArray(config.discord)) {
@@ -379,6 +424,7 @@ const VALID_CONFIG_KEYS = [
   "notion",
   "confluence",
   "github_wiki",
+  "obsidian",
   "discord",
   "features",
   "ai",

@@ -15,7 +15,7 @@
 
 **Your architecture docs are already outdated.** RepoLens fixes that.
 
-RepoLens scans your repository, generates living architecture documentation, and publishes it to Notion, Confluence, GitHub Wiki, or Markdown — automatically on every push. Engineers get technical docs. Stakeholders get readable system overviews. Nobody writes a word.
+RepoLens scans your repository, generates living architecture documentation, and publishes it to Notion, Confluence, GitHub Wiki, Obsidian, or Markdown — automatically on every push. Engineers get technical docs. Stakeholders get readable system overviews. Nobody writes a word.
 
 > Stable as of v1.0 — [API guarantees](docs/STABILITY.md) · [Security hardened](SECURITY.md) · version from [`package.json`](package.json)
 
@@ -110,7 +110,7 @@ Run `npx @chappibunny/repolens migrate` to automatically update your workflow fi
 |---|---|
 | 🤖 **Autonomous** | Runs on every push via GitHub Actions — docs stay evergreen |
 | 👥 **Multi-Audience** | Technical docs + stakeholder-readable overviews from one scan |
-| 📤 **Multi-Publisher** | Notion, Confluence, GitHub Wiki, Markdown — or all four at once |
+| 📤 **Multi-Publisher** | Notion, Confluence, GitHub Wiki, Obsidian, Markdown — together or one at a time |
 | 🧠 **AI-Assisted** | Optional AI with zero-hallucination policy (structured context only) |
 | 🔍 **Smart Detection** | Frameworks, domains, data flows, dependencies, drift — all automatic |
 | 🔌 **Extensible** | Plugin system for custom renderers, publishers, and hooks |
@@ -155,7 +155,7 @@ The extension reads your `.repolens.yml` configuration and provides an interacti
 
 ## 🎓 Onboarding Guide
 
-Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki, Discord, and CI/CD automation.
+Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki, Obsidian, Discord, and CI/CD automation.
 
 **[→ Full Onboarding Guide](docs/ONBOARDING.md)**
 
@@ -285,10 +285,16 @@ v1.0+ features complete — CLI, config schema, and plugin interface are frozen.
 
 **Completed:**
 - [x] VS Code extension ([available on Marketplace](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture))
+- [x] Obsidian vault publisher (local notes with wikilinks and frontmatter)
 
 **Next:**
-- [ ] Obsidian publisher
-- [ ] GitHub App
+- [ ] GitHub App for automated setup and status checks
+- [ ] Slack notifications
+- [ ] Custom webhook support
+- [ ] Cross-repository architecture analysis
+- [ ] Security boundary validation
+- [ ] Interactive HTML documentation output
+- [ ] Architecture decision records (ADR) generation
 
 See [ROADMAP.md](docs/ROADMAP.md) for detailed planning.
 

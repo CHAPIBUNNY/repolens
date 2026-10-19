@@ -2,7 +2,8 @@ import { publishToNotion } from "./publish.js";
 import { publishToMarkdown } from "./markdown.js";
 import { publishToConfluence, hasConfluenceSecrets } from "./confluence.js";
 import { publishToGitHubWiki, hasGitHubWikiSecrets } from "./github-wiki.js";
-import { shouldPublishToNotion, shouldPublishToConfluence, shouldPublishToGitHubWiki, getCurrentBranch, branchMatches } from "../utils/branch.js";
+import { publishToObsidian } from "./obsidian.js";
+import { shouldPublishToNotion, shouldPublishToConfluence, shouldPublishToGitHubWiki, shouldPublishToObsidian, getCurrentBranch, branchMatches } from "../utils/branch.js";
 import { resolveOutputDir } from "../utils/safe-path.js";
 import { info, warn } from "../utils/logger.js";
 import { trackPublishing } from "../utils/telemetry.js";
@@ -93,6 +94,25 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
       warn(`Markdown publish failed: ${err.message}`);
       publishErrors.push({ publisher: "markdown", error: err });
       publishStatus = "partial";
+    }
+  }
+
+  // Obsidian vault (local files only — no credentials, no network)
+  if (publishers.includes("obsidian")) {
+    if (shouldPublishToObsidian(cfg, currentBranch)) {
+      info(`Publishing to Obsidian vault from branch: ${currentBranch}`);
+      try {
+        await publishToObsidian(cfg, renderedPages);
+        publishedTo.push("obsidian");
+      } catch (err) {
+        warn(`Obsidian publish failed: ${err.message}`);
+        publishErrors.push({ publisher: "obsidian", error: err });
+        publishStatus = "partial";
+      }
+    } else {
+      const allowedBranches = cfg.obsidian?.branches?.join(", ") || "none configured";
+      warn(`Skipping Obsidian publish: branch "${currentBranch}" not in allowed list (${allowedBranches})`);
+      info("To publish from this branch, add it to obsidian.branches in .repolens.yml");
     }
   }
 

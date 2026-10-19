@@ -273,7 +273,7 @@ scripts/                  # Helper scripts
 - Config file: `.repolens.yml` (auto-discovered from cwd or parent directories)
 - YAML format with js-yaml parser
 - Schema version: `configVersion: 1` (for future migrations)
-- Supported publishers: `notion`, `markdown`, `confluence`, `github_wiki`
+- Supported publishers: `notion`, `markdown`, `confluence`, `github_wiki`, `obsidian`
 - Supported page keys: `system_overview`, `module_catalog`, `api_surface`, `arch_diff`, `route_map`, `system_map`, `executive_summary`, `business_domains`, `architecture_overview`, `data_flows`, `change_impact`, `developer_onboarding`, `security_hotspots`, `code_health`
 
 ### Async/Await

@@ -116,6 +116,7 @@ repolens/
 │   │   ├── notion.js        # Notion API integration
 │   │   ├── confluence.js    # Confluence REST API integration
 │   │   ├── github-wiki.js   # GitHub Wiki publisher (git-based)
+│   │   ├── obsidian.js      # Obsidian vault publisher (local files, no network)
 │   │   └── markdown.js      # Local Markdown generation
 │   ├── integrations/
 │   │   └── discord.js       # Discord webhook notifications
