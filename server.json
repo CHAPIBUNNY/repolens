@@ -1,0 +1,30 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.CHAPIBUNNY/repolens",
+  "title": "RepoLens",
+  "description": "Architecture docs from a repo: overview, modules, API surface, routes, dependency graph, diffs.",
+  "repository": {
+    "url": "https://github.com/CHAPIBUNNY/repolens",
+    "source": "github"
+  },
+  "version": "1.14.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@chappibunny/repolens",
+      "version": "1.14.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "REPOLENS_WORKSPACE",
+          "description": "Absolute path of the repository to read. Defaults to the process working directory. Every tool path must stay inside this directory.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 {
   "name": "@chappibunny/repolens",
-  "version": "1.13.0",
+  "version": "1.14.1",
+  "mcpName": "io.github.CHAPIBUNNY/repolens",
   "description": "AI-assisted documentation intelligence system for technical and non-technical audiences",
   "license": "MIT",
   "type": "module",
@@ -13,7 +14,8 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "repolens": "bin/repolens.js"
+    "repolens": "bin/repolens.js",
+    "repolens-mcp": "bin/repolens-mcp.js"
   },
   "files": [
     "bin",
@@ -37,7 +39,9 @@
     "team-collaboration",
     "discord",
     "obsidian",
-    "ai-documentation"
+    "ai-documentation",
+    "mcp",
+    "model-context-protocol"
   ],
   "repository": {
     "type": "git",
@@ -66,9 +70,11 @@
     "release:major": "npm version major"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "dotenv": "^18.0.8",
     "fast-glob": "^3.3.3",
-    "js-yaml": "^4.3.2"
+    "js-yaml": "^4.3.2",
+    "zod": "3.25.76"
   },
   "optionalDependencies": {
     "@sentry/node": "^10.42.0"

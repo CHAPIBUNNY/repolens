@@ -39,13 +39,43 @@ npm link
 <details>
 <summary><b>Option D: GitHub Release Tarball</b></summary>
 
-Install from a specific GitHub Release. The version segment is the release tag. For 1.13.0:
+Install from a specific GitHub Release. The version segment is the release tag. For 1.14.1:
 
 ```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.13.0/chappibunny-repolens-1.13.0.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.14.1/chappibunny-repolens-1.14.1.tgz
 ```
 
-That URL exists only after the `v1.13.0` tag is published. Until then, install from npm or from the repository.
+That URL exists only after the `v1.14.1` tag is published. Until then, install from npm or from the repository.
+
+After install, `repolens mcp` and `repolens-mcp` start the stdio server. See [MCP.md](MCP.md).
+
+### GitHub Action
+
+Use the composite action from this repository once tag `v1.14.1` exists and `@chappibunny/repolens@1.14.1` is on npm. The action runs that published package. It does not run the checkout of this repo.
+
+```yaml
+name: Architecture docs
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+      - uses: CHAPIBUNNY/repolens@v1.14.1
+        with:
+          command: publish
+          config: .repolens.yml
+          node-version: "20"
+          pr-comment: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
+```
+
+`command` is `publish`, `demo`, or `doctor`. `pr-comment: false` skips the architecture diff comment. Marketplace listing steps are in [RELEASE.md](RELEASE.md).
 </details>
 
 Want to see the output before installing? [See it on real repos](https://chapibunny.github.io/repolens/).

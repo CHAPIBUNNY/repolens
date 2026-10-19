@@ -3,7 +3,7 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** October 2026  
-**Version:** 1.13.0
+**Version:** 1.14.1
 
 ---
 
@@ -260,7 +260,9 @@ scan:
 
 ### Shipped since this list was last current
 - [x] Obsidian vault publisher (1.13.0)
-- [x] VS Code extension ([Marketplace](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture))
+- [x] VS Code extension ([Marketplace](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox))
+- [x] MCP server, GitHub Action, and docs badge (1.14.0)
+- [x] Registry name `io.github.CHAPIBUNNY/repolens` (1.14.1)
 
 ### Future
 - [ ] Cross-repository architecture analysis

@@ -65,6 +65,7 @@ bin/repolens.js
         ├── src/publishers/      7 files (notion, confluence, github-wiki,
         │                         markdown, obsidian, index, publish)
         ├── src/utils/           15 files
+        ├── src/mcp/             server.js, tools.js, workspace.js
         ├── src/delivery/        1 file
         ├── src/integrations/    discord.js
         └── src/plugins/         loader.js, manager.js
@@ -74,10 +75,18 @@ bin/repolens.js
 
 ```
 repolens/
+├── action.yml               # Composite GitHub Action (published npm package)
+├── server.json              # MCP Registry metadata
+├── smithery.yaml            # Smithery stdio launch
 ├── bin/
-│   └── repolens.js          # CLI executable wrapper
+│   ├── repolens.js          # CLI executable wrapper
+│   └── repolens-mcp.js      # stdio MCP alias
 ├── src/
 │   ├── cli.js               # Command orchestration + banner
+│   ├── mcp/                 # MCP tools and stdio server
+│   │   ├── server.js
+│   │   ├── tools.js
+│   │   └── workspace.js
 │   ├── init.js              # Scaffolding command (+ interactive wizard)
 │   ├── doctor.js            # Validation command
 │   ├── migrate.js           # Workflow migration (legacy → current)
@@ -107,7 +116,8 @@ repolens/
 │   │   └── generate-sections.js # AI section generation + fallbacks
 │   ├── docs/
 │   │   ├── generate-doc-set.js  # Document generation orchestration
-│   │   └── write-doc-set.js     # Write docs to disk
+│   │   ├── write-doc-set.js     # Write docs to disk
+│   │   └── branding.js          # Docs by RepoLens footer
 │   ├── renderers/
 │   │   ├── render.js           # System overview, catalog, API, routes
 │   │   ├── renderDiff.js       # Architecture diff rendering

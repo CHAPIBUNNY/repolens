@@ -395,6 +395,28 @@ Exit codes: `0` = all checks pass, `1` = blocking failures found.
 
 ---
 
+## MCP server
+
+### The client shows a broken connection or garbled output
+
+**Cause:** Something wrote logs to stdout. The MCP protocol uses stdout.
+
+**Fix:** Start the server with `repolens mcp` or `repolens-mcp`. Both set `REPOLENS_LOG_STDERR=1`. Do not pipe other commands into the same stdout.
+
+### A tool says the path escapes the workspace
+
+**Cause:** `root` or `outputDir` resolved outside `REPOLENS_WORKSPACE` (or the process working directory).
+
+**Fix:** Open the client in the repository you want to read, or set `REPOLENS_WORKSPACE` to that directory. `outputDir` must be a relative path inside the repository.
+
+### Generated docs include a badge you do not want
+
+Set this in `.repolens.yml`:
+
+```yaml
+branding: false
+```
+
 ## Still Stuck?
 
 - **Run diagnostics:** `npx @chappibunny/repolens doctor`

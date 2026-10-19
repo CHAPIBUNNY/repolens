@@ -738,6 +738,9 @@ function buildRepoLensConfig(projectName, detectedRoots, options = {}) {
     `  - notion      # Auto-detected: publishes if NOTION_TOKEN is set`,
     `  - confluence  # Auto-detected: publishes if CONFLUENCE_URL is set`,
     ``,
+    `# Docs by RepoLens badge on generated Markdown (default: on)`,
+    `# branding: false`,
+    ``,
     `# Optional: Configure Notion publishing behavior`,
     `# notion:`,
     `#   branches:`,
@@ -1390,6 +1393,9 @@ function buildWizardConfig(answers) {
   for (const p of answers.publishers) {
     lines.push(`  - ${p}`);
   }
+  lines.push(``);
+  lines.push(`# Docs by RepoLens badge on generated Markdown (default: on)`);
+  lines.push(`# branding: false`);
 
   if (answers.publishers.includes("notion") && answers.branches.length) {
     lines.push(``);

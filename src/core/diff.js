@@ -8,6 +8,14 @@ function emptyDiff() {
 }
 
 /**
+ * True when `ref` can be passed as one git argument.
+ * Rejects flag-like values and shell metacharacters.
+ */
+export function isSafeGitRef(ref) {
+  return typeof ref === "string" && ref.length > 0 && !ref.startsWith("-") && SAFE_REF.test(ref);
+}
+
+/**
  * Classify one `git diff --name-status` line.
  * Renames and copies (`R100`, `C75`) record the destination path.
  */
@@ -26,17 +34,27 @@ export function classifyDiffLine(line) {
   return { bucket: "modified", file };
 }
 
-export function getGitDiff(baseRef = "origin/main", cwd = process.cwd()) {
-  if (typeof baseRef !== "string" || baseRef.startsWith("-") || !SAFE_REF.test(baseRef)) {
+export function getGitDiff(baseRef = "origin/main", cwd = process.cwd(), headRef) {
+  if (!isSafeGitRef(baseRef)) {
     warn("git diff skipped: base ref contains unsupported characters.");
     return emptyDiff();
+  }
+
+  const args = ["diff", "--name-status", baseRef];
+  if (headRef != null && headRef !== "") {
+    if (!isSafeGitRef(headRef)) {
+      warn("git diff skipped: head ref contains unsupported characters.");
+      return emptyDiff();
+    }
+    args.push(headRef);
   }
 
   let output = "";
 
   try {
     // Pipe stderr so a missing repo or ref does not dump git's usage text.
-    output = execFileSync("git", ["diff", "--name-status", baseRef], {
+    // Arguments stay in an array. Refs are checked by isSafeGitRef first.
+    output = execFileSync("git", args, {
       encoding: "utf8",
       cwd,
       stdio: ["ignore", "pipe", "pipe"],

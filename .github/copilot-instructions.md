@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.13.0  
+**Version:** 1.14.1  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -37,10 +37,18 @@ RepoLens transforms repositories into documented, understandable systems that se
 ### Project Structure
 
 ```
+action.yml                # Composite action: RepoLens Architecture Docs
+server.json               # MCP Registry metadata (mcpName io.github.CHAPIBUNNY/repolens)
+smithery.yaml             # Smithery stdio launch
 bin/
   repolens.js             # CLI entry point
+  repolens-mcp.js         # stdio MCP alias
 src/
   cli.js                  # Main CLI orchestration + banner
+  mcp/
+    server.js             # @modelcontextprotocol/sdk stdio server
+    tools.js              # Read-only tools plus generate_docs
+    workspace.js          # Path containment for the MCP workspace
   doctor.js               # Repository validation + env var checks
   init.js                 # Scaffolding for new repos (+ interactive wizard)
   migrate.js              # Workflow + config migration (legacy → current format)
@@ -71,6 +79,7 @@ src/
   docs/
     generate-doc-set.js   # Document generation orchestration
     write-doc-set.js      # Write documentation set to disk
+    branding.js           # Docs by RepoLens footer (branding: false disables it)
   delivery/
     comment.js            # PR comment management
   integrations/
@@ -130,6 +139,10 @@ tests/                    # Vitest test suite
   deterministic-enrichment.test.js # Enriched deterministic fallback tests (all 6 AI-enhanced doc types)
   tier3.test.js           # T3 feature tests (cache, monorepo, codeowners, AI providers, structured output)
   robustness.test.js      # Robustness tests (rate-limit, context-builder, flow-inference, discord, telemetry, timeout, partial-publish)
+  mcp.test.js             # MCP tools, path containment, in-memory client
+  branding.test.js        # Docs badge footer and schema
+  github-action.test.js   # Action input checks and PR comment opt-out
+  registry.test.js        # server.json, smithery.yaml, README badges
   security-patterns.test.js # Security pattern analyzer tests (30 tests: detection, severity, categories, renderer)
   code-health.test.js     # Code health tests (41 tests: complexity, functions, health scores, renderer)
   e2e/
@@ -143,6 +156,7 @@ docs/                     # Secondary documentation (moved from root)
   INSTALLATION.md         # Installation methods
   KNOWN_ISSUES.md         # Known issues tracker
   MIGRATION.md            # Version migration guide
+  MCP.md                  # stdio MCP server and client configs
   ONBOARDING.md           # Step-by-step onboarding
   PRODUCTION_CHECKLIST.md # Production deployment checklist
   RELEASE.md              # Release process
@@ -167,6 +181,7 @@ scripts/                  # Helper scripts
 - `repolens migrate` - Migrate legacy workflows + config files (adds `configVersion: 1` if missing)
 - `repolens uninstall` - Remove all RepoLens-generated files
 - `repolens feedback` - Send feedback to the RepoLens team
+- `repolens mcp` - stdio MCP server. `repolens-mcp` is the same entry. No telemetry and no update check. Logs go to stderr
 - `repolens version` - Display version
 - `repolens help` - Show usage
 
@@ -188,7 +203,7 @@ scripts/                  # Helper scripts
 - **Notion**: Create/update pages with branch-aware namespacing; relative link rewriting (strips `./` and `../` links)
 - **Confluence**: Atlassian Cloud REST API v1, storage format (HTML-like), Basic Auth (email + API token); CDATA-safe code blocks; relative link rewriting
 - **GitHub Wiki**: Audience-grouped Home page, grouped sidebar, page metadata headers, `master` branch push for compatibility
-- **Markdown**: Snake_case files in `.repolens/` (`executive_summary.md`, `architecture_diff.md` for `arch_diff`). Also runs when `notion` is not in `publishers`
+- **Markdown**: Snake_case files in `.repolens/` (`executive_summary.md`, `architecture_diff.md` for `arch_diff`). Also runs when `notion` is not in `publishers`. Generated Markdown includes the Docs by RepoLens badge unless `branding` is `false` or `branding.badge` is `false`
 - **Obsidian**: Local vault folder only. YAML frontmatter, wikilinks, index note `RepoLens.md`, idempotent writes, path containment. No credentials and no network. Wikilink scan is linear: label ≤500 chars with no brackets or newlines, target ≤2048 chars with no parentheses or whitespace
 - **Discord**: Rich embed notifications via webhooks (publish metrics, coverage stats)
 - **Numbered set**: `publish` always writes `00-executive-summary.md` … `16-code-health.md` via `writeDocumentSet`, separate from the Markdown publisher's names
@@ -487,8 +502,10 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - Interactive HTML output and ADR generation
 
 ### Shipped
+- ~~MCP registry name `io.github.CHAPIBUNNY/repolens`~~ ✅ Shipped in v1.14.1
+- ~~MCP server, GitHub Action, docs badge~~ ✅ Shipped in v1.14.0
 - ~~Obsidian vault publisher~~ ✅ Shipped in v1.13.0
-- ~~VS Code extension~~ ✅ On the Marketplace (`CHAPIBUNNY.repolens-architecture`)
+- ~~VS Code extension~~ ✅ On the Marketplace (`repolensdox.repolensdox`)
 - ~~Complexity metrics & code health scoring~~ ✅ Shipped in v1.12.0
 - ~~Security pattern detection (eval, XSS, SQL injection, CWE classification)~~ ✅ Shipped in v1.12.0
 - ~~JSDoc/TSDoc extraction for API Surface enrichment~~ ✅ Shipped in v1.12.0

@@ -71,6 +71,19 @@ REPOLENS_AI_API_KEY=...
 
 > **GitHub Models (free):** Set `REPOLENS_AI_PRESET=github` in GitHub Actions — uses `GITHUB_TOKEN` automatically, no separate API key required. See [AI.md](AI.md) for details.
 
+## MCP server
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `REPOLENS_WORKSPACE` | No | Absolute directory the MCP server is allowed to read. Defaults to the process working directory. Tool paths must stay inside it |
+| `REPOLENS_LOG_STDERR` | No | `repolens mcp` sets this to `1` so logs stay off stdout |
+
+## Pull request comments
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `REPOLENS_PR_COMMENT` | No | `false` or `0` skips the architecture diff comment even on `pull_request`. The GitHub Action sets this from the `pr-comment` input |
+
 ## Telemetry
 
 | Variable | Required | Description |
