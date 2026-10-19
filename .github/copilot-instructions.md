@@ -331,6 +331,14 @@ scripts/                  # Helper scripts
 - **Install**: `npm ci`
 - **Node**: 18, 20, and 22. Node 18 runs `scripts/node18-runtime.js` because Vitest 4 needs Node 20.12 (`util.styleText`)
 
+### Gallery (`.github/workflows/gallery.yml`)
+- **Trigger**: Weekly schedule (Monday 06:17 UTC) and `workflow_dispatch`. Not pull requests. The jobs run only on `main`, so a branch dispatch does not replace the live site
+- **Run**: `node gallery/build.mjs` after `npm ci`. AI stays off. No publisher secrets
+- **Clones**: Cached under `gallery/.cache/repos`. A failed clone, license check, or scan is skipped
+- **Deploy**: Uploads `gallery/dist` and deploys with GitHub Pages to `https://chapibunny.github.io/repolens/`
+- **Pages setting**: A maintainer must set Settings → Pages → Source to GitHub Actions once. The workflow token cannot do that
+- **Package**: `gallery/` is not in the npm `files` list
+
 ### Release (`release.yml`)
 - **Trigger**: Push of `v*` tags. That tag is what publishes to npm. Do not publish by hand from a feature branch
 - **Jobs**: Security audit, then release (test, pack, GitHub Release, `npm publish --provenance`)

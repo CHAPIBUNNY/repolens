@@ -2,6 +2,17 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## Unreleased
+
+### Gallery
+
+Static showcase of deterministic RepoLens output for public repositories. The package version is unchanged.
+
+- `gallery/build.mjs` shallow-clones the curated list in `gallery/repos.json`, runs RepoLens with AI disabled, and writes one HTML page per repository plus an index, `sitemap.xml`, and `robots.txt`
+- A repository that fails to clone, fails the license check, or fails the scan is skipped. The build refuses to publish when too few repositories succeed
+- `.github/workflows/gallery.yml` rebuilds the site weekly and on manual dispatch, caches clones, and deploys with GitHub Pages to `https://chapibunny.github.io/repolens/`
+- `gallery/` stays out of the npm package: it is not in the `files` allowlist, and `/gallery` is listed in `.npmignore`
+
 ## 1.13.0
 
 ### Obsidian vault publisher

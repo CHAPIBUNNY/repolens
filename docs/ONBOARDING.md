@@ -4,6 +4,8 @@ Complete step-by-step setup for RepoLens 1.13.0: publishers (Notion, Confluence,
 
 > **Quick start:** For a 60-second setup, see the [Quick Start](README.md#-quick-start-60-seconds) in the README.
 
+> **See it on real repos:** the [gallery](https://chapibunny.github.io/repolens/) shows deterministic RepoLens output for public projects such as Express, FastAPI, and Gin.
+
 ---
 
 ## Step 1: Initialize RepoLens

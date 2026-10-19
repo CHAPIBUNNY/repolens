@@ -48,4 +48,6 @@ npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.13.0/cha
 That URL exists only after the `v1.13.0` tag is published. Until then, install from npm or from the repository.
 </details>
 
+Want to see the output before installing? [See it on real repos](https://chapibunny.github.io/repolens/).
+
 > **Having install problems?** See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for solutions to common issues like `ENOTEMPTY`, `npm ci` failures, and stale versions.

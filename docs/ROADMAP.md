@@ -162,6 +162,10 @@ Everything below is live, tested, and available on npm.
 ## Integrations
 - ✅ VS Code extension for in-editor architecture visualization ([Marketplace](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture))
 
+## Showcase
+
+The [gallery](https://chapibunny.github.io/repolens/) is a static site of RepoLens output for public repositories. `.github/workflows/gallery.yml` rebuilds it. It is not a CLI feature and it is not part of the npm package.
+
 ---
 
 ## What's Next

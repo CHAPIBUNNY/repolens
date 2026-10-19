@@ -49,6 +49,21 @@ npm install -g chappibunny-repolens-*.tgz
 repolens --version
 ```
 
+## Gallery
+
+The showcase site is generated, not checked in. From the repository root:
+
+```bash
+npm ci
+node gallery/build.mjs
+```
+
+`GALLERY_ONLY=express,flask` limits the run to those slugs. Output is `gallery/dist/`. The default site root is `/repolens`, which matches GitHub Pages. Set `GALLERY_BASE_PATH=` to preview the files at the root of a local static server.
+
+The generator calls the scanners directly with AI disabled. It does not read API keys. Clones live in `gallery/.cache/repos` and can be reused. A repository with a non-permissive license, or a missing license file, is skipped.
+
+`.github/workflows/gallery.yml` runs that command on a weekly schedule and on manual dispatch, then deploys `gallery/dist`. GitHub Pages has to be set to **GitHub Actions** once before the first deploy can succeed.
+
 ## Release Process
 
 RepoLens uses automated GitHub Actions releases.
