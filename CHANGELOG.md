@@ -2,6 +2,36 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.12.3
+
+### Security
+
+- Bump runtime `js-yaml` to 4.3.2 (merge-key CPU limit and `!!omap` duplicate-key complexity fixes)
+- Bump transitive `source-map-js` to 1.2.2 (CVE-2026-93749)
+- Bump transitive `postcss` to 8.5.31 (Dependabot #8 requested 8.5.25; 8.5.31 includes those fixes)
+- Bump `vitest` and `@vitest/mocker` to 4.1.12 (Dependabot #10 requested 4.1.11; 4.1.12 is the current 4.1 release and includes that fix)
+
+### Packaging
+
+- Require Node.js `>=18` (`engines`), matching built-in `fetch` and `node:readline/promises`
+- Add an `exports` map. `main` now points at `src/index.js`, so importing the package does not run the CLI
+- Keep the `repolens` binary on `bin/repolens.js`
+- Replace `node-fetch` with the built-in `fetch` (`AbortSignal.timeout` for the update check)
+- Move `@sentry/node` to `optionalDependencies`. Telemetry and feedback no-op when it is not installed
+- Stop publishing the `docs/` handbook. Runtime document generation stays in `src/docs/`
+
+### CI
+
+- Publish Documentation runs on pushes to `main` and manual dispatch, and skips `dependabot[bot]`, because publisher secrets are not available on Dependabot branches
+- Add a Test workflow that runs `npm test` on pull requests and branch pushes
+- CI installs with `npm ci` so the committed lockfile is what runs. A fresh `npm install` on npm 10 crashes while resolving Vitest 4.1 optional peers
+- Release workflow publishes with `npm publish --provenance` (requires an `NPM_TOKEN` Actions secret)
+
+### Fixes
+
+- `docs:publish` discovers `.repolens.yml` from the current directory instead of `../../.repolens.yml`
+- `release:check` runs `npm pack --dry-run`
+
 ## 1.12.0
 
 ### 🛡️ Security Pattern Detection

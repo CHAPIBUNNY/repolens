@@ -3,7 +3,6 @@
  * Sends rich embed notifications to Discord channels via webhooks
  */
 
-import fetch from "node-fetch";
 import { info, warn, error } from "../utils/logger.js";
 
 /**

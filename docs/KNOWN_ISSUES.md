@@ -252,16 +252,10 @@ scan:
 
 ## � CI/CD
 
-### macOS Lockfile on Linux Runners
-**Issue:** A `package-lock.json` generated on macOS doesn't include Linux platform-specific optional dependencies (e.g., `@rollup/rollup-linux-x64-gnu` used by Vitest/Vite).
+### npm install and Vitest 4.1
+**Issue:** npm 10 can crash with `Cannot read properties of null (reading 'edgesOut')` when it re-resolves Vitest 4.1's optional peer dependencies from scratch.
 
-**Symptom:** `Cannot find module @rollup/rollup-linux-x64-gnu` during `npm test` in GitHub Actions.
-
-**Fix:** All CI workflows now use:
-```bash
-rm -rf node_modules package-lock.json && npm install
-```
-Do NOT use `npm ci` in GitHub Actions workflows.
+**Fix:** CI uses `npm ci` with the committed lockfile. To refresh the lockfile, use npm 11 or newer (`npx npm@11 install`). That records every Rolldown platform package so Linux runners can install `@rolldown/binding-linux-x64-gnu`.
 
 ---
 

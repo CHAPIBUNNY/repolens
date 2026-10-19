@@ -1,7 +1,7 @@
 import "dotenv/config";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { createInterface } from "node:readline/promises";
 import { loadConfig } from "./core/config.js";
 import { scanRepo } from "./core/scan.js";
@@ -267,8 +267,9 @@ Examples:
 async function main() {
   const command = process.argv[2];
 
-  // Initialize telemetry (opt-in via REPOLENS_TELEMETRY_ENABLED=true)
-  initTelemetry();
+  // Initialize telemetry (opt-in via REPOLENS_TELEMETRY_ENABLED=true).
+  // @sentry/node is optional; init is a no-op when it is not installed.
+  await initTelemetry();
   setContext("cli", {
     command: command || "publish",
     args: process.argv.slice(2),
@@ -765,32 +766,41 @@ async function main() {
   process.exit(EXIT_ERROR);
 }
 
-main().catch(async (err) => {
-  // Capture unexpected errors
-  captureError(err, { 
-    type: "uncaught",
-    command: process.argv[2] || "unknown"
+export function runCli() {
+  return main().catch(async (err) => {
+    // Capture unexpected errors
+    captureError(err, {
+      type: "uncaught",
+      command: process.argv[2] || "unknown"
+    });
+
+    console.error("\n❌ RepoLens encountered an unexpected error:\n");
+
+    if (err.code === "ENOENT") {
+      error(formatError("FILE_NOT_FOUND", err.path));
+    } else if (err.code === "EACCES") {
+      error(formatError("FILE_PERMISSION_DENIED", err.path));
+    } else if (err.message) {
+      error(err.message);
+    } else {
+      error(err);
+    }
+
+    if (process.env.VERBOSE || process.argv.includes("--verbose")) {
+      console.error("\nStack trace:");
+      console.error(err.stack);
+    } else {
+      console.error("\nRun with --verbose for full error details.");
+    }
+
+    await closeTelemetry();
+    process.exit(EXIT_ERROR);
   });
-  
-  console.error("\n❌ RepoLens encountered an unexpected error:\n");
-  
-  if (err.code === "ENOENT") {
-    error(formatError("FILE_NOT_FOUND", err.path));
-  } else if (err.code === "EACCES") {
-    error(formatError("FILE_PERMISSION_DENIED", err.path));
-  } else if (err.message) {
-    error(err.message);
-  } else {
-    error(err);
-  }
-  
-  if (process.env.VERBOSE || process.argv.includes("--verbose")) {
-    console.error("\nStack trace:");
-    console.error(err.stack);
-  } else {
-    console.error("\nRun with --verbose for full error details.");
-  }
-  
-  await closeTelemetry();
-  process.exit(EXIT_ERROR);
-});
+}
+
+// Run only when this file is the process entry (node src/cli.js).
+// bin/repolens.js imports runCli() explicitly so a package import does not start the CLI.
+const entryArg = process.argv[1];
+if (entryArg && pathToFileURL(path.resolve(entryArg)).href === import.meta.url) {
+  runCli();
+}

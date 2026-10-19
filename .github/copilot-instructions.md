@@ -251,7 +251,8 @@ scripts/                  # Helper scripts
 - File imports require `.js` extension
 
 ### Dependencies
-- **Runtime**: dotenv, fast-glob, js-yaml, node-fetch, @sentry/node
+- **Runtime**: dotenv, fast-glob, js-yaml (built-in `fetch`; Node >= 18)
+- **Optional**: @sentry/node (telemetry; CLI works when it is absent)
 - **Optional**: @mermaid-js/mermaid-cli (50MB, interactive install)
 - **Dev**: vitest
 - Keep dependencies minimal - favor Node.js built-ins

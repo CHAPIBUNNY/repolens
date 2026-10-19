@@ -303,6 +303,29 @@ describe("telemetry", () => {
     const { captureMessage } = await import("../src/utils/telemetry.js");
     captureMessage("test message", "info", { command: "publish" });
   });
+
+  it("disables telemetry when @sentry/node cannot be loaded", async () => {
+    vi.resetModules();
+    vi.doMock("@sentry/node", () => {
+      const err = new Error("Cannot find package '@sentry/node'");
+      err.code = "ERR_MODULE_NOT_FOUND";
+      throw err;
+    });
+    const previous = process.env.REPOLENS_TELEMETRY_ENABLED;
+    process.env.REPOLENS_TELEMETRY_ENABLED = "true";
+
+    try {
+      const { initTelemetry, isTelemetryEnabled, sendFeedback } = await import("../src/utils/telemetry.js");
+      await initTelemetry();
+      expect(isTelemetryEnabled()).toBe(false);
+      await expect(sendFeedback("Ada", "ada@example.com", "hello")).resolves.toBe(false);
+    } finally {
+      if (previous === undefined) delete process.env.REPOLENS_TELEMETRY_ENABLED;
+      else process.env.REPOLENS_TELEMETRY_ENABLED = previous;
+      vi.doUnmock("@sentry/node");
+      vi.resetModules();
+    }
+  });
 });
 
 // ============================================================

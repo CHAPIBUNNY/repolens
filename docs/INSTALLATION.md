@@ -1,5 +1,9 @@
 # 📦 Installation
 
+## Requirements
+
+Node.js 18 or newer. The CLI uses the built-in `fetch` API.
+
 ## Recommended: npm Registry
 
 ```bash

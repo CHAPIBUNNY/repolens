@@ -48,6 +48,12 @@ RepoLens includes **opt-in** error tracking and usage telemetry to help improve 
 4. **Sample rate** - Only 10% of errors are sent (reduces server load)
 5. **Local-first** - All failures are logged locally regardless of telemetry setting
 
+## Optional dependency
+
+Error reporting uses `@sentry/node`, which is an **optional** dependency. A normal `npm install` includes it. Telemetry still stays off until you opt in.
+
+If `@sentry/node` is missing (`npm install --omit=optional`, or the optional install failed), RepoLens keeps running. Enabled telemetry is skipped, and `repolens feedback` reports that it could not send.
+
 ## How to Enable
 
 Add to your `.env` file:

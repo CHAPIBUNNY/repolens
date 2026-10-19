@@ -22,9 +22,9 @@ RepoLens uses semantic versioning:
 8. Push branch and tag: `git push --follow-tags`
 9. GitHub Actions `release.yml` runs automatically:
    - Security audit (dependency + secrets scanning)
-   - Test suite (185 tests)
+   - Test suite
    - Create GitHub Release with tarball
-   - Publish to npm (`npm publish --access public`)
+   - Publish to npm (`npm publish --provenance --access public`)
 10. Verify on npm: `npm view @chappibunny/repolens version`
 
 ## Example Patch Release
@@ -53,17 +53,25 @@ npm view @chappibunny/repolens version
 
 ### Important: CI Install Strategy
 
-GitHub Actions workflows use `rm -rf node_modules package-lock.json && npm install` instead of `npm ci`. This is because a macOS-generated `package-lock.json` doesn't properly resolve Linux platform-specific optional dependencies (e.g., `@rollup/rollup-linux-x64-gnu` required by Vitest).
+GitHub Actions workflows run `npm ci` against the committed `package-lock.json`.
 
-- **Do NOT** use `npm ci` in CI workflows
-- **Do NOT** commit `package-lock.json` changes made on CI runners back to the repo
-- Always delete both `node_modules` and `package-lock.json` before install in CI
+Do not delete the lockfile in CI and re-resolve with `npm install`. npm 10 (the npm that ships with Node 22) crashes while building a fresh tree for Vitest 4.1 optional peers (`Cannot read properties of null (reading 'edgesOut')`). `npm ci` uses the lockfile and does not hit that resolver bug.
+
+When dependencies change, regenerate the lockfile with npm 11 or newer (`npx npm@11 install`) and commit it. npm 10's `--legacy-peer-deps` install can omit Rolldown's platform packages from the lockfile. Do not commit a lockfile produced on a CI runner.
 
 ### npm Publishing
 
-The `release.yml` workflow publishes to npm automatically when a `v*` tag is pushed. It requires:
-- `NPM_TOKEN` secret set in GitHub repository settings
-- Token must have publish access to `@chappibunny` scope
+The `release.yml` workflow publishes to npm automatically when a `v*` tag is pushed.
+
+**Manual step before the first tagged release:** add an `NPM_TOKEN` secret.
+
+1. Create an npm access token (automation or granular) that can publish `@chappibunny/repolens`.
+2. In GitHub, open **Settings → Secrets and variables → Actions → New repository secret**.
+3. Name it `NPM_TOKEN` and paste the token.
+
+The workflow checks that the secret is present and then runs `npm publish --provenance --access public`. Provenance also needs the workflow `id-token: write` permission, which `release.yml` already sets. If `NPM_TOKEN` is missing, the publish job fails with a message pointing at this secret and does not publish.
+
+Local preflight is `npm run release:check` (`npm test` and `npm pack --dry-run`).
 
 ## Testing Upgrade Path
 
