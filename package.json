@@ -1,17 +1,23 @@
 {
   "name": "@chappibunny/repolens",
-  "version": "1.12.2",
+  "version": "1.12.3",
   "description": "AI-assisted documentation intelligence system for technical and non-technical audiences",
   "license": "MIT",
   "type": "module",
-  "main": "src/cli.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
   "bin": {
     "repolens": "bin/repolens.js"
   },
   "files": [
     "bin",
     "src",
-    "docs",
     "package.json",
     "README.md",
     "CHANGELOG.md"
@@ -47,26 +53,28 @@
   },
   "scripts": {
     "test:notion": "node notion-test.js",
-    "docs:publish": "node src/cli.js publish --config ../../.repolens.yml",
+    "docs:publish": "node bin/repolens.js publish",
     "init:test": "node src/cli.js init --target /tmp/repolens-init-test",
     "test": "NODE_ENV=test vitest run --no-watch --reporter=verbose",
     "pack:check": "npm pack",
-    "release:check": "npm test && npm pack",
+    "audit:runtime": "node scripts/audit-runtime.js",
+    "release:check": "npm test && npm run audit:runtime && npm pack --dry-run",
     "test:install": "./test-install.sh",
     "release:patch": "npm version patch",
     "release:minor": "npm version minor",
     "release:major": "npm version major"
   },
   "dependencies": {
-    "@sentry/node": "^10.42.0",
     "dotenv": "^17.3.1",
     "fast-glob": "^3.3.3",
-    "js-yaml": "^4.1.0",
-    "node-fetch": "^3.3.2"
+    "js-yaml": "^4.3.2"
+  },
+  "optionalDependencies": {
+    "@sentry/node": "^10.42.0"
   },
   "devDependencies": {
     "tinyexec": "1.0.2",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "yauzl": ">=3.2.1",

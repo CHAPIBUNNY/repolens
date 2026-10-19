@@ -5,8 +5,12 @@ on:
     tags:
       - "v*"
 
+# Tag pushes (v*) publish to npm. NPM_TOKEN must be set under
+# Settings → Secrets and variables → Actions before a tag will publish.
+# id-token: write lets npm attach a provenance attestation.
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   security:
@@ -20,24 +24,10 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: rm -rf node_modules package-lock.json && npm install
+        run: npm ci
 
       - name: Run dependency audit
-        run: |
-          echo "Running npm audit..."
-          npm audit --audit-level=moderate || true
-          
-          # Fail on critical/high vulnerabilities
-          AUDIT_RESULT=$(npm audit --audit-level=high --json || echo '{}')
-          CRITICAL=$(echo $AUDIT_RESULT | jq -r '.metadata.vulnerabilities.critical // 0')
-          HIGH=$(echo $AUDIT_RESULT | jq -r '.metadata.vulnerabilities.high // 0')
-          
-          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
-            echo "❌ Found $CRITICAL critical and $HIGH high severity vulnerabilities"
-            exit 1
-          else
-            echo "✅ No critical or high severity vulnerabilities found"
-          fi
+        run: node scripts/audit-runtime.js
       
       - name: Scan for secrets in release
         run: |
@@ -63,7 +53,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: rm -rf node_modules package-lock.json && npm install
+        run: npm ci
 
       - name: Run tests
         run: npm test
@@ -90,6 +80,6 @@ jobs:
       - name: Publish to npm
         run: |
           npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
-          npm publish --access public
+          npm publish --provenance --access public
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

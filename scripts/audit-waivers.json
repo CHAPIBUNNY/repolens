@@ -1,0 +1,14 @@
+{
+  "waivers": [
+    {
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "cve": "CVE-2026-93687",
+      "severity": "high",
+      "scope": "runtime",
+      "reason": "No patched braces release exists. The advisory covers every published version (<=3.0.3), and 3.0.3 (2024-05-21) is still the latest tag. fast-glob 3.3.3, the latest release, depends on micromatch 4.0.8, which depends on braces ^3.0.3. micromatch/braces#72 was closed without a release.",
+      "exposure": "Scan globs from the repository's own .repolens.yml are passed to fast-glob. A deeply nested brace pattern can crash the Node process (availability only). The pattern is chosen by whoever writes that config, not by a remote caller.",
+      "review": "Delete this waiver when braces publishes a version outside <=3.0.3, or when the runtime dependency path no longer reaches braces."
+    }
+  ]
+}

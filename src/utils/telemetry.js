@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/node";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -9,12 +8,32 @@ const __dirname = dirname(__filename);
 
 let initialized = false;
 let enabled = false;
+let Sentry = null;
+let sentryLoadFailed = false;
+
+/**
+ * Load @sentry/node on demand. Telemetry is opt-in and the package is an
+ * optional dependency, so a missing install must not crash the CLI.
+ */
+async function loadSentry() {
+  if (Sentry) return Sentry;
+  if (sentryLoadFailed) return null;
+
+  try {
+    Sentry = await import("@sentry/node");
+    return Sentry;
+  } catch {
+    sentryLoadFailed = true;
+    Sentry = null;
+    return null;
+  }
+}
 
 /**
  * Initialize error tracking (Sentry)
  * Only enabled if REPOLENS_TELEMETRY_ENABLED=true
  */
-export function initTelemetry() {
+export async function initTelemetry() {
   // Skip if already initialized
   if (initialized) return;
   initialized = true;
@@ -27,6 +46,13 @@ export function initTelemetry() {
     return;
   }
 
+  const sentry = await loadSentry();
+  if (!sentry) {
+    console.error("Telemetry enabled but optional dependency @sentry/node is not installed. Continuing without telemetry.");
+    enabled = false;
+    return;
+  }
+
   try {
     // Get version from package.json
     const packageJsonPath = join(__dirname, "../../package.json");
@@ -35,7 +61,7 @@ export function initTelemetry() {
 
     const dsn = process.env.REPOLENS_SENTRY_DSN || "https://082083dbf5899ed7e65dfd9b8dc72f90@o4511014913703936.ingest.de.sentry.io/4511014919209040";
 
-    Sentry.init({
+    sentry.init({
       dsn,
       
       // Release tracking
@@ -405,7 +431,9 @@ export function trackMigration(migratedCount, skippedCount) {
  * Ensure Sentry is initialized for feedback submission.
  * Feedback always works, even if REPOLENS_TELEMETRY_ENABLED is false.
  */
-function ensureSentryForFeedback() {
+async function ensureSentryForFeedback() {
+  const sentry = await loadSentry();
+  if (!sentry) return false;
   if (enabled) return true;
 
   // Initialize Sentry in a minimal mode just for feedback
@@ -416,7 +444,7 @@ function ensureSentryForFeedback() {
 
     const dsn = process.env.REPOLENS_SENTRY_DSN || "https://082083dbf5899ed7e65dfd9b8dc72f90@o4511014913703936.ingest.de.sentry.io/4511014919209040";
 
-    Sentry.init({
+    sentry.init({
       dsn,
       release: `repolens@${version}`,
       environment: process.env.NODE_ENV || "production",
@@ -439,7 +467,7 @@ function ensureSentryForFeedback() {
  */
 export async function sendFeedback(name, email, message) {
   try {
-    if (!ensureSentryForFeedback()) {
+    if (!(await ensureSentryForFeedback())) {
       return false;
     }
 

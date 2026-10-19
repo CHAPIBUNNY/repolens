@@ -1,10 +1,13 @@
 name: Publish Documentation
 
+# Notion, Confluence, and AI tokens are repository secrets. Dependabot
+# branch pushes run with secrets withheld, so this workflow stays on main
+# (and manual dispatch). Tests live in test.yml and still run on PRs.
 on:
   push:
     branches:
-      - "**"  # All branches - namespacing prevents conflicts
-  workflow_dispatch:  # Manual trigger option
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,24 +26,10 @@ jobs:
           node-version: 22
       
       - name: Install dependencies
-        run: rm -rf node_modules package-lock.json && npm install
+        run: npm ci
 
       - name: Run dependency audit
-        run: |
-          echo "Running npm audit..."
-          npm audit --audit-level=moderate || true
-          
-          # Fail on critical/high vulnerabilities
-          AUDIT_RESULT=$(npm audit --audit-level=high --json || echo '{}')
-          CRITICAL=$(echo $AUDIT_RESULT | jq -r '.metadata.vulnerabilities.critical // 0')
-          HIGH=$(echo $AUDIT_RESULT | jq -r '.metadata.vulnerabilities.high // 0')
-          
-          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
-            echo "❌ Found $CRITICAL critical and $HIGH high severity vulnerabilities"
-            exit 1
-          else
-            echo "✅ No critical or high severity vulnerabilities found"
-          fi
+        run: node scripts/audit-runtime.js
       
       - name: Scan for secrets
         run: |
@@ -72,13 +61,15 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: rm -rf node_modules package-lock.json && npm install
+        run: npm ci
 
       - name: Run tests
         run: npx vitest run --no-watch --reporter=verbose
 
   publish:
     needs: [security, test]
+    # Dependabot-triggered runs do not receive publisher secrets.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     
     steps:
@@ -91,7 +82,7 @@ jobs:
           node-version: 22
       
       - name: Install dependencies
-        run: rm -rf node_modules package-lock.json && npm install
+        run: npm ci
 
       - name: Generate and publish documentation
         env:

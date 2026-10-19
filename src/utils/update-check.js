@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import fetch from "node-fetch";
 import { info, warn } from "./logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,7 +22,7 @@ async function getCurrentVersion() {
 async function getLatestVersion() {
   try {
     const response = await fetch("https://registry.npmjs.org/repolens/latest", {
-      timeout: 3000
+      signal: AbortSignal.timeout(3000)
     });
     
     if (!response.ok) return null;
