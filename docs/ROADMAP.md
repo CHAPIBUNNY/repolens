@@ -160,7 +160,7 @@ Everything below is live, tested, and available on npm.
 - ✅ Optional `obsidian` config fields on schema v1 (existing configs keep working)
 
 ## Integrations
-- ✅ VS Code extension for in-editor architecture visualization ([Marketplace](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture))
+- ✅ VS Code extension for in-editor architecture visualization ([Marketplace](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox))
 
 ---
 

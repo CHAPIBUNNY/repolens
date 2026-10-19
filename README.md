@@ -9,7 +9,7 @@
 ```
 
 [![npm version](https://img.shields.io/npm/v/@chappibunny/repolens)](https://www.npmjs.com/package/@chappibunny/repolens)
-[![VS Code Extension](https://img.shields.io/visual-studio-marketplace/v/CHAPIBUNNY.repolens-architecture?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture)
+[![VS Code Extension](https://img.shields.io/visual-studio-marketplace/v/repolensdox.repolensdox?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox)
 [![Tests](https://img.shields.io/github/actions/workflow/status/CHAPIBUNNY/repolens/test.yml?label=tests)](https://github.com/CHAPIBUNNY/repolens/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -137,10 +137,10 @@ For alternative methods, see [INSTALLATION.md](docs/INSTALLATION.md).
 
 **Install from Marketplace:**
 ```
-ext install CHAPIBUNNY.repolens-architecture
+ext install repolensdox.repolensdox
 ```
 
-[**→ Get it on Visual Studio Marketplace**](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture)
+[**→ Get it on Visual Studio Marketplace**](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox)
 
 **Features:**
 - 🏗️ **Architecture Explorer** — Tree view of your system structure
@@ -267,7 +267,7 @@ When you open a pull request, RepoLens posts:
 v1.0+ features complete — CLI, config schema, and plugin interface are frozen.
 
 **Completed:**
-- [x] VS Code extension ([available on Marketplace](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture))
+- [x] VS Code extension ([available on Marketplace](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox))
 - [x] Obsidian vault publisher (local notes with wikilinks and frontmatter)
 
 **Next:**
