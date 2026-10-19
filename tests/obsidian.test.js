@@ -29,6 +29,20 @@ const pages = {
   executive_summary: "# Summary\n",
 };
 
+describe("rewriteMarkdownToWikilinks", () => {
+  it("finishes hostile link prefixes in linear time", async () => {
+    const { rewriteMarkdownToWikilinks } = await import("../src/publishers/obsidian.js");
+    const samples = ["[\\".repeat(50_000), "[](".repeat(50_000)];
+
+    for (const sample of samples) {
+      const started = performance.now();
+      const result = rewriteMarkdownToWikilinks(sample, new Map());
+      expect(performance.now() - started).toBeLessThan(1000);
+      expect(result).toBe(sample);
+    }
+  });
+});
+
 describe("Obsidian vault publisher", () => {
   let dirs;
 

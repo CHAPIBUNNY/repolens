@@ -16,6 +16,7 @@ Publish generated docs into a folder in a local Obsidian vault. No network calls
 - Optional config on schema v1: `obsidian.vault`, `obsidian.folder`, `obsidian.branches`, `obsidian.index`, `obsidian.frontmatter`, `obsidian.wikilinks`. Existing configs keep working
 - `repolens init` can select the Obsidian publisher and ask for a vault path
 - `repolens doctor` checks that `obsidian.vault` is set and does not require env vars for it
+- Wikilink rewriting is a linear scan with bounded label and target lengths. The previous link regex was polynomial on hostile markdown (CodeQL)
 
 ### Security
 

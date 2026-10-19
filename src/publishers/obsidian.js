@@ -204,22 +204,120 @@ function ensureTrailingNewline(text) {
   return text.endsWith("\n") ? text : `${text}\n`;
 }
 
+const MAX_LINK_LABEL = 500;
+const MAX_LINK_TARGET = 2048;
+
 /**
  * Rewrite inline markdown links to Obsidian wikilinks.
  * Fenced code blocks are left untouched. http(s) and other URLs stay as links.
+ *
+ * The scan is a single forward pass. Label and target lengths are capped so
+ * a hostile document cannot trigger polynomial backtracking.
  * @param {string} markdown
  * @param {Map<string, string>} linkMap basename/stem → note name
  */
 export function rewriteMarkdownToWikilinks(markdown, linkMap) {
   const source = String(markdown ?? "");
-  const parts = source.split(/(```[\s\S]*?```)/g);
-  return parts.map((part, index) => {
-    if (index % 2 === 1) return part;
-    return part.replace(/(!?)\[([^\]]*)\]\(([^)]+)\)/g, (full, bang, label, rawTarget) => {
-      const converted = toWikilink(bang === "!", label, rawTarget, linkMap);
-      return converted ?? full;
-    });
-  }).join("");
+  const fences = fencedCodeRanges(source);
+  const parts = [];
+  let i = 0;
+  let fenceIndex = 0;
+
+  while (i < source.length) {
+    if (fenceIndex < fences.length && i === fences[fenceIndex][0]) {
+      parts.push(source.slice(fences[fenceIndex][0], fences[fenceIndex][1]));
+      i = fences[fenceIndex][1];
+      fenceIndex += 1;
+      continue;
+    }
+
+    const nextFence = fenceIndex < fences.length ? fences[fenceIndex][0] : source.length;
+    const link = scanInlineLink(source, i);
+    if (link && link.end <= nextFence) {
+      const converted = toWikilink(link.embed, link.label, link.target, linkMap);
+      parts.push(converted ?? link.raw);
+      i = link.end;
+      continue;
+    }
+
+    parts.push(source[i]);
+    i += 1;
+  }
+
+  return parts.join("");
+}
+
+/**
+ * Pairs of ``` fences, as [start, end) indexes. An unclosed fence is not a range.
+ * Each search starts at the previous match, so this is linear in the input length.
+ */
+function fencedCodeRanges(source) {
+  const ranges = [];
+  let i = 0;
+  while (i < source.length) {
+    const open = source.indexOf("```", i);
+    if (open === -1) break;
+    const close = source.indexOf("```", open + 3);
+    if (close === -1) break;
+    ranges.push([open, close + 3]);
+    i = close + 3;
+  }
+  return ranges;
+}
+
+/**
+ * Match `![label](target)` or `[label](target)` at `index`.
+ * Label: 0–500 chars, no brackets or newlines. Target: 1–2048 chars, no
+ * parentheses or whitespace. Returns null when the text at `index` is not a link.
+ */
+function scanInlineLink(source, index) {
+  let cursor = index;
+  let embed = false;
+  if (source[cursor] === "!" && source[cursor + 1] === "[") {
+    embed = true;
+    cursor += 1;
+  }
+  if (source[cursor] !== "[") return null;
+
+  const labelStart = cursor + 1;
+  const labelEnd = readLinkLabel(source, labelStart);
+  if (labelEnd < 0 || source[labelEnd + 1] !== "(") return null;
+
+  const targetStart = labelEnd + 2;
+  const targetEnd = readLinkTarget(source, targetStart);
+  if (targetEnd < 0) return null;
+
+  return {
+    embed,
+    label: source.slice(labelStart, labelEnd),
+    target: source.slice(targetStart, targetEnd),
+    raw: source.slice(index, targetEnd + 1),
+    end: targetEnd + 1,
+  };
+}
+
+function readLinkLabel(source, start) {
+  const limit = Math.min(source.length, start + MAX_LINK_LABEL);
+  let i = start;
+  while (i < limit) {
+    const ch = source[i];
+    if (ch === "]" || ch === "[" || ch === "\n") break;
+    i += 1;
+  }
+  if (i >= source.length || source[i] !== "]") return -1;
+  return i;
+}
+
+function readLinkTarget(source, start) {
+  const limit = Math.min(source.length, start + MAX_LINK_TARGET);
+  let i = start;
+  while (i < limit) {
+    const ch = source[i];
+    if (ch === "(" || ch === ")" || ch.charCodeAt(0) <= 32) break;
+    i += 1;
+  }
+  if (i === start || i >= source.length || source[i] !== ")") return -1;
+  return i;
 }
 
 function toWikilink(isEmbed, label, rawTarget, linkMap) {
