@@ -435,6 +435,10 @@ If you configured Notion credentials during setup, documentation will publish au
    - \`NOTION_TOKEN\` — Get from https://www.notion.so/my-integrations
    - \`NOTION_PARENT_PAGE_ID\` — The page where docs will be published
 
+### Obsidian and GitHub Wiki
+
+Obsidian writes notes into a folder in a local vault. Set \`obsidian.vault\` in \`.repolens.yml\`. No API key and no network. GitHub Wiki needs \`github_wiki\` in \`publishers\` and \`GITHUB_TOKEN\`.
+
 ### Confluence Publishing
 
 To publish documentation to Atlassian Confluence:
@@ -472,23 +476,20 @@ The workflow token is \`contents: read\` plus \`pull-requests: write\`. That is 
 
 ## 📊 Generated Documentation
 
-RepoLens generates documentation in two modes:
+RepoLens generates 17 documents by default. Diagrams are Unicode.
 
-### Deterministic Mode (Default - Free)
-- **System Overview** — Technical profile and stats
-- **Module Catalog** — Complete code inventory
-- **API Surface** — Internal endpoints + external integrations
-- **Route Map** — Application routes
-- **System Map** — Unicode architecture diagram
-- **Architecture Diff** — Change tracking
+### Always written
+- **System Overview**, **Module Catalog**, **API Surface**, **Route Map**, **System Map** (Unicode diagram), **Architecture Diff**
+- **GraphQL Schema**, **Type Graph**, **Dependency Graph**, **Architecture Drift**, **Security Hotspots**, **Code Health**
 
-### AI-Enhanced Mode (Optional - Requires API Key)
-Adds 5 natural language documents readable by non-technical audiences:
+### AI-Enhanced Mode (Optional)
+These documents use AI when it is enabled, and a deterministic fallback when it is not:
 - **Executive Summary** — Project overview for leadership
 - **Business Domains** — What the system does by function
 - **Architecture Overview** — Layered technical analysis
-- **Data Flows** — How information moves through system
+- **Data Flows** — How information moves through the system
 - **Developer Onboarding** — Getting started guide
+- **Change Impact** and the hybrid pages above (module catalog, route map, API surface, system map)
 
 ## 🤖 Enabling AI Features
 
@@ -529,11 +530,7 @@ No API key signup needed. Uses \`gpt-4o-mini\` by default.
 
 **Cost estimate**: $0.10-$0.40 per run for typical projects (or free with GitHub Models)
 
-See [AI.md](https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md) for full documentation
-- **Module Catalog** — Detected code modules
-- **API Surface** — REST API endpoints
-- **Route Map** — Application routes
-- **System Map** — Architecture diagram (Unicode ASCII art)
+See [AI.md](https://github.com/CHAPIBUNNY/repolens/blob/main/docs/AI.md) for full documentation.
 
 ## ⚙️ Configuration
 
@@ -547,8 +544,8 @@ Edit \`.repolens.yml\` to customize:
 ## 📚 Learn More
 
 - [RepoLens GitHub](https://github.com/CHAPIBUNNY/repolens)
-- [Configuration Docs](https://github.com/CHAPIBUNNY/repolens#configuration)
-- [Troubleshooting](https://github.com/CHAPIBUNNY/repolens#troubleshooting)
+- [Configuration](https://github.com/CHAPIBUNNY/repolens/blob/main/docs/CONFIGURATION.md)
+- [Troubleshooting](https://github.com/CHAPIBUNNY/repolens/blob/main/docs/TROUBLESHOOTING.md)
 `;
 
 async function fileExists(filePath) {

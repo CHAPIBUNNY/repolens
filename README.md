@@ -83,7 +83,7 @@ CONFLUENCE_SPACE_KEY=DOCS
 npx @chappibunny/repolens publish
 ```
 
-**Done!** Your docs are now live in Notion, Confluence, and/or `.repolens/` directory.
+**Done!** Numbered notes and the Markdown publisher’s files are in `.repolens/`. Notion, Confluence, GitHub Wiki, and Obsidian publish only when you configure them. Obsidian needs `obsidian.vault` in `.repolens.yml` and does not use an API key.
 
 **🔄 Upgrading from v0.3.0 or earlier?**
 Run `npx @chappibunny/repolens migrate` to automatically update your workflow files. See [MIGRATION.md](docs/MIGRATION.md) for details.
@@ -96,9 +96,9 @@ Run `npx @chappibunny/repolens migrate` to automatically update your workflow fi
 
 | Audience | Documents |
 |---|---|
-| **Stakeholders** (founders, PMs, ops) | Executive Summary · Business Domains · Data Flows |
-| **Everyone** | System Overview · Developer Onboarding · Change Impact · Architecture Drift · Code Health |
-| **Engineers** | Architecture Overview · Module Catalog · API Surface · Route Map · System Map · GraphQL Schema · TypeScript Type Graph · Dependency Graph · Security Hotspots |
+| **Stakeholders** | Executive Summary |
+| **Mixed** | System Overview · Business Domains · Route Map · Data Flows · Change Impact · System Map · Architecture Drift · Code Health |
+| **Engineers** | Architecture Overview · Module Catalog · API Surface · Developer Onboarding · GraphQL Schema · TypeScript Type Graph · Dependency Graph · Security Hotspots |
 
 **Two modes:** Deterministic (free, fast, always works) or AI-Enhanced (optional — GitHub Models, OpenAI, Anthropic, Google, Azure, Ollama).
 
@@ -183,28 +183,11 @@ Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki,
 
 ## 📸 Example Output
 
-### System Map with Dependencies
+### System map
 
-```mermaid
-graph LR
-    CLI[bin/repolens<br/>1 file] --> Core[src/core<br/>4 files]
-    Publishers[src/publishers<br/>6 files] --> Core
-    Publishers --> Renderers[src/renderers<br/>4 files]
-    Publishers --> Utils[src/utils<br/>10 files]
-    Renderers --> Core
-    Delivery[src/delivery<br/>1 file] --> Publishers
-    Tests[tests<br/>15 files] -. tests .-> CLI
-    Tests -. tests .-> Core
-    Tests -. tests .-> Publishers
-    
-    style CLI fill:#9b59b6,color:#fff
-    style Core fill:#f39c12,color:#000
-    style Publishers fill:#27ae60,color:#fff
-    style Renderers fill:#27ae60,color:#fff
-    style Delivery fill:#16a085,color:#fff
-    style Utils fill:#95a5a6,color:#000
-    style Tests fill:#e67e22,color:#fff
-```
+Published system maps are Unicode diagrams drawn from import edges. RepoLens does not emit Mermaid.
+
+The publisher set in 1.13.0 is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ### System Overview (Technical Profile)
 
@@ -255,7 +238,7 @@ When you open a pull request, RepoLens posts:
 
 | Guide | Description |
 |---|---|
-| [Onboarding Guide](docs/ONBOARDING.md) | Step-by-step setup: publishers, AI, Notion, Confluence, Discord |
+| [Onboarding Guide](docs/ONBOARDING.md) | Step-by-step setup: publishers, AI, Notion, Confluence, GitHub Wiki, Obsidian, Discord |
 | [Configuration](docs/CONFIGURATION.md) | Complete `.repolens.yml` schema and examples |
 | [Environment Variables](docs/ENVIRONMENT.md) | All env vars by publisher and feature |
 | [Architecture](docs/ARCHITECTURE.md) | Pipeline diagram, project structure |

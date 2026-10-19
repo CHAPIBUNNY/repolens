@@ -28,6 +28,8 @@ Publish generated docs into a folder in a local Obsidian vault. No network calls
 - README roadmap matches `docs/ROADMAP.md`
 - The README no longer hard-codes the release version. It points at `package.json`, which is the source of the version
 - Test totals are no longer hard-coded in the README, development guide, or security guide. The tests badge follows the `test.yml` workflow status
+- Handbook pages (README, `docs/*`, `SECURITY.md`, `CONTRIBUTING.md`, and `.github/copilot-instructions.md`) describe 1.13.0 and the Obsidian publisher
+- Corrected drift against the code: `scan.ignore` (there is no `scan.exclude`), `publish` has no `--dry-run`, CI installs with `npm ci`, the publish workflow is `repolens.yml`, diagrams are Unicode, and local files use two filename schemes. `outputs.pages` stays the frozen allowlist; the generator still emits the full 17-document plan unless `documentation.sections` or `features` filters it
 
 ## 1.12.4
 

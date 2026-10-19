@@ -49,7 +49,7 @@ Everything below is live, tested, and available on npm.
 - ✅ 185 tests across 15 test files (including security/fuzzing tests)
 
 ### CI/CD & npm Publishing (v0.5.0 – v0.6.4)
-- ✅ GitHub Actions: `publish-docs.yml` (every push) + `release.yml` (tag-based)
+- ✅ GitHub Actions publishing and tag-based npm releases. Current workflows are `repolens.yml` (push to `main`), `test.yml` (pull requests), and `release.yml` (`v*` tags). CI installs with `npm ci`
 - ✅ npm registry publishing (`npm publish --access public`)
 - ✅ Workflow migration tool (`repolens migrate`)
 - ✅ Cross-platform CI fix for optional dependency resolution
@@ -78,7 +78,7 @@ Everything below is live, tested, and available on npm.
 - ✅ Lifecycle hooks: `afterScan`, `afterRender`, `afterPublish` with chained transforms
 - ✅ Config support: `plugins` array in `.repolens.yml`
 - ✅ 163 tests across 14 test files
-- ✅ 185 tests across 15 test files (current)
+- ✅ 185 tests across 15 test files at the v0.9.0 release
 
 ---
 

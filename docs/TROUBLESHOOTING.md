@@ -75,15 +75,11 @@ Verify: `npx @chappibunny/repolens version` should print the latest version.
 npm error could not resolve … @rollup/rollup-linux-x64-gnu
 ```
 
-**Cause:** `npm ci` with a macOS-generated lockfile fails to resolve platform-specific optional dependencies on Linux runners.
+**Cause:** npm 10 can crash with `Cannot read properties of null (reading 'edgesOut')` when it re-resolves Vitest 4.1 optional peers, and a lockfile built with npm 10 can omit Rolldown's Linux packages.
 
-**Fix:** Use `npm install` instead of `npm ci` in your workflow, and delete `package-lock.json` before install:
+**Fix:** Keep `package-lock.json` and install with `npm ci`, which is what `.github/workflows/test.yml`, `repolens.yml`, and `release.yml` do. Regenerate the lockfile with npm 11 or newer (`npx npm@11 install`) before committing it. Do not delete the lockfile in CI.
 
-```yaml
-- run: rm -f package-lock.json && npm install
-```
-
-See the [CI/CD section](README.md#-release-process) in the README for more details.
+See [RELEASE.md](RELEASE.md) and the CI note in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 
 ---
 
@@ -214,6 +210,20 @@ Generate an API token at [id.atlassian.com/manage-profile/security/api-tokens](h
 - **Locally:** Create a PAT with `repo` scope at [github.com/settings/tokens](https://github.com/settings/tokens) and set `GITHUB_TOKEN=ghp_...`
 
 Also ensure the Wiki tab is enabled in your repository settings (Settings → General → Features → Wikis).
+
+---
+
+### Obsidian: vault missing, or the folder escapes the vault
+
+**Cause:** `obsidian` is in `publishers`, but `obsidian.vault` is unset, the directory does not exist, or `obsidian.folder` is absolute, contains `..`, or resolves through a symlink outside the vault.
+
+**Fix:**
+
+1. Create the vault directory in Obsidian first. RepoLens does not create the vault root.
+2. Set `obsidian.vault` to that directory (absolute, or relative to the repo) and an optional `obsidian.folder` such as `RepoLens/my-app`.
+3. Run `npx @chappibunny/repolens doctor`. A missing vault is a warning, not a failed doctor run. Publish fails if the vault cannot be resolved.
+
+Obsidian publishing does not read environment variables and does not make network calls. Listing only `obsidian` still writes Markdown files under `.repolens/`, because that publisher also runs when `notion` is not selected.
 
 ---
 

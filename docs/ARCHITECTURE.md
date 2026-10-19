@@ -7,6 +7,8 @@
 ──────────────────────────────────────────────────────────────────
 Read files   →   Detect tech     →  Generate docs   →   Notion pages
 from patterns    stack patterns      with insights       + Confluence pages
+                                                         + GitHub Wiki
+                                                         + Obsidian vault
                                                          + Markdown files
 ```
 
@@ -24,14 +26,17 @@ from patterns    stack patterns      with insights       + Confluence pages
 
 **Render Phase:**
 - Groups files into modules based on `module_roots`
-- Generates Mermaid diagrams showing module dependencies
+- Draws Unicode diagrams from import edges (`src/renderers/renderMap.js`). Mermaid is not generated
 - Creates technical profiles with actual stack insights
-- Renders Markdown documentation
+- Renders Markdown documentation (17 documents by default)
 
 **Publish Phase:**
-- Markdown: Writes files to `.repolens/` directory
+- Numbered files: `00-executive-summary.md` through `16-code-health.md` in `documentation.output_dir` (default `.repolens/`)
+- Markdown publisher: snake_case files such as `executive_summary.md` in `.repolens/`
 - Notion: Creates/updates pages via API with retry logic
 - Confluence: Creates/updates pages via REST API v1 (storage format)
+- GitHub Wiki: Clones the wiki repo and pushes audience-grouped pages
+- Obsidian: Writes notes into a local vault folder (wikilinks, frontmatter, no network)
 
 ## Module Dependency Detection
 
@@ -51,25 +56,18 @@ import { scanRepo } from "../core/scan.js";
 
 ## System Map
 
-```mermaid
-graph LR
-    CLI[bin/repolens<br/>1 file] --> Core[src/core<br/>4 files]
-    Publishers[src/publishers<br/>6 files] --> Core
-    Publishers --> Renderers[src/renderers<br/>4 files]
-    Publishers --> Utils[src/utils<br/>10 files]
-    Renderers --> Core
-    Delivery[src/delivery<br/>1 file] --> Publishers
-    Tests[tests<br/>15 files] -. tests .-> CLI
-    Tests -. tests .-> Core
-    Tests -. tests .-> Publishers
-    
-    style CLI fill:#9b59b6,color:#fff
-    style Core fill:#f39c12,color:#000
-    style Publishers fill:#27ae60,color:#fff
-    style Renderers fill:#27ae60,color:#fff
-    style Delivery fill:#16a085,color:#fff
-    style Utils fill:#95a5a6,color:#000
-    style Tests fill:#e67e22,color:#fff
+```text
+bin/repolens.js
+  └── src/cli.js
+        ├── src/core/            4 files (config, schema, diff, scan)
+        ├── src/analyzers/       12 files
+        ├── src/renderers/       4 files
+        ├── src/publishers/      7 files (notion, confluence, github-wiki,
+        │                         markdown, obsidian, index, publish)
+        ├── src/utils/           15 files
+        ├── src/delivery/        1 file
+        ├── src/integrations/    discord.js
+        └── src/plugins/         loader.js, manager.js
 ```
 
 ## Project Structure
@@ -96,7 +94,12 @@ repolens/
 │   │   ├── graphql-analyzer.js    # GraphQL schema detection
 │   │   ├── typescript-analyzer.js # TypeScript type graph analysis
 │   │   ├── dependency-graph.js    # Import graph with cycle detection
-│   │   └── drift-detector.js      # Architecture drift detection
+│   │   ├── drift-detector.js      # Architecture drift detection
+│   │   ├── monorepo-detector.js   # npm, yarn, pnpm, and Lerna workspaces
+│   │   ├── codeowners.js          # CODEOWNERS ownership
+│   │   ├── jsdoc-analyzer.js      # JSDoc and TSDoc on the API surface
+│   │   ├── security-patterns.js   # Security hotspots
+│   │   └── complexity-analyzer.js # Cyclomatic complexity and code health
 │   ├── ai/
 │   │   ├── provider.js          # Provider-agnostic AI generation
 │   │   ├── prompts.js           # Strict prompt templates
@@ -135,12 +138,17 @@ repolens/
 │       ├── secrets.js       # Secret detection & sanitization
 │       ├── telemetry.js     # Opt-in error tracking + performance timers
 │       ├── errors.js        # Enhanced error messages with guidance
-│       └── update-check.js  # Version update notifications
+│       ├── update-check.js  # Version update notifications
+│       ├── doc-cache.js     # Hash cache for unchanged pages
+│       ├── safe-path.js     # Output path containment
+│       ├── github-repo.js   # owner/name checks
+│       ├── interactive.js   # TTY prompts
+│       └── yaml.js          # Size-capped YAML parsing
 ├── tests/                   # Vitest test suite
+├── docs/                    # Handbook (ROADMAP, STABILITY, RELEASE, …)
 ├── .repolens.yml            # Dogfooding config
 ├── package.json
 ├── CHANGELOG.md
-├── STABILITY.md
-├── RELEASE.md
-└── ROADMAP.md
+├── SECURITY.md
+└── CONTRIBUTING.md
 ```

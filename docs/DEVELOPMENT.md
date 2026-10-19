@@ -19,12 +19,12 @@ npm test
 - Config discovery and validation
 - Branch detection (GitHub/GitLab/CircleCI)
 - CLI commands (version, help, uninstall)
-- Markdown publisher and parser tests (Notion, Confluence)
+- Publishers: Markdown, Notion, Confluence, GitHub Wiki, Obsidian
 - Integration and HTTP integration workflows
 - Doctor command validation
 - Init wizard and scaffolding
 - AI provider and structured output tests
-- Extended analysis (GraphQL, TypeScript, dependency graph, drift)
+- Extended analysis (GraphQL, TypeScript, dependency graph, drift, JSDoc, security hotspots, code health)
 - Plugin system (loader, manager, config)
 - Renderers (system map, diff, analysis)
 - Deterministic enrichment (all 6 AI-enhanced doc types)
@@ -39,11 +39,11 @@ npm test
 Simulates the full user installation experience:
 
 ```bash
-# Pack the tarball
+# Pack the tarball. The filename follows package.json (1.13.0 → chappibunny-repolens-1.13.0.tgz).
 npm pack
 
-# Install globally from tarball
-npm install -g chappibunny-repolens-1.8.1.tgz
+# Install globally from that tarball
+npm install -g chappibunny-repolens-*.tgz
 
 # Verify
 repolens --version

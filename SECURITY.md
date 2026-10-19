@@ -16,11 +16,10 @@ RepoLens follows semantic versioning. Security updates are provided for:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.8.x   | :white_check_mark: |
-| 0.7.x   | :white_check_mark: |
-| < 0.7   | :x:                |
+| 1.x     | :white_check_mark: |
+| < 1.0   | :x:                |
 
-**Note**: Once RepoLens reaches v1.0, we will support the latest major version and one previous major version.
+**Note**: The supported line is the current 1.x release (1.13.0). Security fixes ship on that line. 0.x releases are not supported.
 
 ## Reporting a Vulnerability
 
@@ -182,8 +181,8 @@ throw new Error(`API failed: ${apiKey}`);
 **Prevention**: Logger sanitizes output, replaces `sk-abc123xyz` → `sk-ab***yz`
 
 #### Scenario 3: Path Traversal
-**Attack**: Config specifies output path: `../../../etc/passwd`
-**Prevention**: `validateSafePath()` rejects `..` and absolute paths
+**Attack**: Config specifies output path: `../../../etc/passwd`, or an Obsidian folder that walks out of the vault
+**Prevention**: `documentation.output_dir` must stay inside the repository. `obsidian.folder` must stay inside `obsidian.vault` after `realpath`, including symlink escapes. The Obsidian publisher writes only inside that vault and does not open a network connection.
 
 #### Scenario 4: Supply Chain Compromise
 **Attack**: Attacker compromises `actions/checkout@v4` tag

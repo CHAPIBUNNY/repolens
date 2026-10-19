@@ -2,8 +2,30 @@
 
 This guide helps you upgrade RepoLens across breaking changes and major versions.
 
-**Current Version:** 1.5.0  
-**Last Updated:** March 2026
+**Current Version:** 1.13.0  
+**Last Updated:** October 2026
+
+---
+
+## Upgrading to 1.13.0
+
+No required migration. Schema stays at `configVersion: 1`. Existing `.repolens.yml` files keep working.
+
+Obsidian is optional. Add it only if you want notes in a local vault:
+
+```yaml
+publishers:
+  - obsidian
+  - markdown
+
+obsidian:
+  vault: "/path/to/vault"    # must already exist
+  folder: "RepoLens/my-app"  # created inside the vault
+```
+
+There is no network call and no new environment variable. `repolens doctor` warns when `obsidian` is listed and `obsidian.vault` is empty. It does not fail the run for that warning.
+
+Release notes from 1.3.0 through 1.13.0 are in [CHANGELOG.md](../CHANGELOG.md). The sections below stay as historical upgrade notes.
 
 ---
 
@@ -182,7 +204,7 @@ RepoLens checks for updates automatically:
 ┌────────────────────────────────────────────────────────────┐
 │                   📦 Update Available                      │
 ├────────────────────────────────────────────────────────────┤
-│  Current: 0.5.0    → Latest: 1.5.0                        │
+│  Current: 0.5.0    → Latest: 1.13.0                       │
 │                                                            │
 │  Run one of these commands to update:                     │
 │                                                            │
@@ -218,6 +240,8 @@ npm install @chappibunny/repolens@latest
 ---
 
 ## Version History
+
+Versions after 1.2.0 are summarized in [CHANGELOG.md](../CHANGELOG.md) and [ROADMAP.md](ROADMAP.md). 1.13.0 adds the Obsidian vault publisher. Nothing in 1.3.0–1.13.0 requires a config migration.
 
 ### v1.2.0 (March 2026)
 - `repolens migrate` now also patches `.repolens.yml` (adds `configVersion: 1` if missing)
