@@ -39,11 +39,13 @@ npm link
 <details>
 <summary><b>Option D: GitHub Release Tarball</b></summary>
 
-Install from a specific version:
+Install from a specific GitHub Release. The version segment is the release tag. For 1.13.0:
 
 ```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.4.0/chappibunny-repolens-1.4.0.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.13.0/chappibunny-repolens-1.13.0.tgz
 ```
+
+That URL exists only after the `v1.13.0` tag is published. Until then, install from npm or from the repository.
 </details>
 
 > **Having install problems?** See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for solutions to common issues like `ENOTEMPTY`, `npm ci` failures, and stale versions.

@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { info, warn } from "./utils/logger.js";
 import { isNonInteractiveEnvironment } from "./utils/interactive.js";
 
-const PUBLISHER_CHOICES = ["markdown", "notion", "confluence", "github_wiki"];
+const PUBLISHER_CHOICES = ["markdown", "notion", "confluence", "github_wiki", "obsidian"];
 
 // ============================================================================
 // URL PARSING HELPERS
@@ -435,6 +435,10 @@ If you configured Notion credentials during setup, documentation will publish au
    - \`NOTION_TOKEN\` — Get from https://www.notion.so/my-integrations
    - \`NOTION_PARENT_PAGE_ID\` — The page where docs will be published
 
+### Obsidian and GitHub Wiki
+
+Obsidian writes notes into a folder in a local vault. Set \`obsidian.vault\` in \`.repolens.yml\`. No API key and no network. GitHub Wiki needs \`github_wiki\` in \`publishers\` and \`GITHUB_TOKEN\`.
+
 ### Confluence Publishing
 
 To publish documentation to Atlassian Confluence:
@@ -472,23 +476,20 @@ The workflow token is \`contents: read\` plus \`pull-requests: write\`. That is 
 
 ## 📊 Generated Documentation
 
-RepoLens generates documentation in two modes:
+RepoLens generates 17 documents by default. Diagrams are Unicode.
 
-### Deterministic Mode (Default - Free)
-- **System Overview** — Technical profile and stats
-- **Module Catalog** — Complete code inventory
-- **API Surface** — Internal endpoints + external integrations
-- **Route Map** — Application routes
-- **System Map** — Unicode architecture diagram
-- **Architecture Diff** — Change tracking
+### Always written
+- **System Overview**, **Module Catalog**, **API Surface**, **Route Map**, **System Map** (Unicode diagram), **Architecture Diff**
+- **GraphQL Schema**, **Type Graph**, **Dependency Graph**, **Architecture Drift**, **Security Hotspots**, **Code Health**
 
-### AI-Enhanced Mode (Optional - Requires API Key)
-Adds 5 natural language documents readable by non-technical audiences:
+### AI-Enhanced Mode (Optional)
+These documents use AI when it is enabled, and a deterministic fallback when it is not:
 - **Executive Summary** — Project overview for leadership
 - **Business Domains** — What the system does by function
 - **Architecture Overview** — Layered technical analysis
-- **Data Flows** — How information moves through system
+- **Data Flows** — How information moves through the system
 - **Developer Onboarding** — Getting started guide
+- **Change Impact** and the hybrid pages above (module catalog, route map, API surface, system map)
 
 ## 🤖 Enabling AI Features
 
@@ -529,11 +530,7 @@ No API key signup needed. Uses \`gpt-4o-mini\` by default.
 
 **Cost estimate**: $0.10-$0.40 per run for typical projects (or free with GitHub Models)
 
-See [AI.md](https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md) for full documentation
-- **Module Catalog** — Detected code modules
-- **API Surface** — REST API endpoints
-- **Route Map** — Application routes
-- **System Map** — Architecture diagram (Unicode ASCII art)
+See [AI.md](https://github.com/CHAPIBUNNY/repolens/blob/main/docs/AI.md) for full documentation.
 
 ## ⚙️ Configuration
 
@@ -547,8 +544,8 @@ Edit \`.repolens.yml\` to customize:
 ## 📚 Learn More
 
 - [RepoLens GitHub](https://github.com/CHAPIBUNNY/repolens)
-- [Configuration Docs](https://github.com/CHAPIBUNNY/repolens#configuration)
-- [Troubleshooting](https://github.com/CHAPIBUNNY/repolens#troubleshooting)
+- [Configuration](https://github.com/CHAPIBUNNY/repolens/blob/main/docs/CONFIGURATION.md)
+- [Troubleshooting](https://github.com/CHAPIBUNNY/repolens/blob/main/docs/TROUBLESHOOTING.md)
 `;
 
 async function fileExists(filePath) {
@@ -753,6 +750,17 @@ function buildRepoLensConfig(projectName, detectedRoots, options = {}) {
     `#   branches:`,
     `#     - main        # Only publish from main branch`,
     `#     - develop     # Or add specific branches`,
+    ``,
+    `# Optional: Publish into a local Obsidian vault (no network)`,
+    `# publishers also needs: - obsidian`,
+    `# obsidian:`,
+    `#   vault: "/path/to/vault"     # absolute, or relative to this repo`,
+    `#   folder: "RepoLens/my-app"   # stays inside the vault`,
+    `#   branches:`,
+    `#     - main`,
+    `#   index: true`,
+    `#   frontmatter: true`,
+    `#   wikilinks: true`,
     ``,
     `# Optional: GitHub integration for SVG diagram hosting`,
     `# github:`,
@@ -1156,6 +1164,20 @@ async function runInteractiveWizard(repoRoot) {
       githubSecretsNeeded.push("CONFLUENCE_URL", "CONFLUENCE_EMAIL", "CONFLUENCE_API_TOKEN", "CONFLUENCE_SPACE_KEY", "CONFLUENCE_PARENT_PAGE_ID");
     }
 
+    // Obsidian vault (local path only — no credentials)
+    let obsidian = null;
+    if (publishers.includes("obsidian")) {
+      info("\n📝 Obsidian Vault");
+      info("   Notes are written into a folder in your vault. Nothing is uploaded.");
+      const vault = (await ask("   Vault path (absolute, or relative to the repo): ")).trim();
+      const folderDefault = `RepoLens/${projectName}`;
+      const folder = (await ask(`   Folder inside the vault (${folderDefault}): `)).trim();
+      obsidian = { vault, folder: folder || folderDefault };
+      if (!vault) {
+        warn("   No vault path yet. Add obsidian.vault to .repolens.yml before publishing.");
+      }
+    }
+
     // GitHub Wiki setup
     if (publishers.includes("github_wiki")) {
       info("\n📝 GitHub Wiki Setup");
@@ -1278,7 +1300,7 @@ async function runInteractiveWizard(repoRoot) {
 
     // 6. Branch filtering
     info("\n🌿 Branch Filtering");
-    info("   Limits which branches can publish to Notion/Confluence.");
+    info("   Limits which branches can publish to Notion, Confluence, and Obsidian.");
     const branchInput = (await ask("   Allowed branches (comma-separated, default: main): ")).trim() || "main";
     const branches = branchInput.split(",").map((b) => b.trim()).filter(Boolean);
 
@@ -1336,7 +1358,8 @@ async function runInteractiveWizard(repoRoot) {
       branches, 
       enableDiscord,
       credentials,
-      githubSecretsNeeded: uniqueSecrets
+      githubSecretsNeeded: uniqueSecrets,
+      obsidian,
     };
   } finally {
     rl.close();
@@ -1348,6 +1371,7 @@ const PUBLISHER_DESCRIPTIONS = {
   notion: "Notion workspace pages",
   confluence: "Atlassian Confluence pages",
   github_wiki: "Repository wiki pages",
+  obsidian: "Local Obsidian vault folder",
 };
 
 /**
@@ -1379,6 +1403,22 @@ function buildWizardConfig(answers) {
     lines.push(`confluence:`);
     lines.push(`  branches:`);
     for (const b of answers.branches) lines.push(`    - ${b}`);
+  }
+  if (answers.publishers.includes("obsidian")) {
+    lines.push(``);
+    lines.push(`obsidian:`);
+    if (answers.obsidian?.vault) {
+      lines.push(`  vault: ${JSON.stringify(answers.obsidian.vault)}`);
+    }
+    const folder = answers.obsidian?.folder || `RepoLens/${answers.projectName}`;
+    lines.push(`  folder: ${JSON.stringify(folder)}`);
+    if (answers.branches?.length) {
+      lines.push(`  branches:`);
+      for (const b of answers.branches) lines.push(`    - ${b}`);
+    }
+    lines.push(`  index: true`);
+    lines.push(`  frontmatter: true`);
+    lines.push(`  wikilinks: true`);
   }
 
   if (answers.enableDiscord) {

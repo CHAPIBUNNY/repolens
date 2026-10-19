@@ -2,7 +2,21 @@
 
 All notable changes to RepoLens will be documented in this file.
 
-## Unreleased
+## 1.13.0
+
+### Obsidian vault publisher
+
+Publish generated docs into a folder in a local Obsidian vault. No network calls and no credentials.
+
+- New publisher: `obsidian` (`src/publishers/obsidian.js`)
+- Notes get YAML frontmatter (`title`, `aliases`, `tags`, `type`, `project`, `branch`) and an index note (`RepoLens.md`) with wikilinks
+- Markdown links to generated pages become `[[wikilinks]]`. External URLs and fenced code blocks are left alone
+- Re-running publish is idempotent: identical notes are not rewritten, and notes RepoLens previously published but no longer generates are removed. Other files in the folder stay
+- `obsidian.folder` must resolve inside `obsidian.vault`. Absolute folders, `..`, and symlinks that leave the vault are rejected
+- Optional config on schema v1: `obsidian.vault`, `obsidian.folder`, `obsidian.branches`, `obsidian.index`, `obsidian.frontmatter`, `obsidian.wikilinks`. Existing configs keep working
+- `repolens init` can select the Obsidian publisher and ask for a vault path
+- `repolens doctor` checks that `obsidian.vault` is set and does not require env vars for it
+- Wikilink rewriting is a linear scan with bounded label and target lengths. The previous link regex was polynomial on hostile markdown (CodeQL)
 
 ### Security
 
@@ -10,8 +24,12 @@ All notable changes to RepoLens will be documented in this file.
 
 ### Docs
 
+- `docs/ROADMAP.md` now summarizes what shipped from v1.1.0 through v1.12.4, and marks the VS Code extension and the Obsidian publisher as shipped
+- README roadmap matches `docs/ROADMAP.md`
 - The README no longer hard-codes the release version. It points at `package.json`, which is the source of the version
 - Test totals are no longer hard-coded in the README, development guide, or security guide. The tests badge follows the `test.yml` workflow status
+- Handbook pages (README, `docs/*`, `SECURITY.md`, `CONTRIBUTING.md`, and `.github/copilot-instructions.md`) describe 1.13.0 and the Obsidian publisher
+- Corrected drift against the code: `scan.ignore` (there is no `scan.exclude`), `publish` has no `--dry-run`, CI installs with `npm ci`, the publish workflow is `repolens.yml`, diagrams are Unicode, and local files use two filename schemes. `outputs.pages` stays the frozen allowlist; the generator still emits the full 17-document plan unless `documentation.sections` or `features` filters it
 
 ## 1.12.4
 

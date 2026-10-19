@@ -127,7 +127,7 @@ Here are real examples of what we track (sanitized):
 {
   "error": "ENOENT: no such file or directory",
   "command": "publish",
-  "version": "1.5.0",
+  "version": "1.13.0",
   "platform": "darwin",
   "nodeVersion": "v20.11.0"
 }
@@ -143,7 +143,7 @@ Here are real examples of what we track (sanitized):
   "moduleCount": 42,
   "aiEnabled": true,
   "aiProvider": "openai",
-  "publishers": ["notion", "markdown"],
+  "publishers": ["notion", "markdown", "obsidian"],
   "platform": "linux",
   "nodeVersion": "v20.11.0"
 }

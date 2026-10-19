@@ -2,8 +2,8 @@
 
 Ensure RepoLens is properly configured and secured before deploying to production. This checklist helps teams validate their setup and avoid common pitfalls.
 
-**Version:** 1.5.0  
-**Last Updated:** March 2026
+**Version:** 1.13.0  
+**Last Updated:** October 2026
 
 ---
 
@@ -19,7 +19,7 @@ Ensure RepoLens is properly configured and secured before deploying to productio
 ### ✅ Package Installation
 
 - [ ] Install RepoLens: `npx @chappibunny/repolens@latest --version`
-- [ ] Run version check: Should display `1.5.0` or higher
+- [ ] Run version check: Should display `1.13.0` or higher
 - [ ] Check for updates: Tool notifies if newer version available
 
 ---
@@ -48,7 +48,7 @@ npx @chappibunny/repolens@latest doctor
 **Doctor validates:**
 - [ ] `.repolens.yml` exists and is valid YAML
 - [ ] `configVersion: 1` present
-- [ ] At least one publisher configured (notion, markdown, or confluence)
+- [ ] At least one publisher configured (`notion`, `confluence`, `github_wiki`, `obsidian`, or `markdown`)
 - [ ] Required scan patterns specified
 - [ ] `.git` directory present
 
@@ -63,7 +63,7 @@ scan:
     - "lib/**/*.{js,ts}"
     - "app/**/*.{js,ts,jsx,tsx}"
   
-  exclude:
+  ignore:
     - "**/node_modules/**"
     - "**/dist/**"
     - "**/build/**"
@@ -74,8 +74,8 @@ scan:
 
 **Verify:**
 - [ ] Patterns match your project structure
-- [ ] Exclude patterns prevent scanning generated code
-- [ ] Test locally: `npx @chappibunny/repolens@latest publish --dry-run`
+- [ ] `scan.ignore` patterns prevent scanning generated code
+- [ ] Test locally with `npx @chappibunny/repolens@latest publish` (this writes files; `publish` has no `--dry-run`)
 
 ---
 
@@ -219,12 +219,13 @@ Edit `.repolens.yml`:
 
 ```yaml
 notion:
-  workspaceId: ${{ secrets.NOTION_WORKSPACE_ID }}
   branches:
     - main
     - production
     # Add other branches that should publish
 ```
+
+Notion credentials are environment variables (`NOTION_TOKEN`, `NOTION_PARENT_PAGE_ID`), not fields in `.repolens.yml`. There is no `workspaceId` key.
 
 **Purpose:** Prevents feature branches from overwriting production Notion pages.
 
@@ -235,7 +236,7 @@ notion:
 
 ### ✅ Caching Configuration
 
-Workflow should include:
+`repolens init` does not add a cache step. Add one yourself if you want it:
 
 ```yaml
 - name: Cache RepoLens artifacts
@@ -265,7 +266,7 @@ Navigate to: **Actions tab** → Select workflow run
 - [ ] Workflow completes successfully (green checkmark)
 - [ ] Scan step finds expected file count
 - [ ] Render step generates documents without errors
-- [ ] Publish step updates Notion/Confluence/Markdown successfully
+- [ ] Publish step updates Notion, Confluence, GitHub Wiki, Obsidian, and/or Markdown as configured
 - [ ] Time: <2 min for deterministic, <5 min with AI
 
 ### ✅ Error Tracking (if telemetry enabled)
@@ -283,23 +284,21 @@ Sentry Dashboard: https://sentry.io/organizations/YOUR_ORG/projects/
 **Validate:**
 - [ ] Pages created in correct workspace
 - [ ] Titles match expected format (`[branch]` suffix for non-main)
-- [ ] Content includes all 15 document sections
+- [ ] Content includes the documents you enabled (17 by default)
 - [ ] Diagrams render properly (Unicode box-drawing)
 - [ ] Updates don't create duplicates
 
 ### ✅ Markdown Output Verification
 
 ```bash
-ls -la .repolens/docs/
+ls -la .repolens/
 ```
 
-**Expected files:**
-- [ ] `system-overview.md`
-- [ ] `module-catalog.md`
-- [ ] `api-surface.md`
-- [ ] `route-map.md`
-- [ ] `architecture-diff.md` (if changes detected)
-- [ ] `system-map.md` (ASCII dependency diagram)
+**Expected files** (in `.repolens/`, not `.repolens/docs/`):
+- [ ] Numbered set, for example `00-executive-summary.md` and `01-system-overview.md` through `16-code-health.md`
+- [ ] Snake_case set when the Markdown publisher runs, for example `system_overview.md` and `architecture_diff.md`
+- [ ] `artifacts/` when artifact output is enabled
+- [ ] Obsidian notes in the vault folder (`RepoLens.md` plus one note per document), not under `.repolens/`
 
 ---
 
@@ -308,15 +307,13 @@ ls -la .repolens/docs/
 ### ✅ Local Testing
 
 ```bash
-# Dry run (no actual publishing)
-npx @chappibunny/repolens@latest publish --dry-run
-
-# Full local run
+# Full local run. publish has no --dry-run flag.
+# migrate --dry-run previews workflow migration only.
 npx @chappibunny/repolens@latest publish
 
 # Check generated artifacts
 ls -R .repolens/
-cat .repolens/docs/system-overview.md
+cat .repolens/01-system-overview.md
 ```
 
 **Verify:**
@@ -346,7 +343,7 @@ cat .repolens/docs/system-overview.md
 - [ ] **Total:** <2 min (deterministic), <5 min (with AI)
 
 **If exceeding limits:**
-- Check `scan.exclude` patterns
+- Check `scan.ignore` patterns
 - Reduce AI model complexity
 - Enable GitHub Actions caching
 
@@ -371,7 +368,7 @@ cat .repolens/docs/system-overview.md
 ### ✅ Quarterly
 
 - [ ] Audit GitHub Secrets: Ensure tokens not expired
-- [ ] Review `.repolens.yml`: Update exclude patterns as codebase grows
+- [ ] Review `.repolens.yml`: Update `scan.ignore` patterns as the codebase grows
 - [ ] Test disaster recovery: Delete Notion pages, re-run publish
 - [ ] Update team documentation: Reflect any config changes
 
@@ -381,7 +378,7 @@ cat .repolens/docs/system-overview.md
 
 ### For Large Repositories (>5,000 files)
 
-- [ ] Add aggressive `scan.exclude` patterns
+- [ ] Add aggressive `scan.ignore` patterns
 - [ ] Consider splitting into multiple configs (monorepo support)
 - [ ] Increase GitHub Actions timeout (default: 10 min)
 - [ ] Use self-hosted runners for faster execution
@@ -455,7 +452,7 @@ Before declaring "production ready":
 
 **Approved by:** _______________  
 **Date:** _______________  
-**RepoLens Version:** 1.5.0
+**RepoLens Version:** 1.13.0
 
 ---
 

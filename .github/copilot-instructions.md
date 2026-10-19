@@ -15,12 +15,12 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.11.1  
+**Version:** 1.13.0  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
 **Author:** Charl van Zyl  
-**Last Audit:** April 2026
+**Last Audit:** October 2026
 
 ## Core Value Proposition
 
@@ -29,8 +29,8 @@ RepoLens transforms repositories into documented, understandable systems that se
 2. **Analyzing** - Framework/tool detection + domain inference + flow analysis
 3. **Context Building** - Structured artifacts for AI synthesis (no raw code)
 4. **AI Synthesis** (Optional) - Natural language explanations for non-technical readers
-5. **Rendering** - 15 audience-aware documents (technical + non-technical)
-6. **Publishing** - Multi-output delivery (Notion + Confluence + GitHub Wiki + Markdown) with branch-aware safety
+5. **Rendering** - 17 documents (1 non-technical, 8 mixed, 8 technical in `src/ai/document-plan.js`)
+6. **Publishing** - Notion, Confluence, GitHub Wiki, Obsidian, and Markdown, with branch filters on the remote publishers and on Obsidian
 
 ## Architecture
 
@@ -58,6 +58,7 @@ src/
     typescript-analyzer.js # TypeScript type graph analysis
     dependency-graph.js   # Import graph with cycle detection
     drift-detector.js     # Architecture drift detection
+    jsdoc-analyzer.js     # JSDoc/TSDoc extraction for the API surface
     monorepo-detector.js  # Monorepo workspace detection (npm/yarn/pnpm/Lerna)
     codeowners.js         # CODEOWNERS file parser + ownership mapping
     security-patterns.js  # Security anti-pattern detection (eval, XSS, SQL injection, CWE classification)
@@ -80,6 +81,7 @@ src/
     notion.js             # Notion API integration
     confluence.js         # Confluence REST API integration (storage format)
     github-wiki.js        # GitHub Wiki publisher (git-based)
+    obsidian.js           # Obsidian vault publisher (local files, wikilinks, no network)
     publish.js            # Publishing pipeline + diagram URL validation
   renderers/
     render.js             # System overview, module catalog, API surface, route map (with truncation warnings)
@@ -98,6 +100,10 @@ src/
     secrets.js            # Secret detection & sanitization
     telemetry.js          # Opt-in error tracking + performance timers
     doc-cache.js          # Hash-based document cache for skip-unchanged publishing
+    safe-path.js          # Output and page-name containment
+    github-repo.js        # owner/name validation
+    interactive.js        # TTY prompts
+    yaml.js               # Size-capped YAML parsing
   plugins/
     loader.js             # Plugin resolution and dynamic import
     manager.js            # Plugin registry and lifecycle orchestration
@@ -115,6 +121,7 @@ tests/                    # Vitest test suite
   extended-analysis.test.js # Extended analysis tests (GraphQL, TS, deps, drift)
   plugins.test.js         # Plugin system tests (loader, manager, config)
   github-wiki.test.js     # GitHub Wiki publisher tests
+  obsidian.test.js        # Obsidian vault publisher tests
   publisher-parsers.test.js # Publisher parser tests (Notion, Confluence)
   watch.test.js           # Watch mode tests (real filesystem events, debounce, node_modules filter)
   http-integration.test.js # Mock HTTP server integration tests (retry, timeout, headers, publishers)
@@ -168,7 +175,7 @@ scripts/                  # Helper scripts
 ### AI-Assisted Documentation Intelligence
 - **Philosophy**: Not a "flashy code intelligence toy" — a documentation intelligence system for engineers AND stakeholders
 - **Two Modes**: Deterministic (default, free, fast) or AI-Enhanced (optional, provider-agnostic)
-- **17 Document Types**: 3 non-technical, 4 mixed-audience, 4 technical, 6 extended-analysis
+- **17 Document Types**: 1 non-technical, 8 mixed, 8 technical. Six are deterministic extended analysis (GraphQL, type graph, dependency graph, drift, security hotspots, code health). Eleven call the model when AI is on (`ai: true` or `ai: "hybrid"`)
 - **Zero Hallucination**: AI receives only structured JSON context, never raw code
 - **Context Size Limiting**: `truncateContext()` enforces 12K char cap with progressive field pruning (routes→15, domains→8, modules→10)
 - **Strict Prompts**: Word limits, required sections, concrete prose, no speculation
@@ -181,8 +188,10 @@ scripts/                  # Helper scripts
 - **Notion**: Create/update pages with branch-aware namespacing; relative link rewriting (strips `./` and `../` links)
 - **Confluence**: Atlassian Cloud REST API v1, storage format (HTML-like), Basic Auth (email + API token); CDATA-safe code blocks; relative link rewriting
 - **GitHub Wiki**: Audience-grouped Home page, grouped sidebar, page metadata headers, `master` branch push for compatibility
-- **Markdown**: Write to `.repolens/` directory; all 17 document types mapped to filenames
+- **Markdown**: Snake_case files in `.repolens/` (`executive_summary.md`, `architecture_diff.md` for `arch_diff`). Also runs when `notion` is not in `publishers`
+- **Obsidian**: Local vault folder only. YAML frontmatter, wikilinks, index note `RepoLens.md`, idempotent writes, path containment. No credentials and no network. Wikilink scan is linear: label ≤500 chars with no brackets or newlines, target ≤2048 chars with no parentheses or whitespace
 - **Discord**: Rich embed notifications via webhooks (publish metrics, coverage stats)
+- **Numbered set**: `publish` always writes `00-executive-summary.md` … `16-code-health.md` via `writeDocumentSet`, separate from the Markdown publisher's names
 
 ### Business Domain Inference
 - **Purpose**: Map code structure to business functions
@@ -253,8 +262,8 @@ scripts/                  # Helper scripts
 ### Dependencies
 - **Runtime**: dotenv, fast-glob, js-yaml (built-in `fetch`; Node >= 18)
 - **Optional**: @sentry/node (telemetry; CLI works when it is absent)
-- **Optional**: @mermaid-js/mermaid-cli (50MB, interactive install)
 - **Dev**: vitest
+- Mermaid CLI is not a dependency. Diagrams are Unicode
 - Keep dependencies minimal - favor Node.js built-ins
 
 ### Error Handling
@@ -273,8 +282,9 @@ scripts/                  # Helper scripts
 - Config file: `.repolens.yml` (auto-discovered from cwd or parent directories)
 - YAML format with js-yaml parser
 - Schema version: `configVersion: 1` (for future migrations)
-- Supported publishers: `notion`, `markdown`, `confluence`, `github_wiki`
-- Supported page keys: `system_overview`, `module_catalog`, `api_surface`, `arch_diff`, `route_map`, `system_map`, `executive_summary`, `business_domains`, `architecture_overview`, `data_flows`, `change_impact`, `developer_onboarding`, `security_hotspots`, `code_health`
+- Supported publishers: `notion`, `markdown`, `confluence`, `github_wiki`, `obsidian`
+- Supported `outputs.pages` keys (schema v1 only): `system_overview`, `module_catalog`, `api_surface`, `arch_diff`, `route_map`, `system_map`, `executive_summary`, `business_domains`, `architecture_overview`, `data_flows`, `change_impact`, `developer_onboarding`
+- The generator also emits `graphql_schema`, `type_graph`, `dependency_graph`, `architecture_drift`, `security_hotspots`, and `code_health`. Those keys are rejected inside `outputs.pages`. Filter generation with `documentation.sections` or `features`
 
 ### Async/Await
 - Use async/await throughout (not callbacks or raw promises)
@@ -301,25 +311,34 @@ scripts/                  # Helper scripts
    - **Notion**: Create/update pages via Notion API
    - **Confluence**: Create/update pages via REST API v1 (storage format with code block handling)
    - **GitHub Wiki**: Clone wiki repo, write audience-grouped pages, push to `master` branch
-   - **Markdown**: Write to `.repolens/` directory
+   - **Markdown**: Snake_case files in `.repolens/` (also when `notion` is not listed)
+   - **Obsidian**: Notes inside `obsidian.vault` / `obsidian.folder` when `obsidian` is listed
+   - **Numbered files**: `00-` … `16-` in `documentation.output_dir` (default `.repolens/`) on every publish
 4. **Notify**: Send Discord webhook with publish metrics
 5. **Deliver**: Optionally post PR comments with diffs
 
 ## CI/CD Workflows
 
-### Publish Documentation (`publish-docs.yml`)
-- **Trigger**: Push to any branch + manual dispatch
-- **Jobs**: Security audit → Publish docs
-- **Install**: `npm install` (NOT `npm ci` — avoids rollup optional dep issues on Linux)
-- **Run**: `node bin/repolens.js publish` (uses local code, not npx from npm)
-- **Env**: Notion, Confluence, Discord, AI secrets from GitHub Actions secrets
+### Publish Documentation (`.github/workflows/repolens.yml`)
+- **Trigger**: Push to `main`, plus `workflow_dispatch`. Not pull requests. Dependabot pushes do not receive secrets
+- **Jobs**: `security`, `test` (Node 22), then `publish` (`needs` both). The publish job uses `contents: write` because wiki pushes use that token
+- **Install**: `npm ci` against the committed lockfile
+- **Run**: `node bin/repolens.js publish` (this repository's own workflow uses local code)
+- **Env**: Notion, Confluence, Discord, and AI secrets from GitHub Actions secrets
+
+### Tests (`.github/workflows/test.yml`)
+- **Trigger**: Pull requests, and pushes to every branch. `repolens.yml` also runs the suite on `main` before publish
+- **Install**: `npm ci`
+- **Node**: 18, 20, and 22. Node 18 runs `scripts/node18-runtime.js` because Vitest 4 needs Node 20.12 (`util.styleText`)
 
 ### Release (`release.yml`)
-- **Trigger**: Push of `v*` tags
-- **Jobs**: Security audit → Release (test, pack, GitHub Release, npm publish)
-- **Install**: `npm install` (NOT `npm ci`)
+- **Trigger**: Push of `v*` tags. That tag is what publishes to npm. Do not publish by hand from a feature branch
+- **Jobs**: Security audit, then release (test, pack, GitHub Release, `npm publish --provenance`)
+- **Install**: `npm ci`
 - **npm Publish**: Uses `NODE_AUTH_TOKEN` from `NPM_TOKEN` secret
-- **Important**: Always use `npm install` instead of `npm ci` in CI, AND delete `package-lock.json` before install — `npm install` with a macOS-generated lockfile still fails to resolve platform-specific optional dependencies like `@rollup/rollup-linux-x64-gnu` on Linux runners
+- **Lockfile**: Regenerate with npm 11 (`npx npm@11 install`) when dependencies change. Do not delete `package-lock.json` in CI. npm 10's fresh resolve hits the Vitest 4.1 `edgesOut` crash and can omit Rolldown's Linux packages
+
+`repolens init` scaffolds a user workflow named `.github/workflows/repolens.yml` that runs on push to `main` and on `pull_request`, with `contents: read` and `pull-requests: write`, and calls `npx @chappibunny/repolens@latest publish`. That file is not this repository's publish workflow.
 
 ## Git Integration
 
@@ -333,12 +352,12 @@ scripts/                  # Helper scripts
 2. **Idempotent Operations**: Publishing should be safe to run multiple times
 3. **Clear Logging**: Use logger for all user-facing messages with context
 4. **Validation First**: Run validation (`doctor` command) before expensive operations
-5. **Graceful Degradation**: Continue on non-critical failures, log warnings (e.g., mermaid-cli optional)
+5. **Graceful Degradation**: Continue on non-critical failures and log warnings (AI fallback, partial publisher failure)
 6. **Exit Codes**: 0 for success, 1 for errors, 2 for validation failures
 7. **Performance Guardrails**: Warn at 10k files, fail at 50k files
 8. **Branch Safety**: Default to safe behavior (publish all branches) with opt-in filtering
 9. **Secret Safety**: Never log or embed secrets — use `src/utils/secrets.js` for detection
-10. **CI Install**: Always use `npm install` (not `npm ci`) in GitHub Actions workflows
+10. **CI Install**: Use `npm ci` with the committed lockfile
 
 ## Development Workflow
 
@@ -446,7 +465,7 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - ❌ console.log (use logger utilities)
 - ❌ Large dependencies (keep bundle small, ~4MB limit)
 - ❌ Breaking changes to config schema without migration and `configVersion` bump
-- ❌ `npm ci` in CI workflows (use `npm install` — see CI/CD section)
+- ❌ Deleting `package-lock.json` in CI or replacing `npm ci` with a fresh `npm install`
 - ❌ `npx @chappibunny/repolens@latest` in CI (use `node bin/repolens.js` for local code)
 
 ## Future Enhancements
@@ -455,11 +474,13 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - Function-level symbol export analysis
 - Test coverage integration (coverage % per module)
 - Breaking change detection (export signature comparison)
-- Obsidian vault publisher
-- VS Code extension for architecture visualization
 - Cross-repository architecture analysis
+- GitHub App, Slack notifications, custom webhooks
+- Interactive HTML output and ADR generation
 
 ### Shipped
+- ~~Obsidian vault publisher~~ ✅ Shipped in v1.13.0
+- ~~VS Code extension~~ ✅ On the Marketplace (`CHAPIBUNNY.repolens-architecture`)
 - ~~Complexity metrics & code health scoring~~ ✅ Shipped in v1.12.0
 - ~~Security pattern detection (eval, XSS, SQL injection, CWE classification)~~ ✅ Shipped in v1.12.0
 - ~~JSDoc/TSDoc extraction for API Surface enrichment~~ ✅ Shipped in v1.12.0

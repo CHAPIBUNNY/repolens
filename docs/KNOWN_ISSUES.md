@@ -2,8 +2,8 @@
 
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
-**Last Updated:** June 2025  
-**Version:** 1.5.0
+**Last Updated:** October 2026  
+**Version:** 1.13.0
 
 ---
 
@@ -36,7 +36,7 @@ These bugs were discovered in production and have been fixed:
 ### Current Limitations
 
 #### Manual Review Still Recommended
-**Issue:** While migration is highly reliable (185 tests passing), edge cases may exist in complex workflows.
+**Issue:** Migration covers the legacy workflow patterns it was built for. Unusual multi-step workflows can still need a manual pass. `npm test` is the regression check; this guide does not pin a test total.
 
 **Workaround:** 
 1. Run `npx @chappibunny/repolens migrate --dry-run` first
@@ -95,7 +95,7 @@ notion:
 **Workaround:** Filter modules by domain in `.repolens.yml`:
 ```yaml
 scan:
-  exclude:
+  ignore:
     - "**/*.test.js"
     - "**/fixtures/**"
 ```
@@ -113,7 +113,7 @@ scan:
 
 **Workaround:**
 1. Upgrade to OpenAI paid tier, or
-2. Use local model (Ollama) with `AI_PROVIDER=ollama`, or
+2. Point `REPOLENS_AI_PROVIDER=openai_compatible` and `REPOLENS_AI_BASE_URL` at a local server (Ollama, LM Studio), or
 3. Run without AI enhancement (deterministic mode, no API key required)
 
 #### Anthropic Context Window Limits
@@ -126,15 +126,7 @@ scan:
 #### Azure OpenAI Availability
 **Issue:** Azure OpenAI requires separate deployment and endpoint configuration.
 
-**Status:** Supported but requires manual setup (see README.md).
-
-**Configuration:**
-```bash
-AI_PROVIDER=azure
-AZURE_OPENAI_API_KEY=your-key
-AZURE_OPENAI_ENDPOINT=https://your-instance.openai.azure.com/
-AZURE_OPENAI_DEPLOYMENT_NAME=your-deployment
-```
+**Status:** Supported as an OpenAI-compatible endpoint. Set `REPOLENS_AI_PROVIDER=azure` (or `openai_compatible`) and `REPOLENS_AI_BASE_URL` to your deployment URL. The API key is `REPOLENS_AI_API_KEY`. `AZURE_OPENAI_*` names are not read as configuration.
 
 ### Hallucination Prevention
 
@@ -168,11 +160,11 @@ npx @chappibunny/repolens@latest publish --config ../shared/.repolens.yml
 ```
 
 #### YAML Schema Version Compatibility
-**Issue:** `configVersion: 1` required in `.repolens.yml`, but no migration tool exists yet for future version bumps.
+**Issue:** `.repolens.yml` must set `configVersion: 1`. Schema v1 is frozen. New publishers, including Obsidian in 1.13.0, are optional fields and do not bump `configVersion`.
 
-**Status:** Pre-1.0 schema changes may require manual migration.
+**Status:** `repolens migrate` adds `configVersion: 1` to legacy configs. A future breaking schema will be a new `configVersion` and a major release.
 
-**Best Practice:** Pin to specific versions in package.json if strict stability required.
+**Best Practice:** Pin the npm version if you need a known release. Optional blocks such as `obsidian` can be added without a migration.
 
 ---
 
@@ -234,10 +226,10 @@ permissions:
 - Warning at 10k files
 - Hard failure at 50k files
 
-**Workaround:** Use `.repolens.yml` exclude patterns:
+**Workaround:** Narrow `scan.ignore` (the schema key is `ignore`, not `exclude`):
 ```yaml
 scan:
-  exclude:
+  ignore:
     - "**/node_modules/**"
     - "**/dist/**"
     - "**/build/**"
@@ -266,10 +258,12 @@ scan:
 
 ## 🔮 Planned Improvements
 
+### Shipped since this list was last current
+- [x] Obsidian vault publisher (1.13.0)
+- [x] VS Code extension ([Marketplace](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture))
+
 ### Future
-- [ ] Obsidian vault publisher
 - [ ] Cross-repository architecture analysis
-- [ ] VS Code extension for architecture visualization
 - [ ] Slack notifications
 - [ ] Custom webhook support
 

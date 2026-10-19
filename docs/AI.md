@@ -1,6 +1,6 @@
 # AI-Enhanced Documentation
 
-As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is available in the current version (v1.4.0).
+As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is in the current version (v1.13.0).
 
 ## Overview
 
@@ -15,34 +15,37 @@ This approach prevents hallucination while providing rich, readable documentatio
 
 ## Document Structure
 
-RepoLens generates up to 15 documents:
+RepoLens generates 17 documents by default:
 
-### For Non-Technical Audiences
+Filenames below are the numbered set written by `writeDocumentSet`. The Markdown publisher writes a second snake_case copy (`executive_summary.md`, and `architecture_diff.md` for the change-impact key).
 
-- **00-executive-summary.md** - What the system does, who it serves, key risks
-- **02-business-domains.md** - Codebase structure in business language
+### Non-technical
 
-### For Mixed Audiences
+- **00-executive-summary.md** - What the system does, who it serves, key risks (`ai: true`)
+
+### Mixed audience
 
 - **01-system-overview.md** - High-level technical snapshot
+- **02-business-domains.md** - Codebase structure in business language
 - **05-route-map.md** - User-facing pages and capabilities
 - **07-data-flows.md** - How information moves through the system
-- **08-change-impact.md** - PR/diff analysis in plain language
-- **09-system-map.md** - Visual diagram with explanation
+- **08-change-impact.md** - PR/diff analysis in plain language (document key `arch_diff`)
+- **09-system-map.md** - Unicode diagram with explanation
+- **14-architecture-drift.md** - Structural changes tracked against a baseline
+- **16-code-health.md** - Cyclomatic complexity and an A–F health score
 
-### For Technical Audiences
+### Technical
 
 - **03-architecture-overview.md** - Layered architecture analysis
 - **04-module-catalog.md** - Complete code module inventory
 - **06-api-surface.md** - Backend API documentation
 - **10-developer-onboarding.md** - Quick start for new engineers
-
-### Extended Analysis (New in v0.8.0)
-
 - **11-graphql-schema.md** - GraphQL types, queries, mutations, and resolvers
 - **12-type-graph.md** - TypeScript interfaces, classes, and type relationships
 - **13-dependency-graph.md** - Import analysis with circular dependency detection
-- **14-architecture-drift.md** - Structural changes tracked against baseline
+- **15-security-hotspots.md** - Static anti-pattern findings with CWE ids
+
+GraphQL, the type graph, the dependency graph, architecture drift, security hotspots, and code health are deterministic (`ai: false`). The other eleven documents call the model when AI is enabled.
 
 ## Enabling AI Features
 
@@ -110,7 +113,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-> **Free tier limits:** ~150 requests/day for gpt-4o-mini. RepoLens makes ~15 AI calls per run, so this is more than sufficient.
+> **Free tier limits:** about 150 requests/day for gpt-4o-mini. A default run sends one synthesis per AI-enabled document (11 of the 17).
 
 ### OpenAI
 

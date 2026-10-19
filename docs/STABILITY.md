@@ -48,7 +48,7 @@ RepoLens follows semantic versioning (semver):
 | `1` | Runtime error (scan failure, publish failure, etc.) |
 | `2` | Validation error (invalid config, missing files, etc.) |
 
-Unknown commands produce exit code `1`. Unknown flags produce exit code `1`.
+Unknown commands produce exit code `1`. Unknown flags, and missing values for `--config` or `--target`, produce exit code `2`. `repolens doctor` exits `2` when it finds a blocking setup problem. `--dry-run` applies to `migrate` only. `publish` does not accept it.
 
 ## Configuration Schema
 
@@ -99,6 +99,13 @@ outputs:
 | `github_wiki.branches` | string[] | Branch filter for GitHub Wiki publishing |
 | `github_wiki.sidebar` | boolean | Generate `_Sidebar.md` (default: `true`) |
 | `github_wiki.footer` | boolean | Generate `_Footer.md` (default: `true`) |
+| `obsidian` | object | Obsidian vault publisher configuration (local files, no network) |
+| `obsidian.vault` | string | Vault path. Absolute, or relative to the repository |
+| `obsidian.folder` | string | Folder inside the vault (default: `RepoLens/<project>`) |
+| `obsidian.branches` | string[] | Branch filter for Obsidian publishing |
+| `obsidian.index` | boolean | Write an index note (default: `true`) |
+| `obsidian.frontmatter` | boolean | YAML frontmatter on each note (default: `true`) |
+| `obsidian.wikilinks` | boolean | Wikilinks and title filenames (default: `true`). Inline links only, with bounded label and target lengths |
 | `discord` | object | Discord notification configuration |
 | `discord.enabled` | boolean | Enable/disable Discord notifications |
 | `discord.notifyOn` | string | `"always"`, `"significant"`, or `"never"` |
@@ -118,11 +125,15 @@ outputs:
 
 ### Supported Page Keys
 
+These are the only keys `outputs.pages` accepts on schema v1:
+
 ```
 system_overview, module_catalog, api_surface, arch_diff,
 route_map, system_map, executive_summary, business_domains,
 architecture_overview, data_flows, change_impact, developer_onboarding
 ```
+
+The generator also emits `graphql_schema`, `type_graph`, `dependency_graph`, `architecture_drift`, `security_hotspots`, and `code_health`. Those keys are published. Putting them in `outputs.pages` is a schema validation error until a future schema version. Which documents run is controlled by `documentation.sections` or `features`, not by `outputs.pages`. See [CONFIGURATION.md](CONFIGURATION.md).
 
 ### Domains Format
 
@@ -225,7 +236,7 @@ hooks: {
 | `CONFLUENCE_EMAIL` | Confluence publishing |
 | `CONFLUENCE_API_TOKEN` | Confluence publishing |
 | `CONFLUENCE_SPACE_KEY` | Confluence publishing |
-| `CONFLUENCE_PARENT_PAGE_ID` | Confluence publishing |
+| `CONFLUENCE_PARENT_PAGE_ID` | Confluence nesting. `doctor` warns when it is unset. Publish still runs and creates pages at the space root |
 | `DISCORD_WEBHOOK_URL` | Discord notifications |
 
 ### AI
@@ -253,10 +264,11 @@ AI settings can also be set in `.repolens.yml` under `ai.*`. Environment variabl
 
 ### Documentation Files
 
-- `publish` always generates Markdown files in the output directory (default: `.repolens/`)
-- Each enabled page key produces one `.md` file
-- File format is standard Markdown with tables, headers, and code blocks
-- Artifacts (if enabled) are written to `.repolens/artifacts/`
+- `publish` writes the active document plan into `documentation.output_dir` (default: `.repolens/`) using numbered names from `00-executive-summary.md` through `16-code-health.md`
+- The Markdown publisher also writes snake_case names (`executive_summary.md`, `architecture_diff.md`) into `.repolens/`. It runs when `markdown` is listed, and when `notion` is not listed
+- The Obsidian publisher writes title-based notes inside the configured vault folder when `obsidian` is listed and `wikilinks` is on
+- File format is standard Markdown with tables, headers, and code blocks. Diagrams are Unicode, not Mermaid
+- Artifacts (if enabled) are written to `<output_dir>/artifacts/`
 
 ### Backwards Compatibility
 

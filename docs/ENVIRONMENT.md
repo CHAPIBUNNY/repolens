@@ -24,6 +24,10 @@
 |----------|----------|-------------|
 | `DISCORD_WEBHOOK_URL` | No | Discord webhook URL for team notifications |
 
+## Obsidian Publisher
+
+Obsidian publishing does not use environment variables. Set `obsidian.vault` and an optional `obsidian.folder` in `.repolens.yml`. RepoLens only writes files inside that vault.
+
 ## GitHub Wiki Publisher
 
 | Variable | Required | Description |

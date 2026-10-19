@@ -204,6 +204,14 @@ export async function runDoctor(targetDir = process.cwd()) {
       );
     }
 
+    if (cfg.publishers.includes("obsidian")) {
+      if (typeof cfg.obsidian?.vault === "string" && cfg.obsidian.vault.trim() !== "") {
+        ok(`Obsidian vault configured (${cfg.obsidian.vault}) — local publisher, no credentials`);
+      } else {
+        warn("obsidian.vault is not set — required to publish into an Obsidian vault");
+      }
+    }
+
     if (cfg.ai?.enabled || process.env.REPOLENS_AI_ENABLED === "true") {
       const aiProvider = process.env.REPOLENS_AI_PROVIDER || "openai_compatible";
       if (aiProvider === "github") {
@@ -218,7 +226,12 @@ export async function runDoctor(targetDir = process.cwd()) {
     }
 
     if (envChecks.length === 0) {
-      ok("No publisher-specific env vars required (Markdown only)");
+      const localPublishers = [];
+      if (cfg.publishers.includes("markdown")) localPublishers.push("Markdown");
+      if (cfg.publishers.includes("obsidian")) localPublishers.push("Obsidian");
+      ok(localPublishers.length > 0
+        ? `No publisher-specific env vars required (${localPublishers.join(" and ")} only)`
+        : "No publisher-specific env vars required");
     }
 
     for (const check of envChecks) {

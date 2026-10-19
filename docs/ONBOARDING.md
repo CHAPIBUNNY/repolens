@@ -1,6 +1,6 @@
 # RepoLens — Onboarding Guide
 
-Complete step-by-step setup for RepoLens: publishers, AI enhancement, Notion, Confluence, GitHub Wiki, Discord notifications, and CI/CD automation.
+Complete step-by-step setup for RepoLens 1.13.0: publishers (Notion, Confluence, GitHub Wiki, Obsidian, Markdown), AI enhancement, Discord notifications, and CI/CD automation.
 
 > **Quick start:** For a 60-second setup, see the [Quick Start](README.md#-quick-start-60-seconds) in the README.
 
@@ -56,7 +56,7 @@ publishers:
 publishers:
   - confluence
 ```
-Documentation lands in `.repolens/` directory. Commit these files or ignore them.
+Confluence pages are created in the space. Local `.repolens/` files are still written, because the Markdown publisher also runs when `notion` is not in the list.
 
 **Notion + Markdown** (recommended):
 ```yaml
@@ -79,9 +79,11 @@ Docs published to Confluence for enterprise teams, plus local Markdown backups.
 publishers:
   - notion
   - confluence
+  - github_wiki
+  - obsidian
   - markdown
 ```
-Maximum visibility: Notion for async collaboration, Confluence for enterprise docs, Markdown for local backups.
+Notion and Confluence for shared docs, GitHub Wiki beside the repo, Obsidian in a local vault, and Markdown files under `.repolens/`.
 
 **GitHub Wiki** (ideal for open source):
 ```yaml
@@ -90,6 +92,18 @@ publishers:
   - markdown
 ```
 Docs live alongside your code — accessible from the repo's Wiki tab. Requires `GITHUB_TOKEN`.
+
+**Obsidian vault** (local notes, no API keys):
+```yaml
+publishers:
+  - obsidian
+  - markdown
+
+obsidian:
+  vault: "/path/to/vault"     # absolute, or relative to the repo
+  folder: "RepoLens/my-app"   # created inside the vault if missing
+```
+Each publish rewrites notes in that folder with YAML frontmatter and `[[wikilinks]]`. Unchanged notes are left untouched. Files you added yourself are not deleted.
 
 ---
 
@@ -256,6 +270,14 @@ notion:
 confluence:
   branches:
     - main
+
+obsidian:
+  branches:
+    - main
+
+github_wiki:
+  branches:
+    - main
 ```
 
 **Options:**
@@ -263,7 +285,7 @@ confluence:
 - `branches: [main, staging, release/*]` — Multiple branches with glob support
 - Omit `branches` entirely — All branches publish (may cause conflicts)
 
-Markdown publisher always runs on all branches (local files don't conflict).
+The Markdown publisher ignores branch filters. It also runs when `notion` is absent from `publishers`, even if you listed only `obsidian`, `confluence`, or `github_wiki`. Obsidian, Notion, Confluence, and GitHub Wiki honor their own `branches` lists. An empty or missing list means every branch.
 
 ---
 
@@ -312,11 +334,11 @@ RepoLens 🔍
 [RepoLens] ✓ System Map published
 ```
 
-**Verify Markdown output:**
+**Verify local output:**
 ```bash
 ls .repolens/
-# system_overview.md  module_catalog.md  api_surface.md  route_map.md  system_map.md
 ```
+You should see numbered files (`00-executive-summary.md` … `16-code-health.md`) and, when the Markdown publisher runs, snake_case files (`system_overview.md`, `architecture_diff.md`). Obsidian notes are in the vault folder, not in `.repolens/`.
 
 **Verify Notion output:**
 Open your Notion parent page and confirm child pages were created (System Overview, Module Catalog, API Surface, Route Map, System Map — plus AI documents if enabled).
