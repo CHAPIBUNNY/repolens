@@ -103,7 +103,7 @@ REPOLENS_WORKSPACE=/path/to/repo npx @chappibunny/repolens mcp
 
 ## Registry
 
-`package.json` sets `mcpName` to `io.github.chapibunny/repolens`. The repo root `server.json` uses that same name and describes the npm package `@chappibunny/repolens` with stdio transport. `smithery.yaml` starts the same command for Smithery.
+`package.json` sets `mcpName` to `io.github.CHAPIBUNNY/repolens`. The repo root `server.json` uses that same name. The registry treats the GitHub username as case-sensitive, so the `CHAPIBUNNY` segment stays uppercase. The description is 100 characters or fewer. The package is `@chappibunny/repolens` with stdio transport. `smithery.yaml` starts the same command for Smithery.
 
 Publishing to the MCP Registry is a separate step after the npm package exists. This repository does not publish to npm or the registry from a pull request. The release notes in [RELEASE.md](RELEASE.md) list the `mcp-publisher` commands.
 

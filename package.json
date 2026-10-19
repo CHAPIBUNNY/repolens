@@ -1,7 +1,7 @@
 {
   "name": "@chappibunny/repolens",
-  "version": "1.14.0",
-  "mcpName": "io.github.chapibunny/repolens",
+  "version": "1.14.1",
+  "mcpName": "io.github.CHAPIBUNNY/repolens",
   "description": "AI-assisted documentation intelligence system for technical and non-technical audiences",
   "license": "MIT",
   "type": "module",

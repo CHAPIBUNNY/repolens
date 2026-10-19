@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.14.0  
+**Version:** 1.14.1  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -38,7 +38,7 @@ RepoLens transforms repositories into documented, understandable systems that se
 
 ```
 action.yml                # Composite action: RepoLens Architecture Docs
-server.json               # MCP Registry metadata (mcpName io.github.chapibunny/repolens)
+server.json               # MCP Registry metadata (mcpName io.github.CHAPIBUNNY/repolens)
 smithery.yaml             # Smithery stdio launch
 bin/
   repolens.js             # CLI entry point
@@ -494,6 +494,7 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - Interactive HTML output and ADR generation
 
 ### Shipped
+- ~~MCP registry name `io.github.CHAPIBUNNY/repolens`~~ ✅ Shipped in v1.14.1
 - ~~MCP server, GitHub Action, docs badge~~ ✅ Shipped in v1.14.0
 - ~~Obsidian vault publisher~~ ✅ Shipped in v1.13.0
 - ~~VS Code extension~~ ✅ On the Marketplace (`repolensdox.repolensdox`)

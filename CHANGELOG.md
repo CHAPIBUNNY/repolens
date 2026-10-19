@@ -2,6 +2,14 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.14.1
+
+### Registry name and publish skip
+
+- MCP Registry server name is `io.github.CHAPIBUNNY/repolens`. `package.json` `mcpName` and `server.json` `name` use that spelling. The registry matches the GitHub username case
+- `server.json` `description` is 100 characters or fewer
+- The release workflow skips `npm publish` when that exact version is already on the registry
+
 ## 1.14.0
 
 ### MCP server
@@ -14,7 +22,7 @@ AI coding tools can call RepoLens over stdio.
 - Every path stays inside the workspace root (`REPOLENS_WORKSPACE` or the working directory), using the existing `isInsideRoot` and `resolveOutputDir` helpers
 - Deterministic mode is the default and does not make network calls. Logs go to stderr so they do not corrupt the protocol
 - `get_architecture_diff` uses the existing git diff. `baseRef` compares against the working tree. `headRef` diffs two refs. Unsafe refs are rejected
-- `package.json` `mcpName` is `io.github.chapibunny/repolens`. Root `server.json` matches it for the MCP Registry. `smithery.yaml` starts `npx -y @chappibunny/repolens mcp`
+- `package.json` `mcpName` is `io.github.CHAPIBUNNY/repolens`. Root `server.json` matches it for the MCP Registry. `smithery.yaml` starts `npx -y @chappibunny/repolens mcp`
 - Client setup, including Cursor and VS Code install badges, is in `docs/MCP.md`
 
 ### GitHub Action

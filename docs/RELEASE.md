@@ -32,21 +32,21 @@ RepoLens uses semantic versioning:
 Listing the action is a GitHub UI step. A pull request cannot tick it, and this repository does not push the tag for you.
 
 1. Merge the release that contains the root `action.yml` (name, description, and `branding` are required).
-2. Publish `@chappibunny/repolens@1.14.0` to npm first. `action.yml` installs that exact version with `npx`.
+2. Publish `@chappibunny/repolens@1.14.1` to npm first. `action.yml` installs that exact version with `npx`. The publish step exits without publishing again when that version is already on npm.
 3. Open **Releases** → **Draft a new release** on https://github.com/CHAPIBUNNY/repolens/releases/new
-4. Choose or create the tag `v1.14.0` on the commit that contains `action.yml`.
+4. Choose or create the tag `v1.14.1` on the commit that contains `action.yml`.
 5. Tick **Publish this Action to the GitHub Marketplace**.
 6. Accept the GitHub Marketplace Developer Agreement if GitHub asks for it.
 7. Set the primary category. **Utilities** matches a documentation action. A secondary category is optional.
 8. Publish the release. The listing slug follows the action name, **RepoLens Architecture Docs**.
 
-The action is usable from `uses: CHAPIBUNNY/repolens@v1.14.0` as soon as the tag exists, including before the Marketplace review finishes.
+The action is usable from `uses: CHAPIBUNNY/repolens@v1.14.1` as soon as the tag exists, including before the Marketplace review finishes.
 
 ## MCP Registry
 
-The registry stores metadata. The npm package has to exist first, and its `mcpName` must equal `server.json` `name` (`io.github.chapibunny/repolens`).
+The registry stores metadata. The npm package has to exist first, and its `mcpName` must equal `server.json` `name` (`io.github.CHAPIBUNNY/repolens`).
 
-1. Publish `@chappibunny/repolens@1.14.0` to npm (`npm publish --access public`). Confirm https://www.npmjs.com/package/@chappibunny/repolens shows `1.14.0` and that the published `package.json` contains `"mcpName": "io.github.chapibunny/repolens"`.
+1. Publish `@chappibunny/repolens@1.14.1` to npm (`npm publish --access public`). Confirm https://www.npmjs.com/package/@chappibunny/repolens shows `1.14.1` and that the published `package.json` contains `"mcpName": "io.github.CHAPIBUNNY/repolens"`.
 2. Install the publisher CLI:
 
 ```bash
@@ -55,13 +55,13 @@ sudo mv mcp-publisher /usr/local/bin/
 mcp-publisher --help
 ```
 
-3. From a checkout that contains this repo's `server.json` (version `1.14.0`):
+3. From a checkout that contains this repo's `server.json` (version `1.14.1`):
 
 ```bash
 mcp-publisher login github
 ```
 
-4. Open the device URL, enter the code, and authorize the GitHub account that owns `CHAPIBUNNY`. The server name must start with `io.github.chapibunny/`.
+4. Open the device URL, enter the code, and authorize the GitHub account that owns `CHAPIBUNNY`. The server name must start with `io.github.CHAPIBUNNY/`.
 5. Publish:
 
 ```bash
@@ -71,10 +71,10 @@ mcp-publisher publish
 6. Confirm the listing:
 
 ```bash
-curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.chapibunny/repolens"
+curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.CHAPIBUNNY/repolens"
 ```
 
-The response should include `"name":"io.github.chapibunny/repolens"`. Smithery reads `smithery.yaml` from the default branch after it is pushed. It does not use `mcp-publisher`.
+The response should include `"name":"io.github.CHAPIBUNNY/repolens"`. Smithery reads `smithery.yaml` from the default branch after it is pushed. It does not use `mcp-publisher`.
 
 ## Example Patch Release
 
