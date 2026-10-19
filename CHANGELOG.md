@@ -2,6 +2,13 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.13.1
+
+### Docs
+
+- Docs alignment patch: README, CHANGELOG and docs/* point the VS Code extension at the `repolensdox.repolensdox` Marketplace listing (https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox)
+- npm package README now carries the new extension link
+
 ## 1.13.0
 
 ### Obsidian vault publisher
