@@ -13,12 +13,14 @@
 //     sidebar: true              # Generate _Sidebar.md (default: true)
 //     footer: true               # Generate _Footer.md (default: true)
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { info, warn } from "../utils/logger.js";
-import { getCurrentBranch, getBranchQualifiedTitle, normalizeBranchName } from "../utils/branch.js";
+import { getCurrentBranch, getBranchQualifiedTitle } from "../utils/branch.js";
+import { assertGitHubRepo } from "../utils/github-repo.js";
+import { isInsideRoot, safeFileName } from "../utils/safe-path.js";
 
 const PAGE_ORDER = [
   "executive_summary",
@@ -176,7 +178,7 @@ function detectGitHubRepo() {
   }
 
   try {
-    const remoteUrl = execSync("git remote get-url origin", {
+    const remoteUrl = execFileSync("git", ["remote", "get-url", "origin"], {
       encoding: "utf8",
       stdio: ["pipe", "pipe", "ignore"],
     }).trim();
@@ -194,10 +196,30 @@ function detectGitHubRepo() {
 }
 
 /**
- * Build the authenticated wiki clone URL.
+ * Wiki clone URL. The token is passed to git through http.extraheader,
+ * not embedded in the URL, so it does not show up in process arguments
+ * or in the temporary repo's origin remote.
  */
-function buildWikiCloneUrl(repo, token) {
-  return `https://x-access-token:${token}@github.com/${repo}.wiki.git`;
+function buildWikiCloneUrl(repo) {
+  return `https://github.com/${repo}.wiki.git`;
+}
+
+function gitEnv(token) {
+  const env = { ...process.env, GIT_TERMINAL_PROMPT: "0" };
+  if (token) {
+    env.GIT_CONFIG_COUNT = "1";
+    env.GIT_CONFIG_KEY_0 = "http.https://github.com/.extraheader";
+    env.GIT_CONFIG_VALUE_0 = `AUTHORIZATION: bearer ${token}`;
+  }
+  return env;
+}
+
+export function sanitizeGitError(text) {
+  return String(text || "")
+    .replace(/x-access-token:[^\s@]+/gi, "x-access-token:***")
+    .replace(/bearer\s+[A-Za-z0-9._\-]+/gi, "bearer ***")
+    .replace(/github_pat_[A-Za-z0-9_]+/g, "github_pat_***")
+    .replace(/gh[pousr]_[A-Za-z0-9_]+/g, "gh*_***");
 }
 
 /**
@@ -205,7 +227,7 @@ function buildWikiCloneUrl(repo, token) {
  */
 function pageFileName(key) {
   const title = getPageDisplayTitle(key);
-  return title.replace(/\s+/g, "-") + ".md";
+  return safeFileName(`${title.replace(/\s+/g, "-")}.md`);
 }
 
 /**
@@ -346,23 +368,29 @@ function pageHeader(key, branch) {
 
 /**
  * Run a git command in the specified directory.
- * Token is never exposed in error output.
+ * `args` is an argument array. The token stays in the environment, not argv.
  */
-function git(args, cwd) {
+function git(args, cwd, token) {
   try {
-    return execSync(`git ${args}`, {
+    return execFileSync("git", args, {
       cwd,
       encoding: "utf8",
       stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+      env: gitEnv(token),
     });
   } catch (err) {
-    const sanitized = (err.stderr || err.message || "").replace(
-      /x-access-token:[^\s@]+/g,
-      "x-access-token:***"
-    );
-    throw new Error(`Git command failed: git ${args.split(" ")[0]} — ${sanitized}`);
+    const sanitized = sanitizeGitError(err.stderr || err.message || "");
+    throw new Error(`Git command failed: git ${args[0]} — ${sanitized}`);
   }
+}
+
+async function writeWikiFile(tmpDir, fileName, content) {
+  const safe = safeFileName(fileName);
+  const full = path.resolve(tmpDir, safe);
+  if (!isInsideRoot(tmpDir, full)) {
+    throw new Error(`Refusing to write wiki file outside the workspace: ${fileName}`);
+  }
+  await fs.writeFile(full, content, "utf8");
 }
 
 /**
@@ -378,13 +406,14 @@ export async function publishToGitHubWiki(cfg, renderedPages) {
     );
   }
 
-  const repo = detectGitHubRepo();
-  if (!repo) {
+  const detected = detectGitHubRepo();
+  if (!detected) {
     throw new Error(
       "Could not detect GitHub repository. Set GITHUB_REPOSITORY=owner/repo\n" +
       "or ensure git remote 'origin' points to a GitHub URL."
     );
   }
+  const repo = assertGitHubRepo(detected);
 
   const branch = getCurrentBranch();
   const wikiConfig = cfg.github_wiki || {};
@@ -395,16 +424,16 @@ export async function publishToGitHubWiki(cfg, renderedPages) {
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "repolens-wiki-"));
 
   try {
-    const cloneUrl = buildWikiCloneUrl(repo, token);
+    const cloneUrl = buildWikiCloneUrl(repo);
 
     try {
-      git(`clone --depth 1 ${cloneUrl} .`, tmpDir);
+      git(["clone", "--depth", "1", cloneUrl, "."], tmpDir, token);
     } catch {
       warn("Wiki repository not found — initializing. Enable the wiki tab in GitHub repo settings.");
       // GitHub Wiki uses 'master' as default branch; ensure compatibility
       // regardless of the local git init.defaultBranch setting
-      git("init -b master", tmpDir);
-      git(`remote add origin ${cloneUrl}`, tmpDir);
+      git(["init", "-b", "master"], tmpDir, token);
+      git(["remote", "add", "origin", cloneUrl], tmpDir, token);
     }
 
     // Only include pages that have actual content
@@ -415,34 +444,34 @@ export async function publishToGitHubWiki(cfg, renderedPages) {
 
     // Write Home.md
     const home = generateHome(pageKeys, projectName, branch, repo);
-    await fs.writeFile(path.join(tmpDir, "Home.md"), home, "utf8");
+    await writeWikiFile(tmpDir, "Home.md", home);
 
     // Write each rendered page with metadata header
     for (const [key, markdown] of populatedPages) {
       const fileName = pageFileName(key);
       const header = pageHeader(key, branch);
-      await fs.writeFile(path.join(tmpDir, fileName), header + markdown, "utf8");
+      await writeWikiFile(tmpDir, fileName, header + markdown);
     }
 
     // Generate sidebar
     if (includeSidebar) {
       const sidebar = generateSidebar(pageKeys, projectName, branch);
-      await fs.writeFile(path.join(tmpDir, "_Sidebar.md"), sidebar, "utf8");
+      await writeWikiFile(tmpDir, "_Sidebar.md", sidebar);
     }
 
     // Generate footer
     if (includeFooter) {
       const footer = generateFooter(branch);
-      await fs.writeFile(path.join(tmpDir, "_Footer.md"), footer, "utf8");
+      await writeWikiFile(tmpDir, "_Footer.md", footer);
     }
 
     // Stage, commit, push
-    git("config user.name \"RepoLens Bot\"", tmpDir);
-    git("config user.email \"repolens@users.noreply.github.com\"", tmpDir);
-    git("add -A", tmpDir);
+    git(["config", "user.name", "RepoLens Bot"], tmpDir, token);
+    git(["config", "user.email", "repolens@users.noreply.github.com"], tmpDir, token);
+    git(["add", "-A"], tmpDir, token);
 
     try {
-      execSync("git diff --cached --quiet", { cwd: tmpDir, stdio: "pipe" });
+      execFileSync("git", ["diff", "--cached", "--quiet"], { cwd: tmpDir, stdio: "pipe" });
       info("GitHub Wiki is already up to date — no changes to push.");
       return;
     } catch {
@@ -451,10 +480,10 @@ export async function publishToGitHubWiki(cfg, renderedPages) {
 
     const branchLabel = branch !== "main" && branch !== "master" ? ` [${branch}]` : "";
     const commitMsg = `docs: update RepoLens documentation${branchLabel}`;
-    git(`commit -m "${commitMsg}"`, tmpDir);
+    git(["commit", "-m", commitMsg], tmpDir, token);
 
     // GitHub Wiki serves from 'master'; push explicitly to master
-    git("push origin HEAD:refs/heads/master", tmpDir);
+    git(["push", "origin", "HEAD:refs/heads/master"], tmpDir, token);
     info(`GitHub Wiki published (${pageKeys.length} pages): https://github.com/${repo}/wiki`);
 
   } finally {

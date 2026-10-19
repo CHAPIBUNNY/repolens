@@ -1,6 +1,7 @@
-import { execSync } from "node:child_process";
 import { log } from "../utils/logger.js";
 import { fetchWithRetry } from "../utils/retry.js";
+import { assertGitHubRepo } from "../utils/github-repo.js";
+import { sanitizeSecrets } from "../utils/secrets.js";
 
 function safe(text) {
   return String(text || "").trim();
@@ -72,7 +73,8 @@ async function githubRequest(method, url, body) {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`GitHub API error ${res.status}: ${text}`);
+    const clipped = sanitizeSecrets(String(text || "").replace(/\s+/g, " ").slice(0, 500));
+    throw new Error(`GitHub API error ${res.status}: ${clipped}`);
   }
 
   return await res.json();
@@ -114,6 +116,7 @@ export async function upsertPrComment(diff) {
     return;
   }
 
+  assertGitHubRepo(repoFull);
   const [owner, repo] = repoFull.split("/");
   const body = buildBody(diff);
 

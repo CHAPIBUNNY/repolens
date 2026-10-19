@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 /**
  * Detect the current git branch from various sources
@@ -22,7 +22,7 @@ export function getCurrentBranch() {
 
   // 4. Try git command
   try {
-    const branch = execSync("git rev-parse --abbrev-ref HEAD", {
+    const branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
       encoding: "utf8",
       stdio: ["pipe", "pipe", "ignore"]
     }).trim();
@@ -49,6 +49,24 @@ export function normalizeBranchName(branch) {
 }
 
 /**
+ * Match a branch name against an exact value or a simple `*` glob.
+ * Regex metacharacters in the pattern are escaped so a bad config cannot
+ * throw or widen the match.
+ */
+export function branchMatches(pattern, branch) {
+  if (pattern === branch) return true;
+  if (typeof pattern !== "string" || typeof branch !== "string" || !pattern.includes("*")) {
+    return false;
+  }
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+  return new RegExp(`^${escaped}$`).test(branch);
+}
+
+function matchesAnyBranch(patterns, currentBranch) {
+  return patterns.some((pattern) => branchMatches(pattern, currentBranch));
+}
+
+/**
  * Check if current branch should publish to Notion
  * Based on config.notion.branches setting
  */
@@ -63,21 +81,7 @@ export function shouldPublishToNotion(config, currentBranch = getCurrentBranch()
     return true;
   }
 
-  // Check if current branch matches any allowed pattern
-  return config.notion.branches.some(pattern => {
-    // Exact match
-    if (pattern === currentBranch) {
-      return true;
-    }
-
-    // Wildcard pattern (simple glob)
-    if (pattern.includes("*")) {
-      const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
-      return regex.test(currentBranch);
-    }
-
-    return false;
-  });
+  return matchesAnyBranch(config.notion.branches, currentBranch);
 }
 
 /**
@@ -95,21 +99,7 @@ export function shouldPublishToConfluence(config, currentBranch = getCurrentBran
     return true;
   }
 
-  // Check if current branch matches any allowed pattern
-  return config.confluence.branches.some(pattern => {
-    // Exact match
-    if (pattern === currentBranch) {
-      return true;
-    }
-
-    // Wildcard pattern (simple glob)
-    if (pattern.includes("*")) {
-      const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
-      return regex.test(currentBranch);
-    }
-
-    return false;
-  });
+  return matchesAnyBranch(config.confluence.branches, currentBranch);
 }
 
 /**
@@ -125,18 +115,7 @@ export function shouldPublishToGitHubWiki(config, currentBranch = getCurrentBran
     return true;
   }
 
-  return config.github_wiki.branches.some(pattern => {
-    if (pattern === currentBranch) {
-      return true;
-    }
-
-    if (pattern.includes("*")) {
-      const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
-      return regex.test(currentBranch);
-    }
-
-    return false;
-  });
+  return matchesAnyBranch(config.github_wiki.branches, currentBranch);
 }
 
 /**

@@ -8,6 +8,30 @@ function isRetryableStatus(status) {
   return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
 }
 
+const MAX_RETRY_AFTER_MS = 60_000;
+
+/**
+ * Honour Retry-After when it is delta-seconds or an HTTP date.
+ * Unparseable values fall back to exponential backoff. Delays are capped
+ * so a hostile header cannot stall the process.
+ */
+export function retryDelayMs(retryAfterHeader, attempt, baseDelayMs, maxDelayMs) {
+  const fallback = Math.min(baseDelayMs * 2 ** attempt, maxDelayMs);
+  if (retryAfterHeader == null || retryAfterHeader === "") return fallback;
+
+  const seconds = Number(retryAfterHeader);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.min(seconds * 1000, MAX_RETRY_AFTER_MS);
+  }
+
+  const when = Date.parse(retryAfterHeader);
+  if (Number.isFinite(when)) {
+    return Math.min(Math.max(0, when - Date.now()), MAX_RETRY_AFTER_MS);
+  }
+
+  return fallback;
+}
+
 export async function fetchWithRetry(url, options = {}, config = {}) {
   const {
     retries = 3,
@@ -37,12 +61,12 @@ export async function fetchWithRetry(url, options = {}, config = {}) {
         return response;
       }
 
-      const retryAfterHeader = response.headers.get("retry-after");
-      const retryAfterMs = retryAfterHeader != null
-        ? Number(retryAfterHeader) * 1000
-        : null;
-
-      const delay = retryAfterMs != null ? retryAfterMs : Math.min(baseDelayMs * 2 ** attempt, maxDelayMs);
+      const delay = retryDelayMs(
+        response.headers.get("retry-after"),
+        attempt,
+        baseDelayMs,
+        maxDelayMs
+      );
 
       warn(`${label} failed with retryable status ${response.status}. Retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`);
       await sleep(delay);

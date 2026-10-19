@@ -1,13 +1,26 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { info, warn } from "./logger.js";
+
+// The unscoped `repolens` package is a different project. Always query this one.
+export const LATEST_VERSION_URL = "https://registry.npmjs.org/@chappibunny%2Frepolens/latest";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const CHECK_INTERVAL = 1000 * 60 * 60 * 24; // 24 hours
-const CACHE_FILE = path.join(process.env.HOME || process.env.USERPROFILE, ".repolens-update-check.json");
+
+function cacheFile() {
+  try {
+    const home = os.homedir();
+    if (!home) return null;
+    return path.join(home, ".repolens-update-check.json");
+  } catch {
+    return null;
+  }
+}
 
 async function getCurrentVersion() {
   try {
@@ -21,8 +34,9 @@ async function getCurrentVersion() {
 
 async function getLatestVersion() {
   try {
-    const response = await fetch("https://registry.npmjs.org/repolens/latest", {
-      signal: AbortSignal.timeout(3000)
+    const response = await fetch(LATEST_VERSION_URL, {
+      signal: AbortSignal.timeout(3000),
+      redirect: "error",
     });
     
     if (!response.ok) return null;
@@ -35,8 +49,10 @@ async function getLatestVersion() {
 }
 
 async function readCache() {
+  const file = cacheFile();
+  if (!file) return null;
   try {
-    const cache = JSON.parse(await fs.readFile(CACHE_FILE, "utf8"));
+    const cache = JSON.parse(await fs.readFile(file, "utf8"));
     return cache;
   } catch {
     return null;
@@ -44,8 +60,10 @@ async function readCache() {
 }
 
 async function writeCache(data) {
+  const file = cacheFile();
+  if (!file) return;
   try {
-    await fs.writeFile(CACHE_FILE, JSON.stringify(data), "utf8");
+    await fs.writeFile(file, JSON.stringify(data), "utf8");
   } catch {
     // Fail silently - not critical
   }

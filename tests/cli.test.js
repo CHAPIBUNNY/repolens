@@ -53,6 +53,56 @@ describe("cli", () => {
     expect(stdout).toContain("feedback");
     expect(stdout).toContain("version");
     expect(stdout).toContain("--quick");  // Interactive is now the default
+    expect(stdout).toContain("Exit codes:");
+  });
+
+  it("rejects an unknown flag with exit code 2", async () => {
+    const result = await runNodeAny(["publish", "--not-a-flag"], { NODE_ENV: "" });
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("Unknown option: --not-a-flag");
+  });
+
+  it("rejects --config without a path", async () => {
+    const result = await runNodeAny(["publish", "--config"], { NODE_ENV: "" });
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("--config requires a value");
+  });
+
+  it("exits 2 when feedback has no terminal", async () => {
+    const result = await runNodeAny(["feedback"]);
+    expect(result.exitCode).toBe(2);
+  });
+
+  it("demo --target does not reuse the config in the current directory", async () => {
+    const dir = await fsp.mkdtemp(path.join(os.tmpdir(), "repolens-demo-target-"));
+    await fsp.mkdir(path.join(dir, "src"));
+    await fsp.writeFile(path.join(dir, "src/app.js"), "export const n = 1;\n");
+    try {
+      const result = await runNodeAny(["demo", "--target", dir], {
+        NODE_ENV: "",
+        CI: "true",
+        GITHUB_TOKEN: "",
+        REPOLENS_AI_API_KEY: "",
+        REPOLENS_AI_ENABLED: "",
+      });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("No .repolens.yml found");
+      expect(result.stdout).not.toContain(path.resolve(__dirname, "../.repolens.yml"));
+    } finally {
+      await fsp.rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("prints the version from the published binary without loading the CLI", async () => {
+    const binPath = path.resolve(__dirname, "../bin/repolens.js");
+    const result = await new Promise((resolve) => {
+      execFile("node", [binPath, "--version"], { env: { ...process.env, NODE_ENV: "test" } }, (error, stdout, stderr) => {
+        resolve({ code: error ? error.code : 0, stdout: stdout || "", stderr: stderr || "" });
+      });
+    });
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe(pkg.version);
+    expect(result.stderr).not.toContain("Repository Intelligence");
   });
 });
 

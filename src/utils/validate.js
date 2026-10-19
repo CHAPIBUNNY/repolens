@@ -5,6 +5,7 @@
  * Prevents injection attacks, validates types, and enforces constraints.
  */
 
+import path from "node:path";
 import { detectSecrets } from "./secrets.js";
 
 /**
@@ -93,6 +94,12 @@ function validateScanConfig(scan) {
         // Check for dangerous patterns
         if (pattern.includes("..")) {
           errors.push(`Dangerous pattern in scan.include: ${pattern} (contains "..")`);
+        }
+        if (pattern.includes("\0")) {
+          errors.push(`Dangerous pattern in scan.include: null byte`);
+        }
+        if (path.isAbsolute(pattern) || /^[A-Za-z]:[\\/]/.test(pattern)) {
+          errors.push(`Absolute pattern in scan.include: ${pattern}`);
         }
         
         // Warn about overly broad patterns

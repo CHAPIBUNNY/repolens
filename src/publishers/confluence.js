@@ -4,6 +4,7 @@ import { log, info, warn } from "../utils/logger.js";
 import { fetchWithRetry } from "../utils/retry.js";
 import { getCurrentBranch, getBranchQualifiedTitle } from "../utils/branch.js";
 import { createRepoLensError } from "../utils/errors.js";
+import { sanitizeSecrets } from "../utils/secrets.js";
 
 /**
  * Confluence Publisher for RepoLens
@@ -49,6 +50,19 @@ function getConfluenceBaseUrl() {
     );
   }
   
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("CONFLUENCE_URL is not a valid URL");
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    throw new Error("CONFLUENCE_URL must use http or https");
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error("CONFLUENCE_URL must not include embedded credentials. Use CONFLUENCE_EMAIL and CONFLUENCE_API_TOKEN.");
+  }
+
   // Normalize URL (remove trailing slash, ensure /wiki for Cloud)
   let normalized = url.replace(/\/+$/, "");
   
@@ -83,7 +97,8 @@ async function confluenceRequest(method, endpoint, body = null) {
 
   if (!res.ok) {
     const text = await res.text();
-    let errorMsg = `Confluence API error ${res.status}: ${text}`;
+    const clipped = sanitizeSecrets(String(text || "").replace(/\s+/g, " ").slice(0, 500));
+    let errorMsg = `Confluence API error ${res.status}: ${clipped}`;
     
     // Provide helpful error messages
     if (res.status === 401) {
@@ -113,7 +128,7 @@ async function confluenceRequest(method, endpoint, body = null) {
 const CACHE_DIR = path.join(process.cwd(), ".cache");
 
 function getCacheFile() {
-  const branch = getCurrentBranch();
+  const branch = getCurrentBranch().replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80) || "unknown";
   return path.join(CACHE_DIR, `confluence-pages-${branch}.json`);
 }
 

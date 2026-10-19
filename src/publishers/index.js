@@ -2,7 +2,8 @@ import { publishToNotion } from "./publish.js";
 import { publishToMarkdown } from "./markdown.js";
 import { publishToConfluence, hasConfluenceSecrets } from "./confluence.js";
 import { publishToGitHubWiki, hasGitHubWikiSecrets } from "./github-wiki.js";
-import { shouldPublishToNotion, shouldPublishToConfluence, shouldPublishToGitHubWiki, getCurrentBranch } from "../utils/branch.js";
+import { shouldPublishToNotion, shouldPublishToConfluence, shouldPublishToGitHubWiki, getCurrentBranch, branchMatches } from "../utils/branch.js";
+import { resolveOutputDir } from "../utils/safe-path.js";
 import { info, warn } from "../utils/logger.js";
 import { trackPublishing } from "../utils/telemetry.js";
 import { collectMetrics } from "../utils/metrics.js";
@@ -27,7 +28,7 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
   let notionUrl = null;
 
   // --- Hash-based caching: skip unchanged documents ---
-  const cacheDir = path.join(process.cwd(), cfg.documentation?.output_dir || ".repolens");
+  const cacheDir = resolveOutputDir(process.cwd(), cfg.documentation?.output_dir || ".repolens");
   const { cache: previousCache, age: cacheAge } = await loadDocCache(cacheDir);
   const { changedPages, unchangedKeys, newCache } = filterChangedDocs(renderedPages, previousCache);
   logCacheStats(Object.keys(changedPages).length, unchangedKeys.length, cacheAge);
@@ -154,13 +155,7 @@ export async function publishDocs(cfg, renderedPages, scanResult, pluginManager 
       
       // Check if we should send notification for this branch
       const allowedBranches = discordConfig.branches || [currentBranch]; // Default to current branch
-      const branchAllowed = allowedBranches.some(pattern => {
-        if (pattern.includes("*")) {
-          const regex = new RegExp(`^${pattern.replace(/\*/g, ".*")}$`);
-          return regex.test(currentBranch);
-        }
-        return pattern === currentBranch;
-      });
+      const branchAllowed = allowedBranches.some((pattern) => branchMatches(pattern, currentBranch));
       
       if (webhookUrl && discordEnabled && branchAllowed) {
         // Calculate change percent (if we have history)

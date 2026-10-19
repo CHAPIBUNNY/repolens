@@ -2,6 +2,46 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.12.4
+
+### Security
+
+- GitHub Wiki git commands use an argument array. The token is passed with `http.extraheader` and is no longer written into the clone URL or `origin` remote
+- Wiki page names and generated document names cannot leave their output directory
+- `documentation.output_dir` must stay inside the repository. Absolute paths and `..` are rejected
+- Scan results that resolve outside the repository root are dropped, and absolute `scan.include` patterns are rejected
+- Monorepo workspace globs that point outside the repository are ignored
+- YAML configs are size-capped and alias-capped before `js-yaml` parses them. The js-yaml 4 schema is unchanged
+- Notion, Confluence, GitHub, and Discord error bodies are truncated and redacted before they are logged
+- Confluence URLs with embedded credentials, or a scheme other than http/https, are rejected
+- Discord webhooks must be `https` and time out after 15 seconds
+- AI startup logs no longer print a prefix of the API key
+- Secret detection covers fine-grained GitHub tokens (`github_pat_`), `gho_` / `ghu_` / `ghr_` tokens, and npm tokens
+- `Retry-After` values that are not seconds or an HTTP date no longer become `NaN` delays
+- Browser signup links are opened without a shell
+- GitHub Actions: test and security jobs are `contents: read`. `id-token: write` is only on the npm publish job. The token-present check no longer prints the token length
+- Test workflow runs on Node.js 18, 20, and 22. Node 18 runs `scripts/node18-runtime.js` because Vitest 4 cannot start there (`util.styleText` needs Node 20.12). Node 20 and 22 run the full Vitest suite
+
+### Fixes
+
+- Update checks query `@chappibunny/repolens` on the npm registry. The cache file uses the real home directory on Windows and Unix
+- `repolens init` in CI, tests, and non-TTY sessions scaffolds files instead of exiting before writing anything
+- `repolens demo --target` looks for `.repolens.yml` from the target directory, so a demo of another folder does not scan the shell's current repository
+- `repolens feedback` exits 2 when there is no terminal, and exits 1 when sending fails
+- Unknown flags and missing `--config` / `--target` values exit 2. `--help` and `--version` work before or after the command
+- `repolens --version` and `repolens --help` from the installed binary do not load the scanner or telemetry
+- Empty repositories finish the scan with a warning instead of looking like a hung run. Binary files and files over 1 MB are not parsed as source
+- Git renames in `git diff --name-status` record the new path. Unsafe diff refs are ignored instead of being interpolated into a shell command. A missing repo or ref no longer prints git's usage text, and the diff runs in the scanned repository rather than whatever directory the shell happened to be in
+- Branch filters escape regex metacharacters, so a pattern like `release/*)` does not throw
+- Confluence page-cache filenames cannot contain path separators from the branch name
+- Notion block pagination stops if a cursor repeats
+
+### Dependencies
+
+- `dotenv` 18.0.8 (`import "dotenv/config"` is unchanged; Node `-r dotenv/config` preload was removed upstream)
+- `tinyexec` 1.3.1 (dev dependency, Node 18+)
+- js-yaml stays on 4.x, Vitest stays on 4.x, and `@sentry/node` stays on 10.x so `engines` can remain `>=18`
+
 ## 1.12.3
 
 ### Security

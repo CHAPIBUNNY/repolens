@@ -22,7 +22,7 @@ async function rebuild(configPath) {
   try {
     const cfg = await loadConfig(configPath);
     const scan = await scanRepo(cfg);
-    const rawDiff = getGitDiff("origin/main");
+    const rawDiff = getGitDiff("origin/main", cfg.__repoRoot || process.cwd());
     const docSet = await generateDocumentSet(scan, cfg, rawDiff);
     const result = await writeDocumentSet(docSet, process.cwd());
     const elapsed = Date.now() - start;

@@ -12,7 +12,9 @@ const SECRET_PATTERNS = [
   // API Keys
   { name: "OpenAI API Key", pattern: /sk-[a-zA-Z0-9]{20,}/, severity: "high" },
   { name: "Anthropic API Key", pattern: /sk-ant-[a-zA-Z0-9_-]{95,}/, severity: "high" },
-  { name: "GitHub Token", pattern: /gh[ps]_[a-zA-Z0-9]{36,}/, severity: "critical" },
+  { name: "GitHub Token", pattern: /gh[pousr]_[a-zA-Z0-9]{36,}/, severity: "critical" },
+  { name: "GitHub Fine-Grained Token", pattern: /github_pat_[a-zA-Z0-9_]{20,}/, severity: "critical" },
+  { name: "npm Token", pattern: /npm_[a-zA-Z0-9]{36,}/, severity: "critical" },
   { name: "Generic API Key", pattern: /api[_-]?key[_-]?[a-zA-Z0-9]{20,}/i, severity: "high" },
   
   // OAuth Tokens

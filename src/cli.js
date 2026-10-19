@@ -29,6 +29,9 @@ import { generateDocumentSet } from "./docs/generate-doc-set.js";
 import { writeDocumentSet } from "./docs/write-doc-set.js";
 import { loadPlugins } from "./plugins/loader.js";
 import { PluginManager } from "./plugins/manager.js";
+import { printHelp } from "./help.js";
+import { parseCliArgs } from "./cli-args.js";
+import { isNonInteractiveEnvironment } from "./utils/interactive.js";
 import { 
   initTelemetry, 
   captureError, 
@@ -219,53 +222,29 @@ async function findConfig(startDir = process.cwd()) {
   }
 }
 
-function printHelp() {
-  console.log(`
-RepoLens — Repository Intelligence CLI
-
-Usage:
-  repolens <command> [options]
-
-Commands:
-  init        Scaffold RepoLens files in your repository
-  doctor      Validate your RepoLens setup
-  migrate     Upgrade workflow files to current format
-  publish     Scan, render, and publish documentation
-  demo        Generate local docs without API keys (quick preview)
-  watch       Watch for file changes and regenerate docs
-  uninstall   Remove all RepoLens-generated files from your repository
-  feedback    Send feedback to the RepoLens team
-  version     Print the current RepoLens version
-
-Options:
-  --config        Path to .repolens.yml (auto-discovered if not provided)
-  --target        Target repository path for init/doctor/migrate
-  --quick         Run init with minimal prompts (skip wizard)
-  --dry-run       Preview migration changes without applying them
-  --force         Skip interactive confirmation for migration
-  --verbose       Enable verbose logging
-  --version       Print version
-  --help          Show this help message
-
-Examples:
-  repolens init                                 # Full interactive wizard (recommended)
-  repolens init --quick                         # Minimal setup, skip wizard
-  repolens init --target /tmp/my-repo
-  repolens doctor --target /tmp/my-repo
-  repolens migrate                              # Migrate workflows in current directory
-  repolens migrate --dry-run                    # Preview changes without applying
-  repolens publish                              # Auto-discovers .repolens.yml
-  repolens publish --config /path/.repolens.yml # Explicit config path
-  repolens demo                                  # Quick local preview (no API keys)
-  repolens watch                                # Watch mode (Markdown only)
-  repolens uninstall                             # Remove all RepoLens files
-  repolens uninstall --target /tmp/my-repo       # Uninstall from specific repo
-  repolens --version
-`);
-}
-
 async function main() {
-  const command = process.argv[2];
+  const parsed = parseCliArgs(process.argv.slice(2));
+
+  // Help and version return before telemetry and the update check.
+  // bin/repolens.js answers --version/--help without loading this module.
+  if (parsed.help) {
+    printHelp();
+    return;
+  }
+
+  if (parsed.version) {
+    const version = await getPackageVersion();
+    console.log(version);
+    return;
+  }
+
+  if (parsed.errors.length > 0) {
+    for (const message of parsed.errors) error(message);
+    error("Run 'repolens help' for usage information.");
+    process.exit(EXIT_VALIDATION);
+  }
+
+  const command = parsed.command;
 
   // Initialize telemetry (opt-in via REPOLENS_TELEMETRY_ENABLED=true).
   // @sentry/node is optional; init is a no-op when it is not installed.
@@ -279,17 +258,6 @@ async function main() {
 
   // Check for updates (non-blocking, runs in background)
   checkForUpdates().catch(() => {/* Silently fail */});
-
-  if (command === "--help" || command === "-h" || command === "help") {
-    printHelp();
-    return;
-  }
-
-  if (command === "--version" || command === "-v" || command === "version") {
-    const version = await getPackageVersion();
-    console.log(version);
-    return;
-  }
 
   if (command === "init") {
     await printBanner();
@@ -393,13 +361,6 @@ async function main() {
     return;
   }
 
-  // Reject unknown flags/commands before falling through to publish
-  if (command && command.startsWith("--") && !["--help", "-h", "--version", "-v"].includes(command)) {
-    error(`Unknown option: ${command}`);
-    error("Run 'repolens help' for usage information.");
-    process.exit(EXIT_ERROR);
-  }
-
   if (command === "publish" || !command) {
     await printBanner();
     
@@ -462,7 +423,7 @@ async function main() {
       process.exit(EXIT_ERROR);
     }
 
-    const rawDiff = getGitDiff("origin/main");
+    const rawDiff = getGitDiff("origin/main", cfg.__repoRoot || process.cwd());
     const diffData = buildArchitectureDiffData(rawDiff);
 
     try {
@@ -535,10 +496,12 @@ async function main() {
     const commandTimer = startTimer("demo");
     const targetDir = getArg("--target") || process.cwd();
     
-    // Try to load existing config, otherwise use sensible defaults
+    // Try to load existing config, otherwise use sensible defaults.
+    // Start at --target so a demo of another directory does not pick up
+    // the config in the shell's current directory.
     let cfg;
     try {
-      const configPath = getArg("--config") || await findConfig();
+      const configPath = getArg("--config") || await findConfig(targetDir);
       info(`Using config: ${configPath}`);
       cfg = await loadConfig(configPath);
     } catch {
@@ -581,7 +544,7 @@ async function main() {
       stopTimer(scanTimer);
       info(`Detected ${scan.modules?.length || 0} modules, ${scan.filesCount || 0} files`);
       
-      const rawDiff = getGitDiff("origin/main");
+      const rawDiff = getGitDiff("origin/main", cfg.__repoRoot || targetDir);
       
       info("Generating documentation set...");
       const renderTimer = startTimer("render");
@@ -676,7 +639,7 @@ async function main() {
       const isTest = process.env.NODE_ENV === "test" || process.env.VITEST;
       
       if (isCI || isTest) {
-        info("\nCI/test environment detected — skipping confirmation (use --force to suppress this message).");
+        info("\nNon-interactive environment: removing RepoLens files without a prompt. Pass --force to hide this notice.");
       } else {
         const confirmed = await promptYesNo(`\nRemove ${found.length} item${found.length === 1 ? "" : "s"}? This cannot be undone.`, false);
         
@@ -718,6 +681,11 @@ async function main() {
 
   if (command === "feedback") {
     await printBanner();
+    if (isNonInteractiveEnvironment()) {
+      error("feedback needs an interactive terminal.");
+      await closeTelemetry();
+      process.exit(EXIT_VALIDATION);
+    }
     info("Send feedback to the RepoLens team");
     info("Your feedback is anonymous and helps us improve RepoLens.\n");
 
@@ -755,6 +723,8 @@ async function main() {
       captureError(err, { command: "feedback" });
       error("Failed to send feedback:");
       error(err.message);
+      await closeTelemetry();
+      process.exit(EXIT_ERROR);
     }
 
     await closeTelemetry();

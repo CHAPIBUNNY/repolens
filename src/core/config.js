@@ -1,14 +1,17 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import yaml from "js-yaml";
 import { validateConfig as validateSchema } from "./config-schema.js";
 import { validateConfig } from "../utils/validate.js";
 import { warn, error } from "../utils/logger.js";
+import { loadYaml } from "../utils/yaml.js";
 
 export async function loadConfig(configPath) {
   const absoluteConfigPath = path.resolve(configPath);
   const raw = await fs.readFile(absoluteConfigPath, "utf8");
-  const cfg = yaml.load(raw);
+  const cfg = loadYaml(raw);
+  if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) {
+    throw new Error("Configuration must be a YAML mapping");
+  }
 
   // Validate config against schema (structure)
   validateSchema(cfg);
