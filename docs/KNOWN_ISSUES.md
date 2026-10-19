@@ -260,7 +260,7 @@ scan:
 
 ### Shipped since this list was last current
 - [x] Obsidian vault publisher (1.13.0)
-- [x] VS Code extension ([Marketplace](https://marketplace.visualstudio.com/items?itemName=CHAPIBUNNY.repolens-architecture))
+- [x] VS Code extension ([Marketplace](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox))
 
 ### Future
 - [ ] Cross-repository architecture analysis

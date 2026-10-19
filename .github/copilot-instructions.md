@@ -480,7 +480,7 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 
 ### Shipped
 - ~~Obsidian vault publisher~~ ✅ Shipped in v1.13.0
-- ~~VS Code extension~~ ✅ On the Marketplace (`CHAPIBUNNY.repolens-architecture`)
+- ~~VS Code extension~~ ✅ On the Marketplace (`repolensdox.repolensdox`)
 - ~~Complexity metrics & code health scoring~~ ✅ Shipped in v1.12.0
 - ~~Security pattern detection (eval, XSS, SQL injection, CWE classification)~~ ✅ Shipped in v1.12.0
 - ~~JSDoc/TSDoc extraction for API Surface enrichment~~ ✅ Shipped in v1.12.0
