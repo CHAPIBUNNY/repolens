@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const DEFAULT_PACKAGE_VERSION = "1.14.0";
+export const DEFAULT_PACKAGE_VERSION = "1.14.1";
 const ALLOWED_COMMANDS = new Set(["publish", "demo", "doctor"]);
 
 export function isSafeConfigPath(config) {

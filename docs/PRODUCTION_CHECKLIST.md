@@ -2,7 +2,7 @@
 
 Ensure RepoLens is properly configured and secured before deploying to production. This checklist helps teams validate their setup and avoid common pitfalls.
 
-**Version:** 1.14.0  
+**Version:** 1.14.1  
 **Last Updated:** October 2026
 
 ---
@@ -19,7 +19,7 @@ Ensure RepoLens is properly configured and secured before deploying to productio
 ### ✅ Package Installation
 
 - [ ] Install RepoLens: `npx @chappibunny/repolens@latest --version`
-- [ ] Run version check: Should display `1.14.0` or higher
+- [ ] Run version check: Should display `1.14.1` or higher
 - [ ] Check for updates: Tool notifies if newer version available
 
 ---
@@ -452,7 +452,7 @@ Before declaring "production ready":
 
 **Approved by:** _______________  
 **Date:** _______________  
-**RepoLens Version:** 1.14.0
+**RepoLens Version:** 1.14.1
 
 ---
 

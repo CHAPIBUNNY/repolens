@@ -14,8 +14,12 @@ describe("mcp registry metadata", () => {
   it("keeps server.json aligned with package.json mcpName and version", () => {
     const pkg = JSON.parse(read("package.json"));
     const server = JSON.parse(read("server.json"));
-    expect(pkg.version).toBe("1.14.0");
-    expect(pkg.mcpName).toBe("io.github.chapibunny/repolens");
+    expect(pkg.version).toBe("1.14.1");
+    expect(pkg.mcpName).toBe("io.github.CHAPIBUNNY/repolens");
+    expect(server.description).toBe(
+      "Architecture docs from a repo: overview, modules, API surface, routes, dependency graph, diffs."
+    );
+    expect(server.description.length).toBeLessThanOrEqual(100);
     expect(server.name).toBe(pkg.mcpName);
     expect(server.version).toBe(pkg.version);
     expect(server.packages[0].registryType).toBe("npm");
@@ -49,6 +53,8 @@ describe("mcp registry metadata", () => {
     expect(mcp).toContain("mcpServers");
     expect(mcp).toContain("\"repolens\"");
     expect(mcp).toContain("npx");
-    expect(changelog).toContain("## 1.14.0");
+    expect(changelog).toContain("## 1.14.1");
+    const release = read(".github/workflows/release.yml");
+    expect(release).toContain("echo already published; exit 0;");
   });
 });

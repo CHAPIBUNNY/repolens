@@ -4,7 +4,7 @@ First of all, thank you for taking the time to contribute to RepoLens.
 
 RepoLens is an open source repository intelligence system designed to generate architecture documentation directly from real codebases. Contributions help make the tool more reliable, more useful, and more widely adopted across engineering teams.
 
-This document explains how to contribute effectively. The current package version is **1.14.0** (`package.json`). Publishers are Notion, Confluence, GitHub Wiki, Obsidian, and Markdown. 1.14.0 also ships an MCP server, a GitHub Action, and a docs badge. The roadmap lives in [docs/ROADMAP.md](docs/ROADMAP.md).
+This document explains how to contribute effectively. The current package version is **1.14.1** (`package.json`). Publishers are Notion, Confluence, GitHub Wiki, Obsidian, and Markdown. 1.14.0 ships an MCP server, a GitHub Action, and a docs badge. 1.14.1 sets the registry name to `io.github.CHAPIBUNNY/repolens`. The roadmap lives in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 

@@ -206,7 +206,7 @@ Copy-paste configs for Cursor, Claude Desktop, and VS Code are in [docs/MCP.md](
 
 ## GitHub Action
 
-`action.yml` is a composite action named **RepoLens Architecture Docs**. It runs the published npm package (`npx --yes @chappibunny/repolens@1.14.0`). Inputs are `command` (`publish`, `demo`, or `doctor`), `config`, `node-version`, `pr-comment`, and `version`.
+`action.yml` is a composite action named **RepoLens Architecture Docs**. It runs the published npm package (`npx --yes @chappibunny/repolens@1.14.1`). Inputs are `command` (`publish`, `demo`, or `doctor`), `config`, `node-version`, `pr-comment`, and `version`.
 
 ```yaml
 name: Architecture docs
@@ -222,7 +222,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
-      - uses: CHAPIBUNNY/repolens@v1.14.0
+      - uses: CHAPIBUNNY/repolens@v1.14.1
         with:
           command: publish
           config: .repolens.yml
@@ -230,7 +230,7 @@ jobs:
           pr-comment: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
 ```
 
-The action is listed on the GitHub Marketplace only after a release is published with **Publish this Action to the GitHub Marketplace** checked. Those steps are in [docs/RELEASE.md](docs/RELEASE.md). The tag `v1.14.0` has to exist before `uses: CHAPIBUNNY/repolens@v1.14.0` resolves, and `@chappibunny/repolens@1.14.0` has to be on npm before the action can install it.
+The action is listed on the GitHub Marketplace only after a release is published with **Publish this Action to the GitHub Marketplace** checked. Those steps are in [docs/RELEASE.md](docs/RELEASE.md). The tag `v1.14.1` has to exist before `uses: CHAPIBUNNY/repolens@v1.14.1` resolves, and `@chappibunny/repolens@1.14.1` has to be on npm before the action can install it.
 
 ## Add the badge to your repo
 
@@ -248,7 +248,7 @@ Generated Markdown includes this line unless `.repolens.yml` sets `branding: fal
 
 Published system maps are Unicode diagrams drawn from import edges. RepoLens does not emit Mermaid.
 
-The publisher set is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). 1.14.0 adds the MCP server, the Marketplace action, and the docs badge. Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The publisher set is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). 1.14.0 adds the MCP server, the Marketplace action, and the docs badge. 1.14.1 sets the registry name to `io.github.CHAPIBUNNY/repolens`. Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ### System Overview (Technical Profile)
 
