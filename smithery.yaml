@@ -1,0 +1,10 @@
+# Smithery listing for the RepoLens stdio MCP server.
+# https://smithery.ai/docs/build/project-config
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties: {}
+  commandFunction: |
+    (config) => ({ command: 'npx', args: ['-y', '@chappibunny/repolens', 'mcp'] })
+  exampleConfig: {}

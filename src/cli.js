@@ -246,6 +246,15 @@ async function main() {
 
   const command = parsed.command;
 
+  // MCP stdio must start before telemetry and the npm update check.
+  // Those both can open the network, and logs must stay off stdout.
+  if (command === "mcp") {
+    process.env.REPOLENS_LOG_STDERR = "1";
+    const { startMcpServer } = await import("./mcp/server.js");
+    await startMcpServer();
+    return;
+  }
+
   // Initialize telemetry (opt-in via REPOLENS_TELEMETRY_ENABLED=true).
   // @sentry/node is optional; init is a no-op when it is not installed.
   await initTelemetry();
@@ -732,7 +741,7 @@ async function main() {
   }
 
   error(`Unknown command: ${command}`);
-  error("Available commands: init, doctor, migrate, publish, demo, watch, uninstall, feedback, version, help");
+  error("Available commands: init, doctor, migrate, publish, demo, watch, uninstall, feedback, mcp, version, help");
   process.exit(EXIT_ERROR);
 }
 

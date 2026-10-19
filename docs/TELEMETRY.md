@@ -20,7 +20,7 @@ RepoLens includes **opt-in** error tracking and usage telemetry to help improve 
 - Document generation count
 
 **Feature usage:**
-- Commands run (init, doctor, migrate, publish)
+- Commands run (init, doctor, migrate, publish). `repolens mcp` does not initialize telemetry and does not run the npm update check
 - Publishers used (Notion, Markdown, Confluence)
 - AI usage (enabled/disabled, provider)
 - Success/failure rates
@@ -127,7 +127,7 @@ Here are real examples of what we track (sanitized):
 {
   "error": "ENOENT: no such file or directory",
   "command": "publish",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "platform": "darwin",
   "nodeVersion": "v20.11.0"
 }

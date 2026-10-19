@@ -342,6 +342,18 @@ export function validateConfig(config) {
     }
   }
 
+  // Validate branding (optional). Omitted means the docs badge stays on.
+  if (config.branding !== undefined) {
+    const branding = config.branding;
+    const isBoolean = typeof branding === "boolean";
+    const isObject = branding !== null && typeof branding === "object" && !Array.isArray(branding);
+    if (!isBoolean && !isObject) {
+      errors.push("branding must be a boolean or an object");
+    } else if (isObject && branding.badge !== undefined && typeof branding.badge !== "boolean") {
+      errors.push("branding.badge must be a boolean");
+    }
+  }
+
   // Validate documentation configuration (optional)
   if (config.documentation !== undefined) {
     if (typeof config.documentation !== "object" || Array.isArray(config.documentation)) {
@@ -431,6 +443,7 @@ const VALID_CONFIG_KEYS = [
   "documentation",
   "domains",
   "plugins",
+  "branding",
 ];
 
 /**

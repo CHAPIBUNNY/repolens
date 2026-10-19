@@ -1,6 +1,6 @@
 # RepoLens — Onboarding Guide
 
-Complete step-by-step setup for RepoLens 1.13.0: publishers (Notion, Confluence, GitHub Wiki, Obsidian, Markdown), AI enhancement, Discord notifications, and CI/CD automation.
+Complete step-by-step setup for RepoLens 1.14.0: publishers (Notion, Confluence, GitHub Wiki, Obsidian, Markdown), AI enhancement, Discord notifications, the MCP server, and CI/CD automation.
 
 > **Quick start:** For a 60-second setup, see the [Quick Start](README.md#-quick-start-60-seconds) in the README.
 
@@ -397,6 +397,36 @@ Get notified when documentation changes significantly — rich embeds with cover
 
 ---
 
+## Use the GitHub Action
+
+Instead of a hand-written `npx` step, you can call the composite action in `action.yml`. It runs the published `@chappibunny/repolens` package. The `v1.14.0` tag and the npm release both have to exist first.
+
+```yaml
+name: Architecture docs
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+      - uses: CHAPIBUNNY/repolens@v1.14.0
+        with:
+          command: publish
+          config: .repolens.yml
+          node-version: "20"
+          pr-comment: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
+```
+
+`command` accepts `publish`, `demo`, or `doctor`.
+
+Agents that should read the repo without publishing can use the MCP server. Setup for Cursor, Claude Desktop, and VS Code is in [MCP.md](MCP.md).
+
 ## Next Steps
 
 - [Configuration Reference](CONFIGURATION.md) — Full `.repolens.yml` schema
@@ -404,3 +434,4 @@ Get notified when documentation changes significantly — rich embeds with cover
 - [Architecture](ARCHITECTURE.md) — Pipeline and project structure
 - [Security](../SECURITY.md) — Threat model and hardening details
 - [Troubleshooting](TROUBLESHOOTING.md) — Common issues and fixes
+- [MCP server](MCP.md) — Cursor, Claude, and VS Code

@@ -24,6 +24,7 @@ RepoLens follows semantic versioning (semver):
 | `watch` | Stable | Watch for file changes and regenerate docs |
 | `migrate` | Stable | Migrate legacy workflows to current format |
 | `feedback` | Stable | Send feedback to the RepoLens team |
+| `mcp` | Stable | Start the stdio MCP server. `repolens-mcp` is the same entry |
 | `version` | Stable | Display version |
 | `help` | Stable | Show usage information |
 
@@ -112,6 +113,7 @@ outputs:
 | `discord.significantThreshold` | number | 0–100, coverage threshold |
 | `discord.branches` | string[] | Branch filter for Discord |
 | `features` | object | Feature flags (boolean values) |
+| `branding` | boolean or object | Docs badge. Default on. `false` or `{ badge: false }` disables it |
 | `ai` | object | AI configuration |
 | `ai.enabled` | boolean | Enable AI-powered documentation |
 | `ai.mode` | string | `"hybrid"`, `"full"`, or `"off"` |

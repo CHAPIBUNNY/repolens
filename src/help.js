@@ -14,6 +14,7 @@ Commands:
   watch       Watch for file changes and regenerate docs
   uninstall   Remove RepoLens-generated files from a repository
   feedback    Send feedback to the RepoLens team
+  mcp         Start the stdio MCP server (also available as repolens-mcp)
   version     Print the current RepoLens version
   help        Show this help message
 
@@ -49,6 +50,7 @@ Examples:
   repolens demo
   repolens watch
   repolens uninstall --target /tmp/my-repo
+  repolens mcp
   repolens --version
 `);
 }

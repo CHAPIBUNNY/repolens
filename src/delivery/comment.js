@@ -92,6 +92,12 @@ async function findExistingRepoLensComment(owner, repo, issueNumber) {
 }
 
 export async function upsertPrComment(diff) {
+  const flag = process.env.REPOLENS_PR_COMMENT;
+  if (flag === "false" || flag === "0") {
+    log("REPOLENS_PR_COMMENT is disabled, skipping PR comment.");
+    return;
+  }
+
   const eventName = process.env.GITHUB_EVENT_NAME;
   if (eventName !== "pull_request") {
     log("GITHUB_EVENT_NAME is not 'pull_request', skipping PR comment.");

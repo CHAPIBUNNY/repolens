@@ -31,6 +31,7 @@ npm test
 - Security fuzzing and rate-limit stress tests
 - Watch mode and migration (including e2e)
 - Robustness (timeout, partial-publish, error isolation)
+- MCP tools, the docs badge, the GitHub Action input checks, and registry metadata
 
 `npm test` prints the current pass count.
 
@@ -39,7 +40,7 @@ npm test
 Simulates the full user installation experience:
 
 ```bash
-# Pack the tarball. The filename follows package.json (1.13.0 → chappibunny-repolens-1.13.0.tgz).
+# Pack the tarball. The filename follows package.json (1.14.0 → chappibunny-repolens-1.14.0.tgz).
 npm pack
 
 # Install globally from that tarball

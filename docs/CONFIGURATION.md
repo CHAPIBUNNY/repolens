@@ -96,6 +96,11 @@ outputs:
       title: "System Map"
       description: "Visual dependency graph"
 
+# Docs by RepoLens badge on generated Markdown (default: on)
+# branding: false
+# branding:
+#   badge: false
+
 # Feature flags (optional). Keys are document-plan keys.
 # false drops that document, except system_overview, module_catalog, and route_map.
 # Ignored when documentation.sections is set.
@@ -137,6 +142,7 @@ features:
 | `documentation.sections` | string[] | No | When set, only these document-plan keys are generated. |
 | `documentation.include_artifacts` | boolean | No | Write JSON artifacts under the output directory (default: on). |
 | `features` | object | No | When `documentation.sections` is unset, a feature flag set to `false` drops that document. `system_overview`, `module_catalog`, and `route_map` are always kept. |
+| `branding` | boolean or object | No | Footer badge on generated Markdown. Default: on. `false` or `{ badge: false }` disables it. |
 | `ai.enabled` | boolean | No | Enable AI-powered documentation |
 | `ai.mode` | string | No | AI mode: `hybrid`, `full`, or `off` |
 | `ai.temperature` | number | No | Generation temperature (0–2). Not supported by all models (e.g. gpt-5-mini ignores it) |
@@ -144,7 +150,7 @@ features:
 
 ## What actually gets generated
 
-`publish` builds the document plan in `src/ai/document-plan.js` (17 documents in 1.13.0). `documentation.sections` filters that plan when it is set. Otherwise `features` can turn individual documents off. With neither filter, all 17 are generated.
+`publish` builds the document plan in `src/ai/document-plan.js` (17 documents). `documentation.sections` filters that plan when it is set. Otherwise `features` can turn individual documents off. With neither filter, all 17 are generated. Each generated Markdown document ends with the Docs by RepoLens badge unless `branding` is off.
 
 `outputs.pages` is still required, and its keys are the frozen schema allowlist:
 
