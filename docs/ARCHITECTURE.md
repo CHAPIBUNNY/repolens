@@ -155,6 +155,7 @@ repolens/
 │       ├── interactive.js   # TTY prompts
 │       └── yaml.js          # Size-capped YAML parsing
 ├── tests/                   # Vitest test suite
+├── gallery/                 # Static showcase generator (not published to npm)
 ├── docs/                    # Handbook (ROADMAP, STABILITY, RELEASE, …)
 ├── .repolens.yml            # Dogfooding config
 ├── package.json

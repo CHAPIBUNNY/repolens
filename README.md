@@ -27,6 +27,8 @@ RepoLens scans your repository, generates living architecture documentation, and
 
 > **Try it now** — no installation required. Run `npx @chappibunny/repolens demo` on any repo for an instant local preview.
 
+**[See it on real repos](https://chapibunny.github.io/repolens/)** — architecture pages RepoLens generated for Express, FastAPI, Django, Gin, mdBook, and other public projects. Deterministic mode, no API keys.
+
 🎬 **[Watch Demo Video](https://www.loom.com/share/8e077624e69f41319fd93acbbe03871e)** — See RepoLens generate docs in 60 seconds
 
 <table>

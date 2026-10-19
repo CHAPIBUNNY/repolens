@@ -12,3 +12,5 @@ test-*.sh
 notion-test.js
 INTERACTIVE-TEST-GUIDE.md
 .cache/
+gallery/.cache/
+gallery/dist/
