@@ -69,7 +69,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
-          files: repolens-*.tgz
+          files: chappibunny-repolens-*.tgz
           generate_release_notes: true
 
       - name: Verify npm token is set
@@ -84,8 +84,27 @@ jobs:
 
       - name: Publish to npm
         run: |
-          if npm view "$(node -p "require('./package.json').name")@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then echo already published; exit 0; fi
+          pkg="$(node -p "require('./package.json').name")"
+          ver="$(node -p "require('./package.json').version")"
+          on_npm() {
+            attempt=1
+            while [ "$attempt" -le 3 ]; do
+              if npm view "${pkg}@${ver}" version --prefer-online >/dev/null 2>&1; then
+                return 0
+              fi
+              if [ "$attempt" -lt 3 ]; then
+                sleep 10
+              fi
+              attempt=$((attempt + 1))
+            done
+            return 1
+          }
+          if on_npm; then echo already published; exit 0; fi
           npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
-          npm publish --provenance --access public
+          if npm publish --provenance --access public; then
+            exit 0
+          fi
+          if on_npm; then echo already published; exit 0; fi
+          exit 1
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
