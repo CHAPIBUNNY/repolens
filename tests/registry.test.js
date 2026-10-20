@@ -55,6 +55,11 @@ describe("mcp registry metadata", () => {
     expect(mcp).toContain("npx");
     expect(changelog).toContain("## 1.14.1");
     const release = read(".github/workflows/release.yml");
+    expect(release).toContain('npm view "${pkg}@${ver}" version --prefer-online');
+    expect(release).toContain('while [ "$attempt" -le 3 ]');
+    expect(release).toContain("sleep 10");
     expect(release).toContain("echo already published; exit 0;");
+    expect(release).toContain("files: chappibunny-repolens-*.tgz");
+    expect(release).not.toContain("files: repolens-*.tgz");
   });
 });

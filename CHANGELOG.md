@@ -2,6 +2,14 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## Unreleased
+
+### Release workflow
+
+- Before publishing, the release workflow queries `npm view <pkg>@<ver> version --prefer-online` up to three times, waiting 10 seconds between tries, and skips `npm publish` when that version is already on npm
+- If `npm publish` fails, the same check runs again. The step passes when the version is live
+- The GitHub Release uploads `chappibunny-repolens-*.tgz`, which is the tarball name `npm pack` writes for `@chappibunny/repolens`
+
 ## 1.14.3
 
 ### Docs

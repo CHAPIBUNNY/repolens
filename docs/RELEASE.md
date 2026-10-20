@@ -120,6 +120,20 @@ The `release.yml` workflow publishes to npm automatically when a `v*` tag is pus
 
 The workflow checks that the secret is present and then runs `npm publish --provenance --access public`. Provenance also needs the workflow `id-token: write` permission, which `release.yml` already sets. If `NPM_TOKEN` is missing, the publish job fails with a message pointing at this secret and does not publish.
 
+### Already published and release assets
+
+`npm pack` writes `chappibunny-repolens-<version>.tgz`. The GitHub Release step attaches `chappibunny-repolens-*.tgz`. A `repolens-*.tgz` glob does not match that file, so the release would have no package asset.
+
+Before publishing, the workflow reads `name` and `version` from `package.json` and runs:
+
+```bash
+npm view <pkg>@<ver> version --prefer-online
+```
+
+It tries that query up to three times and sleeps 10 seconds between tries. `--prefer-online` forces a fresh registry check instead of a stale cache. If any try shows the version, the step prints `already published` and exits 0 without calling `npm publish`.
+
+If `npm publish` fails, the same three-try check runs again. The step passes when the version is now live (the publish landed, or an earlier run already published it). The step fails when the version is still missing.
+
 Local preflight is `npm run release:check` (`npm test`, `npm run audit:runtime`, and `npm pack --dry-run`).
 
 The release audit runs `npm audit --omit=dev` and fails on high or critical production findings. `braces` GHSA-vfj7-8cjw-p6xm is waived because no patched version is published. The waiver, and the `micromatch` / `fast-glob` findings that exist only because of it, is recorded in `scripts/audit-waivers.json` and explained in `SECURITY.md`. A different high or critical advisory on those packages still fails the job.
