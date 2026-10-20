@@ -32,6 +32,7 @@ describe("docs badge", () => {
     const once = applyBrandingFooter("# Hello\n", {});
     expect(once).toContain(DOCS_BADGE_MARKER);
     expect(once).toContain(DOCS_BADGE_MARKDOWN);
+    expect(once).toContain("https://chapibunny.github.io/repolens/");
     expect(once).toContain("https://github.com/CHAPIBUNNY/repolens");
     expect(once).toContain("https://img.shields.io/badge/Docs%20by-RepoLens-0B5FFF");
     expect(applyBrandingFooter(once, {})).toBe(once);

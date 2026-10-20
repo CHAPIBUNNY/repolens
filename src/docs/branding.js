@@ -6,7 +6,7 @@
 export const DOCS_BADGE_MARKER = "<!-- repolens:docs-badge -->";
 
 export const DOCS_BADGE_MARKDOWN =
-  "[![Docs by RepoLens](https://img.shields.io/badge/Docs%20by-RepoLens-0B5FFF)](https://github.com/CHAPIBUNNY/repolens)";
+  "[![Docs by RepoLens](https://img.shields.io/badge/Docs%20by-RepoLens-0B5FFF)](https://github.com/CHAPIBUNNY/repolens) · [Examples](https://chapibunny.github.io/repolens/)";
 
 export function brandingEnabled(config) {
   const branding = config?.branding;

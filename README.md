@@ -12,8 +12,12 @@
 [![VS Code Extension](https://img.shields.io/visual-studio-marketplace/v/repolensdox.repolensdox?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox)
 [![Tests](https://img.shields.io/github/actions/workflow/status/CHAPIBUNNY/repolens/test.yml?label=tests)](https://github.com/CHAPIBUNNY/repolens/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.CHAPIBUNNY%2Frepolens-6E56CF)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.CHAPIBUNNY/repolens)
+[![Gallery](https://img.shields.io/badge/Gallery-26_real_repos-0B5FFF)](https://chapibunny.github.io/repolens/)
 [![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=repolens&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBjaGFwcGlidW5ueS9yZXBvbGVucyIsIm1jcCJdfQ%3D%3D)
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=repolens&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40chappibunny%2Frepolens%22%2C%22mcp%22%5D%7D)
+
+**Links:** [Gallery](https://chapibunny.github.io/repolens/) · [npm](https://www.npmjs.com/package/@chappibunny/repolens) · [MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.CHAPIBUNNY/repolens) · [VS Code extension](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox) · [GitHub Action](action.yml)
 
 **Your architecture docs are already outdated.** RepoLens fixes that.
 
@@ -239,8 +243,10 @@ The action is listed on the GitHub Marketplace only after a release is published
 Generated Markdown includes this line unless `.repolens.yml` sets `branding: false` (or `branding.badge: false`). Add the same badge to a repository README:
 
 ```markdown
-[![Docs by RepoLens](https://img.shields.io/badge/Docs%20by-RepoLens-0B5FFF)](https://github.com/CHAPIBUNNY/repolens)
+[![Docs by RepoLens](https://img.shields.io/badge/Docs%20by-RepoLens-0B5FFF)](https://github.com/CHAPIBUNNY/repolens) · [Examples](https://chapibunny.github.io/repolens/)
 ```
+
+Generated docs also link to the [gallery](https://chapibunny.github.io/repolens/) after the badge.
 
 ---
 
@@ -250,7 +256,7 @@ Generated Markdown includes this line unless `.repolens.yml` sets `branding: fal
 
 Published system maps are Unicode diagrams drawn from import edges. RepoLens does not emit Mermaid.
 
-The publisher set is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). 1.14.0 adds the MCP server, the Marketplace action, and the docs badge. 1.14.1 sets the registry name to `io.github.CHAPIBUNNY/repolens`. Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The publisher set is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). 1.14.0 adds the MCP server, the Marketplace action, and the docs badge. 1.14.1 sets the registry name to `io.github.CHAPIBUNNY/repolens`. 1.14.2 adds the gallery link to the badge line, `glama.json`, and `CITATION.cff`. Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ### System Overview (Technical Profile)
 
