@@ -10,6 +10,13 @@ All notable changes to RepoLens will be documented in this file.
 - If `npm publish` fails, the same check runs again. The step passes when the version is live
 - The GitHub Release uploads `chappibunny-repolens-*.tgz`, which is the tarball name `npm pack` writes for `@chappibunny/repolens`
 
+## Unreleased
+
+### Docs
+
+- README VS Code badge switched to a static shields.io badge (the visual-studio-marketplace badges were retired)
+- New `assets/social-preview.png` (1280x640, rendered from HTML with headless Chrome)
+
 ## 1.14.3
 
 ### Docs
