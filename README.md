@@ -9,7 +9,7 @@
 ```
 
 [![npm version](https://img.shields.io/npm/v/@chappibunny/repolens)](https://www.npmjs.com/package/@chappibunny/repolens)
-[![VS Code Extension](https://img.shields.io/visual-studio-marketplace/v/repolensdox.repolensdox?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox)
+[![VS Code Extension](https://img.shields.io/badge/VS_Code-Marketplace-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox)
 [![Tests](https://img.shields.io/github/actions/workflow/status/CHAPIBUNNY/repolens/test.yml?label=tests)](https://github.com/CHAPIBUNNY/repolens/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.CHAPIBUNNY%2Frepolens-6E56CF)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.CHAPIBUNNY/repolens)
