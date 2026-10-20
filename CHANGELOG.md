@@ -2,6 +2,25 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.15.0
+
+### CLI usability
+
+- `init --quick` detects the repository language (Python, Go, Rust, Java/Kotlin, JavaScript/TypeScript, Ruby, PHP, C#, Swift, C/C++, and mixes of those) and writes matching `scan.include` globs and `module_roots`. It no longer defaults to JavaScript-only patterns such as `src/**/*.{ts,tsx,js,jsx,md}`
+- `init --quick` enables the Markdown publisher only. The interactive wizard can still add Notion, Confluence, GitHub Wiki, and Obsidian
+- `doctor` fails when `scan.include` matches 0 files
+- `demo` and `publish` print a warning and exit 2 when 0 files are scanned. They do not write empty documentation
+- `repolens <command> --help` prints that command's usage and flags for init, doctor, migrate, publish, demo, watch, uninstall, feedback, and mcp
+- `--target` is checked before any scan or publish. A missing path exits 2 with `Target directory not found: <path>`
+- A directory that is not a git repository is reported as `not a git repository`. Code health does not claim an average of 100/100 across 0 files
+- `watch` exits 2 when none of the `module_roots` directories exist
+- `publish --strict` exits 2 when a configured publisher is missing credentials
+- `repolens` with no arguments prints help and does not publish
+- The ASCII banner is omitted when stdout is not a terminal or `CI` is set
+- Init's next-steps text uses `repolens publish` when the CLI is installed globally, and `npx @chappibunny/repolens publish` otherwise
+
+Exit codes stay 0 success, 1 runtime error or unknown command, and 2 validation failure (bad flags, missing config, missing target, doctor failure, 0 files scanned, nothing to watch, `--strict` credentials, feedback without a terminal).
+
 ## Unreleased
 
 ### Release workflow

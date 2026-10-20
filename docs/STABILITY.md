@@ -17,7 +17,7 @@ RepoLens follows semantic versioning (semver):
 | Command | Status | Description |
 |---------|--------|-------------|
 | `init` | Stable | **Interactive wizard** — configure publishers, AI, credentials |
-| `init --quick` | Stable | Minimal scaffolding, skip wizard |
+| `init --quick` | Stable | Markdown-only scaffolding. Globs follow the detected language |
 | `doctor` | Stable | Validate repository setup |
 | `publish` | Stable | Scan, generate, and publish documentation |
 | `demo` | Stable | Generate local docs without API keys (quick preview) |
@@ -34,7 +34,8 @@ RepoLens follows semantic versioning (semver):
 |--------|-------|--------|-------------|
 | `--config <path>` | — | Stable | Path to `.repolens.yml` |
 | `--target <path>` | — | Stable | Target repository path (init, doctor, migrate) |
-| `--quick` | — | Stable | Skip interactive wizard for init |
+| `--quick` | — | Stable | Skip interactive wizard for init. Markdown publisher only |
+| `--strict` | — | Stable | `publish`: exit 2 when a configured publisher is missing credentials |
 | `--dry-run` | — | Stable | Preview changes without applying (migrate) |
 | `--force` | — | Stable | Skip confirmation prompts (migrate) |
 | `--verbose` | — | Stable | Enable verbose logging |
@@ -49,7 +50,9 @@ RepoLens follows semantic versioning (semver):
 | `1` | Runtime error (scan failure, publish failure, etc.) |
 | `2` | Validation error (invalid config, missing files, etc.) |
 
-Unknown commands produce exit code `1`. Unknown flags, and missing values for `--config` or `--target`, produce exit code `2`. `repolens doctor` exits `2` when it finds a blocking setup problem. `--dry-run` applies to `migrate` only. `publish` does not accept it.
+Unknown commands produce exit code `1`. Unknown flags, and missing values for `--config` or `--target`, produce exit code `2`. `repolens doctor` exits `2` when it finds a blocking setup problem, including a scan that matches 0 files. `demo` and `publish` exit `2` when 0 files are scanned and do not write empty docs. `watch` exits `2` when no `module_roots` directory exists. `publish --strict` exits `2` when publisher credentials are missing. A `--target` path that does not exist exits `2` with `Target directory not found: <path>` before any scan. `repolens` with no command prints help and exits `0`. `repolens <command> --help` prints that command's flags. `--dry-run` applies to `migrate` only. `publish` does not accept it.
+
+`--target` must already be a directory. RepoLens does not create it.
 
 ## Configuration Schema
 

@@ -200,6 +200,37 @@ describe("runInit", () => {
     expect(env).toContain("REPOLENS_AI_MODEL");
   });
 
+  it("writes Python globs and a markdown-only publisher for a Python repo", async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "repolens-init-py-"));
+    await fs.writeFile(path.join(tempDir, "setup.py"), "from setuptools import setup\nsetup(name='demo')\n");
+    await fs.mkdir(path.join(tempDir, "requests"));
+    await fs.writeFile(path.join(tempDir, "requests", "api.py"), "def get():\n    return 1\n");
+
+    await runInit(tempDir, { interactive: false });
+
+    const config = await fs.readFile(path.join(tempDir, ".repolens.yml"), "utf8");
+    expect(config).toContain('"**/*.py"');
+    expect(config).toContain('"requests"');
+    expect(config).not.toContain("src/**/*.{ts,tsx,js,jsx,md}");
+    expect(config).toMatch(/publishers:\n {2}- markdown\b/);
+    expect(config).not.toMatch(/^ {2}- notion\b/m);
+    expect(config).not.toMatch(/^ {2}- confluence\b/m);
+  });
+
+  it("writes Go globs and module roots for a Go repo", async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "repolens-init-go-"));
+    await fs.writeFile(path.join(tempDir, "go.mod"), "module example.com/demo\n\ngo 1.22\n");
+    await fs.mkdir(path.join(tempDir, "cmd", "demo"), { recursive: true });
+    await fs.writeFile(path.join(tempDir, "cmd", "demo", "main.go"), "package main\nfunc main() {}\n");
+
+    await runInit(tempDir, { interactive: false });
+
+    const config = await fs.readFile(path.join(tempDir, ".repolens.yml"), "utf8");
+    expect(config).toContain('"**/*.go"');
+    expect(config).toContain('"cmd"');
+    expect(config).not.toContain("src/**/*.{ts,tsx,js,jsx,md}");
+  });
+
   it("does not overwrite existing files", async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "repolens-init-skip-"));
     const configPath = path.join(tempDir, ".repolens.yml");

@@ -4,6 +4,8 @@
 
 Node.js 18 or newer. The CLI uses the built-in `fetch` API.
 
+`npx @chappibunny/repolens demo` previews the current repository. It picks scan globs from the languages it finds. If nothing matches, it exits 2. `npx @chappibunny/repolens` with no command prints help. `npx @chappibunny/repolens <command> --help` prints that command's flags.
+
 ## Recommended: npm Registry
 
 ```bash
@@ -39,19 +41,19 @@ npm link
 <details>
 <summary><b>Option D: GitHub Release Tarball</b></summary>
 
-Install from a specific GitHub Release. The version segment is the release tag. For 1.14.3:
+Install from a specific GitHub Release. The version segment is the release tag. For 1.15.0:
 
 ```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.14.3/chappibunny-repolens-1.14.3.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.15.0/chappibunny-repolens-1.15.0.tgz
 ```
 
-That URL exists only after the `v1.14.3` tag is published. Until then, install from npm or from the repository.
+That URL exists only after the `v1.15.0` tag is published. Until then, install from npm or from the repository.
 
 After install, `repolens mcp` and `repolens-mcp` start the stdio server. See [MCP.md](MCP.md).
 
 ### GitHub Action
 
-Use the composite action from this repository once tag `v1.14.3` exists and `@chappibunny/repolens@1.14.3` is on npm. The action runs that published package. It does not run the checkout of this repo.
+Use the composite action from this repository once tag `v1.15.0` exists and `@chappibunny/repolens@1.15.0` is on npm. The action runs that published package. It does not run the checkout of this repo.
 
 ```yaml
 name: Architecture docs
@@ -67,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
-      - uses: CHAPIBUNNY/repolens@v1.14.3
+      - uses: CHAPIBUNNY/repolens@v1.15.0
         with:
           command: publish
           config: .repolens.yml

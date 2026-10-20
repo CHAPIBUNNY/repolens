@@ -375,7 +375,9 @@ describe("computeCodeHealth", () => {
   it("handles empty input", () => {
     const result = computeCodeHealth({ files: [], functions: [], filesAnalyzed: 0 }, { nodes: [] }, { byFile: {} }, { findings: [] });
     expect(result.modules.length).toBe(0);
-    expect(result.stats.avgScore).toBe(100);
+    expect(result.stats.avgScore).toBeNull();
+    expect(result.summary).not.toContain("100/100");
+    expect(result.summary).toMatch(/No source files/i);
   });
 
   it("clamps score between 0 and 100", () => {

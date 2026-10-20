@@ -56,6 +56,9 @@ ${extraConfig}
       "utf8"
     );
 
+    await fs.mkdir(path.join(tempDir, "src"), { recursive: true });
+    await fs.writeFile(path.join(tempDir, "src", "index.js"), "export const n = 1;\n", "utf8");
+
     return tempDir;
   }
 
@@ -63,6 +66,15 @@ ${extraConfig}
     const tempDir = await createValidRepo();
     const result = await runDoctor(tempDir);
     expect(result.ok).toBe(true);
+  });
+
+  it("fails when scan.include matches 0 files", async () => {
+    const tempDir = await createValidRepo();
+    await fs.rm(path.join(tempDir, "src"), { recursive: true, force: true });
+
+    const result = await runDoctor(tempDir);
+    expect(result.ok).toBe(false);
+    expect(result.failures.some((message) => message.includes("0 files matched"))).toBe(true);
   });
 
   it("fails when RepoLens config is missing", async () => {

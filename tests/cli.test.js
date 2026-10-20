@@ -105,6 +105,62 @@ describe("cli", () => {
     expect(result.stdout.trim()).toBe(pkg.version);
     expect(result.stderr).not.toContain("Repository Intelligence");
   });
+
+  it("prints help when invoked with no arguments", async () => {
+    const result = await runNodeAny([]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Usage:");
+    expect(result.stdout).toContain("With no command");
+    expect(result.stdout).not.toContain("Scanning repository");
+  });
+
+  it("prints per-command help", async () => {
+    const initHelp = await runNodeAny(["init", "--help"]);
+    expect(initHelp.exitCode).toBe(0);
+    expect(initHelp.stdout).toContain("repolens init");
+    expect(initHelp.stdout).toContain("--quick");
+    expect(initHelp.stdout).toContain("Exit codes:");
+    expect(initHelp.stdout).not.toContain("\nCommands:\n");
+
+    const publishHelp = await runNodeAny(["publish", "--help"]);
+    expect(publishHelp.stdout).toContain("--strict");
+    expect(publishHelp.stdout).toContain("--config");
+
+    const doctorHelp = await runNodeAny(["doctor", "--help"]);
+    expect(doctorHelp.stdout).toContain("0 files");
+
+    const watchHelp = await runNodeAny(["watch", "--help"]);
+    expect(watchHelp.stdout).toContain("nothing to watch");
+
+    const demoHelp = await runNodeAny(["demo", "--help"]);
+    expect(demoHelp.stdout).toContain("0 files");
+
+    for (const command of ["migrate", "uninstall", "feedback", "mcp"]) {
+      const help = await runNodeAny([command, "--help"]);
+      expect(help.exitCode).toBe(0);
+      expect(help.stdout).toContain(`repolens ${command}`);
+      expect(help.stdout).toContain("Exit codes:");
+    }
+  });
+
+  it("exits 2 when --target does not exist", async () => {
+    const missing = path.join(os.tmpdir(), `repolens-missing-${Date.now()}`);
+    const result = await runNodeAny(["init", "--quick", "--target", missing], { NODE_ENV: "" });
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain(`Target directory not found: ${missing}`);
+    expect(fs.existsSync(missing)).toBe(false);
+  });
+
+  it("hides the ASCII banner when CI is set", async () => {
+    const dir = await fsp.mkdtemp(path.join(os.tmpdir(), "repolens-banner-"));
+    try {
+      const result = await runNodeAny(["init", "--quick", "--target", dir], { NODE_ENV: "", CI: "true" });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).not.toContain("██████");
+    } finally {
+      await fsp.rm(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("uninstall", () => {

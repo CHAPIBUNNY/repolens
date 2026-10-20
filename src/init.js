@@ -4,6 +4,8 @@ import { createInterface } from "node:readline/promises";
 import { spawn } from "node:child_process";
 import { info, warn } from "./utils/logger.js";
 import { isNonInteractiveEnvironment } from "./utils/interactive.js";
+import { detectRepoLanguages } from "./core/languages.js";
+import { repolensCommand } from "./utils/invocation.js";
 
 const PUBLISHER_CHOICES = ["markdown", "notion", "confluence", "github_wiki", "obsidian"];
 
@@ -315,21 +317,6 @@ const SCAN_PRESETS = {
   },
 };
 
-const DETECTABLE_ROOTS = [
-  "app",
-  "src/app",
-  "components",
-  "src/components",
-  "lib",
-  "src/lib",
-  "hooks",
-  "src/hooks",
-  "store",
-  "src/store",
-  "pages",
-  "src/pages"
-];
-
 const DEFAULT_GITHUB_WORKFLOW = `name: RepoLens Documentation
 
 on:
@@ -422,7 +409,8 @@ This repository is configured to use [RepoLens](https://github.com/CHAPIBUNNY/re
 ### Local Testing
 
 \`\`\`bash
-# Test documentation generation locally
+# Test documentation generation locally.
+# Use \`repolens publish\` when the CLI is on your PATH.
 npx @chappibunny/repolens publish
 \`\`\`
 
@@ -557,15 +545,6 @@ async function fileExists(filePath) {
   }
 }
 
-async function dirExists(dirPath) {
-  try {
-    const stat = await fs.stat(dirPath);
-    return stat.isDirectory();
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Open a URL in the default browser (cross-platform).
  */
@@ -680,23 +659,6 @@ async function testAIKey(provider, apiKey) {
   }
 }
 
-async function detectRepoStructure(repoRoot) {
-  const detectedRoots = [];
-
-  for (const relativePath of DETECTABLE_ROOTS) {
-    const absolutePath = path.join(repoRoot, relativePath);
-    if (await dirExists(absolutePath)) {
-      detectedRoots.push(relativePath);
-    }
-  }
-
-  return detectedRoots;
-}
-
-function buildIncludePatterns(detectedRoots) {
-  return detectedRoots.map((root) => `${root}/**/*.{ts,tsx,js,jsx,md}`);
-}
-
 function buildIgnorePatterns() {
   return [
     "tools/repolens/**",
@@ -717,12 +679,18 @@ function buildIgnorePatterns() {
     "**/esm/**",
     "**/imp/**",
     "**/types/**",
-    "**/load-testing/**"
+    "**/load-testing/**",
+    "**/__pycache__/**",
+    "**/.venv/**",
+    "**/venv/**",
+    "**/vendor/**",
+    "**/target/**"
   ];
 }
 
-function buildRepoLensConfig(projectName, detectedRoots, options = {}) {
-  const includePatterns = buildIncludePatterns(detectedRoots);
+function buildRepoLensConfig(projectName, detected, options = {}) {
+  const includePatterns = detected?.include?.length ? detected.include : ["**/*.{js,jsx,ts,tsx,py,go,rs,java}"];
+  const moduleRoots = detected?.moduleRoots?.length ? detected.moduleRoots : ["."];
   const ignorePatterns = buildIgnorePatterns();
   const enableAI = options.enableAI || false;
 
@@ -734,9 +702,7 @@ function buildRepoLensConfig(projectName, detectedRoots, options = {}) {
     `  docs_title_prefix: "RepoLens"`,
     ``,
     `publishers:`,
-    `  - markdown    # Always generate local Markdown files`,
-    `  - notion      # Auto-detected: publishes if NOTION_TOKEN is set`,
-    `  - confluence  # Auto-detected: publishes if CONFLUENCE_URL is set`,
+    `  - markdown    # Local files. The wizard (repolens init) can add Notion, Confluence, GitHub Wiki, and Obsidian.`,
     ``,
     `# Docs by RepoLens badge on generated Markdown (default: on)`,
     `# branding: false`,
@@ -799,13 +765,8 @@ function buildRepoLensConfig(projectName, detectedRoots, options = {}) {
   lines.push(`scan:`);
   lines.push(`  include:`);
 
-  if (includePatterns.length) {
-    for (const pattern of includePatterns) {
-      lines.push(`    - "${pattern}"`);
-    }
-  } else {
-    lines.push(`    - "src/**/*.{ts,tsx,js,jsx,md}"`);
-    lines.push(`    - "app/**/*.{ts,tsx,js,jsx,md}"`);
+  for (const pattern of includePatterns) {
+    lines.push(`    - "${pattern}"`);
   }
 
   lines.push(``);
@@ -818,17 +779,8 @@ function buildRepoLensConfig(projectName, detectedRoots, options = {}) {
   lines.push(``);
   lines.push(`module_roots:`);
 
-  if (detectedRoots.length) {
-    for (const root of detectedRoots) {
-      lines.push(`  - "${root}"`);
-    }
-  } else {
-    lines.push(`  - "app"`);
-    lines.push(`  - "src/app"`);
-    lines.push(`  - "components"`);
-    lines.push(`  - "src/components"`);
-    lines.push(`  - "lib"`);
-    lines.push(`  - "src/lib"`);
+  for (const root of moduleRoots) {
+    lines.push(`  - "${root}"`);
   }
 
   lines.push(``);
@@ -1552,8 +1504,15 @@ export { parseConfluenceUrl, parseNotionInput };
 export async function runInit(targetDir = process.cwd(), options = {}) {
   const repoRoot = path.resolve(targetDir);
 
-  // Ensure target directory exists
-  await fs.mkdir(repoRoot, { recursive: true });
+  let targetStat;
+  try {
+    targetStat = await fs.stat(repoRoot);
+  } catch {
+    throw new Error(`Target directory not found: ${targetDir}`);
+  }
+  if (!targetStat.isDirectory()) {
+    throw new Error(`Target directory not found: ${targetDir}`);
+  }
 
   // Interactive wizard is the default (--quick skips it).
   // CI, tests, and closed stdin used to return null from the wizard and
@@ -1568,8 +1527,10 @@ export async function runInit(targetDir = process.cwd(), options = {}) {
     info("Non-interactive environment detected — running quick setup instead of the wizard.");
   }
 
-  // Prompt for Notion credentials interactively (only in non-wizard mode)
-  const notionCredentials = wizardAnswers ? null : await promptNotionCredentials();
+  // --quick is Markdown only. The wizard collects Notion and Confluence.
+  const notionCredentials = wizardAnswers || options.interactive === false
+    ? null
+    : await promptNotionCredentials();
 
   const repolensConfigPath = path.join(repoRoot, ".repolens.yml");
   const workflowDir = path.join(repoRoot, ".github", "workflows");
@@ -1587,24 +1548,30 @@ export async function runInit(targetDir = process.cwd(), options = {}) {
   const readmeExists = await fileExists(readmePath);
 
   const projectName = wizardAnswers?.projectName || detectProjectName(repoRoot);
-  const detectedRoots = wizardAnswers ? [] : await detectRepoStructure(repoRoot);
+  const detected = wizardAnswers ? null : await detectRepoLanguages(repoRoot);
 
   // Auto-detect GITHUB_TOKEN for AI enablement
   const hasGitHubToken = !!process.env.GITHUB_TOKEN;
   const configContent = wizardAnswers
     ? buildWizardConfig(wizardAnswers)
-    : buildRepoLensConfig(projectName, detectedRoots, { enableAI: hasGitHubToken });
+    : buildRepoLensConfig(projectName, detected, { enableAI: hasGitHubToken });
 
   info(`Detected project name: ${projectName}`);
 
-  if (detectedRoots.length) {
-    info(`Detected module roots:`);
-    for (const root of detectedRoots) {
+  if (detected) {
+    if (detected.languages.length) {
+      info(`Detected languages: ${detected.languages.map((lang) => lang.label).join(", ")}`);
+    } else {
+      info("No known language detected. Using multi-language scan patterns.");
+    }
+    info("module_roots:");
+    for (const root of detected.moduleRoots) {
       info(`  - ${root}`);
     }
-  } else if (!wizardAnswers) {
-    info(`No known roots detected. Falling back to default config.`);
   }
+
+  const publishCmd = repolensCommand("publish");
+  const doctorCmd = repolensCommand("doctor");
 
   if (!configExists) {
     await fs.writeFile(repolensConfigPath, configContent, "utf8");
@@ -1694,13 +1661,13 @@ NOTION_VERSION=2022-06-28
       info("   └────────────────────────────────────────────────────────────┘");
       info("");
       info("   1. source .env                   ← Load your credentials");
-      info("   2. npx @chappibunny/repolens publish   ← Test locally");
+      info(`   2. ${publishCmd}   ← Test locally`);
     } else {
-      info("   1. npx @chappibunny/repolens publish   ← Test locally");
+      info(`   1. ${publishCmd}   ← Test locally`);
     }
     info(`   ${hasLocalCredentials ? "3" : "2"}. Add GitHub secrets (see above)`);
     info(`   ${hasLocalCredentials ? "4" : "3"}. Commit and push to trigger workflow`);
-    info(`   ${hasLocalCredentials ? "5" : "4"}. Run 'npx @chappibunny/repolens doctor' to validate setup`);
+    info(`   ${hasLocalCredentials ? "5" : "4"}. Run '${doctorCmd}' to validate setup`);
     return;
   }
 
@@ -1714,7 +1681,7 @@ NOTION_VERSION=2022-06-28
     info("   Your credentials are stored in .env (gitignored)\n");
     info("Next steps:");
     info("  1. Review .repolens.yml to customize your documentation");
-    info("  2. Run 'npx @chappibunny/repolens publish' to generate your first docs (deterministic mode)");
+    info(`  2. Run '${publishCmd}' to generate your first docs (deterministic mode)`);
     info("  3. (Optional) Enable AI features:");
     info("     ── FREE: GitHub Models (recommended for GitHub Actions) ──");
     info("     REPOLENS_AI_ENABLED=true");
@@ -1745,7 +1712,7 @@ NOTION_VERSION=2022-06-28
       info("     REPOLENS_AI_API_KEY=sk-...");
       info("     See: https://github.com/CHAPIBUNNY/repolens/blob/main/AI.md");
     }
-    info(`  ${hasGitHubToken ? "3" : "4"}. Run 'npx @chappibunny/repolens publish' to test locally`);
+    info(`  ${hasGitHubToken ? "3" : "4"}. Run '${publishCmd}' to test locally`);
     info(`  ${hasGitHubToken ? "4" : "5"}. Commit the generated files`);
   }
 }

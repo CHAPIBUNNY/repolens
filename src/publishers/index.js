@@ -20,6 +20,39 @@ function hasNotionSecrets() {
   return !!process.env.NOTION_TOKEN && !!process.env.NOTION_PARENT_PAGE_ID;
 }
 
+/**
+ * Credentials a configured publisher still needs.
+ * Markdown has none. Used by `publish --strict`.
+ */
+export function missingPublisherCredentials(cfg) {
+  const publishers = Array.isArray(cfg?.publishers) ? cfg.publishers : [];
+  const missing = [];
+
+  if (publishers.includes("notion")) {
+    if (!process.env.NOTION_TOKEN) missing.push("NOTION_TOKEN (required for notion)");
+    if (!process.env.NOTION_PARENT_PAGE_ID) missing.push("NOTION_PARENT_PAGE_ID (required for notion)");
+  }
+
+  if (publishers.includes("confluence")) {
+    for (const key of ["CONFLUENCE_URL", "CONFLUENCE_EMAIL", "CONFLUENCE_API_TOKEN", "CONFLUENCE_SPACE_KEY"]) {
+      if (!process.env[key]) missing.push(`${key} (required for confluence)`);
+    }
+  }
+
+  if (publishers.includes("github_wiki")) {
+    if (!process.env.GITHUB_TOKEN) missing.push("GITHUB_TOKEN (required for github_wiki)");
+  }
+
+  if (publishers.includes("obsidian")) {
+    const vault = cfg?.obsidian?.vault;
+    if (typeof vault !== "string" || vault.trim() === "") {
+      missing.push("obsidian.vault (required for obsidian)");
+    }
+  }
+
+  return missing;
+}
+
 export async function publishDocs(cfg, renderedPages, scanResult, pluginManager = null) {
   const publishers = cfg.publishers || ["markdown", "notion"];
   const currentBranch = getCurrentBranch();

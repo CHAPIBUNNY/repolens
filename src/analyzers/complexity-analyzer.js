@@ -264,7 +264,7 @@ export function computeCodeHealth(complexityResult, depGraph, jsdocResult, secur
 
   // Aggregate stats
   const totalFiles = modules.length;
-  const avgScore = totalFiles > 0 ? Math.round(modules.reduce((s, m) => s + m.score, 0) / totalFiles) : 100;
+  const avgScore = totalFiles > 0 ? Math.round(modules.reduce((s, m) => s + m.score, 0) / totalFiles) : null;
   const avgComplexity = totalFiles > 0 ? Math.round(modules.reduce((s, m) => s + m.complexity, 0) / totalFiles) : 0;
 
   const gradeDistribution = { A: 0, B: 0, C: 0, D: 0, F: 0 };
@@ -280,7 +280,11 @@ export function computeCodeHealth(complexityResult, depGraph, jsdocResult, secur
     ? `${totalFiles} files analyzed · Average health: ${avgScore}/100 · ${gradeDistribution.A} A, ${gradeDistribution.B} B, ${gradeDistribution.C} C, ${gradeDistribution.D} D, ${gradeDistribution.F} F`
     : "No source files analyzed.";
 
-  info(`Code health: avg ${avgScore}/100 across ${totalFiles} files (${hotspots.length} hotspots)`);
+  if (totalFiles === 0) {
+    info("Code health: no source files analyzed.");
+  } else {
+    info(`Code health: avg ${avgScore}/100 across ${totalFiles} files (${hotspots.length} hotspots)`);
+  }
 
   return {
     modules,

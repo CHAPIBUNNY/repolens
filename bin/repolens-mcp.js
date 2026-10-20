@@ -13,7 +13,7 @@ if (wantsVersion && !wantsHelp) {
 
 if (wantsHelp) {
   const { printHelp } = await import("../src/help.js");
-  printHelp();
+  printHelp("mcp");
   process.exit(0);
 }
 

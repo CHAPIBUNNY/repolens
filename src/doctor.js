@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { loadYaml } from "./utils/yaml.js";
 import { loadConfig } from "./core/config.js";
+import { listMatchedFiles } from "./core/scan.js";
 import { detectConfigTypos } from "./core/config-schema.js";
 import { info } from "./utils/logger.js";
 import { forceCheckForUpdates } from "./utils/update-check.js";
@@ -56,8 +57,11 @@ function ok(message) {
   info(`✅ ${message}`);
 }
 
+let activeFailures = null;
+
 function fail(message) {
   info(`❌ ${message}`);
+  if (activeFailures) activeFailures.push(message);
 }
 
 function warn(message) {
@@ -66,6 +70,8 @@ function warn(message) {
 
 export async function runDoctor(targetDir = process.cwd()) {
   const repoRoot = path.resolve(targetDir);
+  const failures = [];
+  activeFailures = failures;
 
   const repolensConfigPath = path.join(repoRoot, ".repolens.yml");
   const workflowPath = path.join(repoRoot, ".github", "workflows", "repolens.yml");
@@ -172,6 +178,20 @@ export async function runDoctor(targetDir = process.cwd()) {
       fail("outputs.pages is missing or empty");
       hasFailures = true;
     }
+
+    try {
+      const matched = await listMatchedFiles(cfg);
+      if (matched.length === 0) {
+        const patterns = (cfg.scan?.include || []).join(", ") || "(none)";
+        fail(`0 files matched scan.include (${patterns}). publish and demo would write empty documentation. Update scan.include, or run \`repolens init --quick\` so the globs match this repository's language.`);
+        hasFailures = true;
+      } else {
+        ok(`scan.include matches ${matched.length} file(s)`);
+      }
+    } catch (error) {
+      fail(`Could not scan repository: ${error.message}`);
+      hasFailures = true;
+    }
   }
 
   // Validate environment variables for configured publishers
@@ -259,10 +279,11 @@ export async function runDoctor(targetDir = process.cwd()) {
 
   if (hasFailures) {
     fail("RepoLens doctor found blocking issues.");
-    process.exitCode = 1;
-    return { ok: false };
+    activeFailures = null;
+    return { ok: false, failures };
   }
 
   ok("RepoLens doctor passed.");
-  return { ok: true };
+  activeFailures = null;
+  return { ok: true, failures };
 }
