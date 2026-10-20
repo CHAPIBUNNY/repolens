@@ -260,7 +260,7 @@ function layout({ title, description, canonical, image, home, logo, css, depth, 
   <meta name="description" content="${escapeAttr(description)}">
   <link rel="canonical" href="${escapeAttr(canonical)}">
   <meta name="robots" content="index,follow">
-  <meta name="theme-color" content="#071018">
+  <meta name="theme-color" content="#1565C0">
   <meta property="og:site_name" content="RepoLens">
   <meta property="og:title" content="${escapeAttr(title)}">
   <meta property="og:description" content="${escapeAttr(description)}">
@@ -279,10 +279,10 @@ function layout({ title, description, canonical, image, home, logo, css, depth, 
 </head>
 <body>
   <a class="skip" href="#content">Skip to content</a>
-  <header class="top">
+  <header class="appbar">
     <a class="brand" href="${escapeAttr(home)}">
-      <img src="${escapeAttr(logo)}" width="1024" height="1024" alt="RepoLens">
-      <span>RepoLens <em>Gallery</em></span>
+      <img src="${escapeAttr(logo)}" width="40" height="40" alt="">
+      <span>RepoLens</span>
     </a>
     <nav aria-label="RepoLens">
       <a href="${LINKS.npm}">npm</a>
@@ -337,19 +337,30 @@ export function renderIndex({ origin, basePath, generatedOn, version, pages, ski
     .join("");
 
   const sections = groups.map((group) => {
-    const cards = group.pages.map((page) => `<a class="card" href="${escapeAttr(sitePath(basePath, `${page.slug}/`))}">
-      <span class="pill">${escapeHtml(page.language)}</span>
-      <h3>${escapeHtml(page.name)}</h3>
-      <p>${escapeHtml(page.blurb)}</p>
-      <dl>
-        <div><dt>Modules</dt><dd>${page.stats.modules}</dd></div>
-        <div><dt>Files</dt><dd>${page.stats.files}</dd></div>
-        <div><dt>License</dt><dd>${escapeHtml(page.license)}</dd></div>
-      </dl>
-    </a>`).join("");
+    const rows = group.pages.map((page) => `<tr>
+      <td data-label="Repository"><a class="repo-name" href="${escapeAttr(sitePath(basePath, `${page.slug}/`))}">${escapeHtml(page.name)}</a><span class="blurb">${escapeHtml(page.blurb)}</span></td>
+      <td data-label="Language">${escapeHtml(page.language)}</td>
+      <td class="num" data-label="Modules">${page.stats.modules}</td>
+      <td class="num" data-label="Files">${page.stats.files}</td>
+      <td data-label="License">${escapeHtml(page.license)}</td>
+    </tr>`).join("");
     return `<section class="lang-block" id="${languageAnchor(group.language)}">
       <h2>${escapeHtml(group.language)}</h2>
-      <div class="grid">${cards}</div>
+      <div class="table-wrap">
+        <table class="repo-list">
+          <caption>${escapeHtml(group.language)} repositories</caption>
+          <thead>
+            <tr>
+              <th scope="col">Repository</th>
+              <th scope="col">Language</th>
+              <th scope="col">Modules</th>
+              <th scope="col">Files</th>
+              <th scope="col">License</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
     </section>`;
   }).join("\n");
 
@@ -437,6 +448,10 @@ export function renderRepo(page, { origin, basePath, generatedOn, version }) {
 
   const languages = (page.stats.languages || []).filter(Boolean);
   const frameworks = (page.stats.frameworks || []).filter(Boolean).slice(0, 8);
+  const tags = [...languages, ...frameworks];
+  const tagsHtml = tags.length
+    ? `<p class="chips">${tags.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</p>`
+    : "";
   const note = page.note ? `<p class="note">${escapeHtml(page.note)}</p>` : "";
   const capped = page.stats.capped
     ? `<p class="note">Scanned ${page.stats.files} of ${page.stats.matched} matching files, a deterministic sample, so the job stays inside CI limits.</p>`
@@ -455,7 +470,7 @@ export function renderRepo(page, { origin, basePath, generatedOn, version }) {
       <div><dt>API routes</dt><dd>${page.stats.api}</dd></div>
       <div><dt>Documents</dt><dd>${docs.length}</dd></div>
     </dl>
-    <p>${languages.map((lang) => `<span class="pill">${escapeHtml(lang)}</span>`).join(" ")} ${frameworks.map((item) => `<span class="pill">${escapeHtml(item)}</span>`).join(" ")}</p>
+    ${tagsHtml}
     ${ctaBlock()}
     <div class="layout">
       <nav class="toc" aria-label="Documents">
@@ -563,6 +578,38 @@ export function selfTest() {
     ["keeps https link", html.includes('href="https://example.com/docs"')],
     ["list", html.includes("<li>one</li>")],
   ];
+
+  const sample = {
+    slug: "express",
+    name: "Express",
+    owner: "expressjs",
+    repo: "express",
+    language: "JavaScript",
+    license: "MIT",
+    licenseFiles: ["LICENSE"],
+    commit: "abc123",
+    shortSha: "abc123",
+    blurb: "Web framework.",
+    stats: { files: 7, modules: 7, api: 0, languages: ["JavaScript"], frameworks: ["Express"] },
+    documents: [{
+      key: "system_map",
+      title: "System map",
+      audience: "technical",
+      description: "Map",
+      filename: "01-system-map.md",
+      content: "# System map\n\nHello",
+    }],
+  };
+  const opts = { origin: "https://example.com", basePath: "/repolens", generatedOn: "2026-01-01", version: "1.14.1" };
+  const index = renderIndex({ ...opts, pages: [sample], skipped: [], curatedCount: 1 });
+  const repo = renderRepo(sample, opts);
+  checks.push(
+    ["app bar name", index.includes('class="appbar"') && index.includes(">RepoLens</span>") && repo.includes('class="appbar"')],
+    ["dense repo table", index.includes('class="repo-list"') && index.includes(">Express</a>") && !index.includes('class="card"')],
+    ["flat theme color", index.includes('content="#1565C0"') && repo.includes('content="#1565C0"')],
+    ["repo stats row", repo.includes('class="stats"') && repo.includes("Generate this for your repo:")],
+    ["no inline radius", !/border-radius\s*:/.test(index + repo) && !/box-shadow\s*:/.test(index + repo)],
+  );
   const failed = checks.filter(([, ok]) => !ok).map(([name]) => name);
   if (failed.length) {
     throw new Error(`gallery renderer self-test failed: ${failed.join(", ")}\n${html}`);

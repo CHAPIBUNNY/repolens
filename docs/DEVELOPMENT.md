@@ -63,6 +63,8 @@ node gallery/build.mjs
 
 The generator calls the scanners directly with AI disabled. It does not read API keys. Clones live in `gallery/.cache/repos` and can be reused. A repository with a non-permissive license, or a missing license file, is skipped.
 
+The site is static and has no CSS framework. `gallery/site.css` is flat Material: Roboto or the system font stack, an 8px spacing grid, square corners, no shadows, and no gradients. One primary colour and one accent sit on white and light grey. The index is a dense table (name, language, modules, files, license, and a link). Each repository page uses the same app bar, dividers, and type scale.
+
 `.github/workflows/gallery.yml` runs that command on a weekly schedule and on manual dispatch, then deploys `gallery/dist`. GitHub Pages has to be set to **GitHub Actions** once before the first deploy can succeed.
 
 ## Release Process
