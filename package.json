@@ -1,6 +1,6 @@
 {
   "name": "@chappibunny/repolens",
-  "version": "1.14.2",
+  "version": "1.14.3",
   "mcpName": "io.github.CHAPIBUNNY/repolens",
   "description": "AI-assisted documentation intelligence system for technical and non-technical audiences",
   "license": "MIT",
@@ -22,7 +22,8 @@
     "src",
     "package.json",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "llms-install.md"
   ],
   "keywords": [
     "cli",

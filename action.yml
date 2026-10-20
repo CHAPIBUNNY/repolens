@@ -24,7 +24,7 @@ inputs:
   version:
     description: Published @chappibunny/repolens version to run with npx.
     required: false
-    default: "1.14.2"
+    default: "1.14.3"
 runs:
   using: composite
   steps:

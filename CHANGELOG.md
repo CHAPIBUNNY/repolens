@@ -2,6 +2,14 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.14.3
+
+### Docs
+
+- README "Use with Cline" section and `llms-install.md` for agent-driven installs
+- Note on `min-release-age` / stale npx cache resolving a pre-MCP release
+- Verified end to end from a clean npm cache with the MCP SDK stdio client: initialize, tools/list, all six tools on expressjs/express, error cases, stdout carries only JSON-RPC
+
 ## 1.14.2
 
 ### Discoverability

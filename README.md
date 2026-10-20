@@ -192,7 +192,7 @@ Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki,
 
 ## MCP server
 
-Cursor, Claude Desktop, Claude Code, and VS Code Copilot can call RepoLens over stdio. The server is read-only except for `generate_docs`, which writes Markdown inside the workspace. Deterministic mode does not use the network. Paths cannot leave the workspace root.
+Cursor, Cline, Claude Desktop, Claude Code, and VS Code Copilot can call RepoLens over stdio. The server is read-only except for `generate_docs`, which writes Markdown inside the workspace. Deterministic mode does not use the network. Paths cannot leave the workspace root.
 
 [![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=repolens&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBjaGFwcGlidW5ueS9yZXBvbGVucyIsIm1jcCJdfQ%3D%3D)
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=repolens&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40chappibunny%2Frepolens%22%2C%22mcp%22%5D%7D)
@@ -210,9 +210,21 @@ Copy-paste configs for Cursor, Claude Desktop, and VS Code are in [docs/MCP.md](
 }
 ```
 
+### Use with Cline
+
+Open Cline → MCP Servers → Installed → Configure MCP Servers, paste this into `cline_mcp_settings.json`, and save:
+
+```json
+{"mcpServers":{"repolens":{"command":"npx","args":["-y","@chappibunny/repolens","mcp"]}}}
+```
+
+Cline starts the server with no install step (Node 18+ required). It reads the directory the server starts in. To point it at a specific repo, add `"env": {"REPOLENS_WORKSPACE": "/absolute/path/to/repo"}`. Six tools appear: `get_system_overview`, `list_modules`, `get_api_surface`, `get_dependency_graph`, `get_architecture_diff`, `generate_docs`. Step-by-step agent instructions are in [llms-install.md](llms-install.md).
+
+If `npx` reports `Unknown command: mcp`, an `.npmrc` with `min-release-age` (or an old npx cache) resolved a release older than 1.14.0. Use `npx -y @chappibunny/repolens@latest mcp` or clear `~/.npm/_npx`.
+
 ## GitHub Action
 
-`action.yml` is a composite action named **RepoLens Architecture Docs**. It runs the published npm package (`npx --yes @chappibunny/repolens@1.14.1`). Inputs are `command` (`publish`, `demo`, or `doctor`), `config`, `node-version`, `pr-comment`, and `version`.
+`action.yml` is a composite action named **RepoLens Architecture Docs**. It runs the published npm package (`npx --yes @chappibunny/repolens@1.14.3`). Inputs are `command` (`publish`, `demo`, or `doctor`), `config`, `node-version`, `pr-comment`, and `version`.
 
 ```yaml
 name: Architecture docs
@@ -228,7 +240,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
-      - uses: CHAPIBUNNY/repolens@v1.14.1
+      - uses: CHAPIBUNNY/repolens@v1.14.3
         with:
           command: publish
           config: .repolens.yml
@@ -236,7 +248,7 @@ jobs:
           pr-comment: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
 ```
 
-The action is listed on the GitHub Marketplace only after a release is published with **Publish this Action to the GitHub Marketplace** checked. Those steps are in [docs/RELEASE.md](docs/RELEASE.md). The tag `v1.14.1` has to exist before `uses: CHAPIBUNNY/repolens@v1.14.1` resolves, and `@chappibunny/repolens@1.14.1` has to be on npm before the action can install it.
+The action is listed on the GitHub Marketplace only after a release is published with **Publish this Action to the GitHub Marketplace** checked. Those steps are in [docs/RELEASE.md](docs/RELEASE.md). The tag `v1.14.1` has to exist before `uses: CHAPIBUNNY/repolens@v1.14.3` resolves, and `@chappibunny/repolens@1.14.3` has to be on npm before the action can install it.
 
 ## Add the badge to your repo
 
@@ -256,7 +268,7 @@ Generated docs also link to the [gallery](https://chapibunny.github.io/repolens/
 
 Published system maps are Unicode diagrams drawn from import edges. RepoLens does not emit Mermaid.
 
-The publisher set is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). 1.14.0 adds the MCP server, the Marketplace action, and the docs badge. 1.14.1 sets the registry name to `io.github.CHAPIBUNNY/repolens`. 1.14.2 adds the gallery link to the badge line, `glama.json`, and `CITATION.cff`. Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The publisher set is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). 1.14.0 adds the MCP server, the Marketplace action, and the docs badge. 1.14.1 sets the registry name to `io.github.CHAPIBUNNY/repolens`. 1.14.2 adds the gallery link to the badge line, `glama.json`, and `CITATION.cff`. 1.14.3 adds Cline setup docs and `llms-install.md`. Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ### System Overview (Technical Profile)
 
