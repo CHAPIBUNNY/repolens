@@ -175,7 +175,7 @@ Everything below is live, tested, and available on npm.
 
 ## Showcase
 
-The [gallery](https://chapibunny.github.io/repolens/) is a static site of RepoLens output for public repositories. `.github/workflows/gallery.yml` rebuilds it. It is not a CLI feature and it is not part of the npm package.
+The [gallery](https://chapibunny.github.io/repolens/) is a static flat Material site of RepoLens output for public repositories. `.github/workflows/gallery.yml` rebuilds it. It is not a CLI feature and it is not part of the npm package.
 
 ---
 

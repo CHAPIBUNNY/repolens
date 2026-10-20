@@ -12,6 +12,7 @@ Static showcase of deterministic RepoLens output for public repositories. The pa
 - A repository that fails to clone, fails the license check, or fails the scan is skipped. The build refuses to publish when too few repositories succeed
 - `.github/workflows/gallery.yml` rebuilds the site weekly and on manual dispatch, caches clones, and deploys with GitHub Pages to `https://chapibunny.github.io/repolens/`
 - `gallery/` stays out of the npm package: it is not in the `files` allowlist, and `/gallery` is listed in `.npmignore`
+- Gallery pages use a flat Material layout: square corners, no shadows or gradients, one primary colour and one accent on white and light grey, a flat RepoLens app bar, and a dense repository table on the index. The same stylesheet covers each repository page
 
 ## 1.14.1
 
