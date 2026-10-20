@@ -1,6 +1,6 @@
 {
   "name": "@chappibunny/repolens",
-  "version": "1.14.1",
+  "version": "1.14.2",
   "mcpName": "io.github.CHAPIBUNNY/repolens",
   "description": "AI-assisted documentation intelligence system for technical and non-technical audiences",
   "license": "MIT",
@@ -41,13 +41,26 @@
     "obsidian",
     "ai-documentation",
     "mcp",
-    "model-context-protocol"
+    "model-context-protocol",
+    "architecture-documentation",
+    "documentation-generator",
+    "docs-as-code",
+    "living-documentation",
+    "dependency-graph",
+    "codebase-analysis",
+    "static-analysis",
+    "mcp-server",
+    "github-action",
+    "vscode",
+    "code-documentation",
+    "software-architecture",
+    "ai"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/CHAPIBUNNY/repolens.git"
   },
-  "homepage": "https://github.com/CHAPIBUNNY/repolens#readme",
+  "homepage": "https://chapibunny.github.io/repolens/",
   "bugs": {
     "url": "https://github.com/CHAPIBUNNY/repolens/issues"
   },

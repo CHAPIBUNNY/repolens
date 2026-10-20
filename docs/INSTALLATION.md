@@ -39,19 +39,19 @@ npm link
 <details>
 <summary><b>Option D: GitHub Release Tarball</b></summary>
 
-Install from a specific GitHub Release. The version segment is the release tag. For 1.14.1:
+Install from a specific GitHub Release. The version segment is the release tag. For 1.14.2:
 
 ```bash
-npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.14.1/chappibunny-repolens-1.14.1.tgz
+npm install https://github.com/CHAPIBUNNY/repolens/releases/download/v1.14.2/chappibunny-repolens-1.14.2.tgz
 ```
 
-That URL exists only after the `v1.14.1` tag is published. Until then, install from npm or from the repository.
+That URL exists only after the `v1.14.2` tag is published. Until then, install from npm or from the repository.
 
 After install, `repolens mcp` and `repolens-mcp` start the stdio server. See [MCP.md](MCP.md).
 
 ### GitHub Action
 
-Use the composite action from this repository once tag `v1.14.1` exists and `@chappibunny/repolens@1.14.1` is on npm. The action runs that published package. It does not run the checkout of this repo.
+Use the composite action from this repository once tag `v1.14.2` exists and `@chappibunny/repolens@1.14.2` is on npm. The action runs that published package. It does not run the checkout of this repo.
 
 ```yaml
 name: Architecture docs
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
-      - uses: CHAPIBUNNY/repolens@v1.14.1
+      - uses: CHAPIBUNNY/repolens@v1.14.2
         with:
           command: publish
           config: .repolens.yml

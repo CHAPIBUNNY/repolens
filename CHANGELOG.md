@@ -2,7 +2,15 @@
 
 All notable changes to RepoLens will be documented in this file.
 
-## Unreleased
+## 1.14.2
+
+### Discoverability
+
+- Docs badge line now links to the gallery (`[Examples](https://chapibunny.github.io/repolens/)`)
+- Added `glama.json` (Glama MCP directory ownership) and `CITATION.cff`
+- More npm keywords; npm `homepage` points at the gallery
+- README: MCP Registry and Gallery badges and a links row
+
 
 ### Gallery
 
