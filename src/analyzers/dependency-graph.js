@@ -80,6 +80,35 @@ async function loadGoModule(repoRoot) {
   return parseGoModule(text);
 }
 
+function goPackageImportPath(file, modulePath) {
+  const norm = String(file || "").replace(/\\/g, "/");
+  if (!norm.endsWith(".go")) return null;
+  const dir = path.posix.dirname(norm);
+  const rel = dir === "." ? "" : dir;
+  if (modulePath) return rel ? `${modulePath}/${rel}` : modulePath;
+  return rel || ".";
+}
+
+function aggregateHubs(nodes, fileKeyToFile, modulePath, hubThreshold) {
+  const groups = new Map();
+  for (const node of nodes) {
+    const pkg = goPackageImportPath(node.file, modulePath);
+    const key = pkg || node.key;
+    if (!groups.has(key)) groups.set(key, new Set());
+    const importers = groups.get(key);
+    for (const importer of node.importedBy || []) {
+      const importerFile = fileKeyToFile.get(importer) || importer;
+      if (pkg && goPackageImportPath(importerFile, modulePath) === pkg) continue;
+      importers.add(importer);
+    }
+  }
+  return [...groups.entries()]
+    .map(([key, importers]) => ({ key, importedBy: importers.size }))
+    .filter((hub) => hub.importedBy >= hubThreshold)
+    .sort((a, b) => b.importedBy - a.importedBy)
+    .slice(0, 10);
+}
+
 function goFilesInDir(goFiles, dir) {
   const target = dir || "";
   return goFiles.filter((file) => {
@@ -149,6 +178,7 @@ export async function analyzeDependencyGraph(files, repoRoot) {
     if (!content) continue;
     const fromKey = normalizeFileKey(file);
     for (const imported of extractPythonImports(content)) {
+      if (imported.typeOnly) continue;
       const resolved = resolvePythonImport(file, imported, pyIndex);
       if (resolved.kind === "internal") addEdge(fromKey, normalizeFileKey(resolved.file));
       else if (resolved.kind === "external") addExternal(fromKey, resolved.name);
@@ -205,11 +235,7 @@ export async function analyzeDependencyGraph(files, repoRoot) {
   const totalImports = result.edges.length;
   const orphans = result.nodes.filter(n => n.imports.length === 0 && n.importedBy.length === 0);
   const hubThreshold = Math.max(5, Math.floor(result.nodes.length * 0.1));
-  const hubs = result.nodes
-    .filter(n => n.importedBy.length >= hubThreshold)
-    .sort((a, b) => b.importedBy.length - a.importedBy.length)
-    .slice(0, 10)
-    .map(n => ({ key: n.key, importedBy: n.importedBy.length }));
+  const hubs = aggregateHubs(result.nodes, fileKeyToFile, goModulePath, hubThreshold);
 
   result.stats = {
     totalFiles: codeFiles.length,

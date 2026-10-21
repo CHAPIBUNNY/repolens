@@ -359,6 +359,16 @@ function scanTemplate(source, i, onExpression) {
   return i;
 }
 
+const NODE_BUILTINS = new Set([
+  "assert", "async_hooks", "buffer", "child_process", "cluster", "console",
+  "constants", "crypto", "dgram", "diagnostics_channel", "dns", "domain",
+  "events", "fs", "http", "http2", "https", "inspector", "module", "net",
+  "os", "path", "perf_hooks", "process", "punycode", "querystring",
+  "readline", "repl", "sqlite", "stream", "string_decoder", "sys", "timers",
+  "tls", "trace_events", "tty", "url", "util", "v8", "vm", "wasi",
+  "worker_threads", "zlib",
+]);
+
 export function externalPackageName(specifier) {
   if (typeof specifier !== "string") return null;
   const trimmed = specifier.trim();
@@ -369,6 +379,8 @@ export function externalPackageName(specifier) {
     : trimmed.split("/").slice(0, 1);
   const name = parts.filter(Boolean).join("/");
   if (!name || name === "." || name === "..") return null;
+  const top = name.startsWith("@") ? null : name.split("/")[0];
+  if (top && NODE_BUILTINS.has(top)) return null;
   return name;
 }
 
@@ -410,45 +422,127 @@ function stripPythonNoise(source) {
   return out;
 }
 
+function leadingIndent(line) {
+  const match = String(line).match(/^[ \t]*/);
+  return match ? match[0].length : 0;
+}
+
+function noteTypingBindings(statement, aliases, flags) {
+  const imported = statement.match(/^import\s+(.+)$/);
+  if (imported) {
+    for (const part of imported[1].split(",")) {
+      const as = part.trim().match(/^([\w.]+)(?:\s+as\s+([A-Za-z_]\w*))?$/);
+      if (!as) continue;
+      if (as[1] !== "typing" && as[1] !== "typing_extensions") continue;
+      aliases.add(as[2] || as[1]);
+    }
+    return;
+  }
+  const from = statement.match(/^from\s+(typing|typing_extensions)\s+import\s+(.+)$/);
+  if (!from) return;
+  for (const part of from[2].replace(/[()]/g, " ").split(",")) {
+    const as = part.trim().match(/^([A-Za-z_]\w*)(?:\s+as\s+([A-Za-z_]\w*))?$/);
+    if (!as || as[1] !== "TYPE_CHECKING") continue;
+    flags.add(as[2] || as[1]);
+  }
+}
+
+function isTypeCheckingGuard(statement, aliases, flags) {
+  const match = statement.match(/^(?:if|elif)\s+(.+?)\s*:\s*$/);
+  if (!match) return false;
+  const cond = match[1].trim();
+  if (cond === "TYPE_CHECKING" || flags.has(cond)) return true;
+  if (cond === "typing.TYPE_CHECKING") return true;
+  const attr = cond.match(/^([A-Za-z_]\w*)\.TYPE_CHECKING$/);
+  return Boolean(attr && aliases.has(attr[1]));
+}
+
+function pushPythonImport(imports, statement, typeOnly) {
+  if (statement.startsWith("import ")) {
+    const rest = statement.slice("import ".length).replace(/[()]/g, " ");
+    for (const part of rest.split(",")) {
+      const name = part.trim().split(/\s+/)[0];
+      if (name && /^[\w.]+$/.test(name)) imports.push({ module: name, level: 0, typeOnly });
+    }
+    return;
+  }
+  const relative = statement.match(/^from\s+(\.+)([\w.]*)\s+import\s+(.+)$/);
+  if (relative) {
+    const level = relative[1].length;
+    const base = relative[2] || "";
+    if (base) {
+      imports.push({ module: base, level, typeOnly });
+      return;
+    }
+    for (const part of relative[3].replace(/[()]/g, " ").split(",")) {
+      const name = part.trim().split(/\s+/)[0];
+      if (name && /^[A-Za-z_]\w*$/.test(name)) imports.push({ module: name, level, typeOnly });
+    }
+    return;
+  }
+  const match = statement.match(/^from\s+([\w.]+)\s+import\b/);
+  if (!match) return;
+  imports.push({ module: match[1], level: 0, typeOnly });
+}
+
 /**
- * @returns {{ module: string, level: number }[]}
+ * @returns {{ module: string, level: number, typeOnly: boolean }[]}
  * level 0 is an absolute import. level N is a relative import with N dots.
+ * Imports under `if TYPE_CHECKING:` / `if typing.TYPE_CHECKING:` (including
+ * `import typing as t`) are typeOnly and must not become runtime edges.
  */
 export function extractPythonImports(source) {
   const stripped = stripPythonNoise(source).replace(/\\\n/g, " ");
   const lines = stripped.split("\n");
-  const statements = [];
+  const imports = [];
+  const aliases = new Set(["typing"]);
+  const flags = new Set(["TYPE_CHECKING"]);
+  const blockIndents = [];
   let buf = "";
   let depth = 0;
+  let bufTypeOnly = false;
+  let bufIndent = 0;
+
+  function inTypeChecking(indent) {
+    while (blockIndents.length && indent <= blockIndents[blockIndents.length - 1]) {
+      blockIndents.pop();
+    }
+    return blockIndents.length > 0;
+  }
+
+  function finishStatement() {
+    const statement = buf.trim();
+    buf = "";
+    depth = 0;
+    if (!statement) return;
+    if (bufTypeOnly) {
+      pushPythonImport(imports, statement, true);
+      return;
+    }
+    if (isTypeCheckingGuard(statement, aliases, flags)) {
+      blockIndents.push(bufIndent);
+      return;
+    }
+    noteTypingBindings(statement, aliases, flags);
+    pushPythonImport(imports, statement, false);
+  }
+
   for (const line of lines) {
-    buf = buf ? `${buf} ${line.trim()}` : line.trim();
+    const trimmed = line.trim();
+    if (!trimmed && depth === 0) continue;
+    if (depth === 0) {
+      bufTypeOnly = inTypeChecking(leadingIndent(line));
+      bufIndent = leadingIndent(line);
+      buf = trimmed;
+    } else {
+      buf = `${buf} ${trimmed}`;
+    }
     depth += (line.match(/\(/g) || []).length;
     depth -= (line.match(/\)/g) || []).length;
     if (depth > 0) continue;
-    if (buf) statements.push(buf);
-    buf = "";
-    depth = 0;
+    finishStatement();
   }
-  if (buf) statements.push(buf);
-
-  const imports = [];
-  for (const statement of statements) {
-    if (statement.startsWith("import ")) {
-      const rest = statement.slice("import ".length).replace(/[()]/g, " ");
-      for (const part of rest.split(",")) {
-        const name = part.trim().split(/\s+/)[0];
-        if (name && /^[\w.]+$/.test(name)) imports.push({ module: name, level: 0 });
-      }
-      continue;
-    }
-    const match = statement.match(/^from\s+(\.+)([\w.]*)\s+import\b/) || statement.match(/^from\s+([\w.]+)\s+import\b/);
-    if (!match) continue;
-    if (match[1].startsWith(".")) {
-      imports.push({ module: match[2] || "", level: match[1].length });
-    } else {
-      imports.push({ module: match[1], level: 0 });
-    }
-  }
+  if (buf) finishStatement();
   return imports;
 }
 
