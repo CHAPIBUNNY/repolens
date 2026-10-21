@@ -20,7 +20,7 @@ RepoLens includes **opt-in** error tracking and usage telemetry to help improve 
 - Document generation count
 
 **Feature usage:**
-- Commands run (init, doctor, migrate, publish). `repolens mcp` does not initialize telemetry and does not run the npm update check
+- Commands run (init, doctor, migrate, publish). `repolens mcp`, `repolens badge`, and `repolens comment` do not initialize telemetry and do not run the npm update check. Badge JSON is written to stdout, so an update check must not print there
 - Publishers used (Notion, Markdown, Confluence)
 - AI usage (enabled/disabled, provider)
 - Success/failure rates

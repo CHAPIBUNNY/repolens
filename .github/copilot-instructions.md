@@ -37,7 +37,7 @@ RepoLens transforms repositories into documented, understandable systems that se
 ### Project Structure
 
 ```
-action.yml                # Composite action: RepoLens Architecture Docs
+action.yml                # Composite action: publish/demo/doctor via npm; comment and badge from this repo
 server.json               # MCP Registry metadata (mcpName io.github.CHAPIBUNNY/repolens)
 smithery.yaml             # Smithery stdio launch
 bin/
@@ -352,6 +352,7 @@ scripts/                  # Helper scripts
 - **Trigger**: Weekly schedule (Monday 06:17 UTC) and `workflow_dispatch`. Not pull requests. The jobs run only on `main`, so a branch dispatch does not replace the live site
 - **Run**: `node gallery/build.mjs` after `npm ci`. AI stays off. No publisher secrets
 - **Clones**: Cached under `gallery/.cache/repos`. A failed clone, license check, or scan is skipped
+- **Pages**: Each repo gets `/<slug>/` (documents), `/<slug>/explained/` ("<name> architecture explained", JSON-LD SoftwareSourceCode), `/<slug>/score/` (badge snippet), plus `badge.json` and `badge.svg`. Site root includes `sitemap.xml`, `robots.txt`, `llms.txt`, and `llms-full.txt`. Flat Material, square corners, no card containers
 - **Deploy**: Uploads `gallery/dist` and deploys with GitHub Pages to `https://chapibunny.github.io/repolens/`
 - **Pages setting**: A maintainer must set Settings → Pages → Source to GitHub Actions once. The workflow token cannot do that
 - **Package**: `gallery/` is not in the npm `files` list

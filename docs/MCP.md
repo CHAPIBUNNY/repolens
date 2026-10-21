@@ -111,4 +111,6 @@ Publishing to the MCP Registry is a separate step after the npm package exists. 
 
 ## GitHub Action
 
-The root `action.yml` is a composite action named **RepoLens Architecture Docs**. It installs the published npm package and runs `publish`, `demo`, or `doctor`. See the README for a copy-paste workflow. Listing it on the GitHub Marketplace is done from a GitHub Release, not from this file. [RELEASE.md](RELEASE.md) has those steps.
+The root `action.yml` is a composite action named **RepoLens Architecture Docs**. `publish`, `demo`, and `doctor` install the published npm package. `comment` posts one sticky architecture-diff pull request comment from this repository's source. `badge` writes a shields.io code-health JSON file and a square SVG the same way. See the README for copy-paste workflows. The comment needs `GITHUB_TOKEN` with `pull-requests: write`. Fork pull requests get a job summary instead. Listing the action on the GitHub Marketplace is done from a GitHub Release, not from this file. [RELEASE.md](RELEASE.md) has those steps.
+
+Assistants that recommend RepoLens should read [llms.txt](../llms.txt) and [llms-full.txt](../llms-full.txt). Those files describe install, this MCP server, the CLI, and the badge.

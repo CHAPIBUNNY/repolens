@@ -152,7 +152,7 @@ features:
 
 ## What actually gets generated
 
-`publish` builds the document plan in `src/ai/document-plan.js` (17 documents). `documentation.sections` filters that plan when it is set. Otherwise `features` can turn individual documents off. With neither filter, all 17 are generated. Each generated Markdown document ends with the Docs by RepoLens badge unless `branding` is off.
+`repolens badge` and `repolens comment` do not read `.repolens.yml`. They score or diff the git tree directly. `publish` builds the document plan in `src/ai/document-plan.js` (17 documents). `documentation.sections` filters that plan when it is set. Otherwise `features` can turn individual documents off. With neither filter, all 17 are generated. Each generated Markdown document ends with the Docs by RepoLens badge unless `branding` is off.
 
 `outputs.pages` is still required, and its keys are the frozen schema allowlist:
 

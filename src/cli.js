@@ -284,6 +284,29 @@ async function main() {
 
   // MCP stdio must start before telemetry and the npm update check.
   // Those both can open the network, and logs must stay off stdout.
+  if (command === "badge") {
+    const { runBadgeCli } = await import("./badge.js");
+    const code = await runBadgeCli({
+      target: parsed.flags["--target"] || process.cwd(),
+      format: parsed.flags["--format"] || "json",
+      out: parsed.flags["--out"],
+      url: parsed.flags["--url"] || "",
+      link: parsed.flags["--link"] || "",
+      label: parsed.flags["--label"] || "code health",
+    });
+    process.exit(code);
+  }
+
+  if (command === "comment") {
+    const { runPullRequestComment } = await import("./delivery/architecture-comment.js");
+    const code = await runPullRequestComment({
+      repo: parsed.flags["--target"] || process.cwd(),
+      base: parsed.flags["--base"],
+      head: parsed.flags["--head"],
+    });
+    process.exit(code);
+  }
+
   if (command === "mcp") {
     process.env.REPOLENS_LOG_STDERR = "1";
     const { startMcpServer } = await import("./mcp/server.js");
@@ -799,7 +822,7 @@ async function main() {
   }
 
   error(`Unknown command: ${command}`);
-  error("Available commands: init, doctor, migrate, publish, demo, watch, uninstall, feedback, mcp, version, help");
+  error("Available commands: init, doctor, migrate, publish, demo, watch, uninstall, feedback, mcp, badge, comment, version, help");
   process.exit(EXIT_ERROR);
 }
 

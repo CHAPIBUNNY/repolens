@@ -270,12 +270,25 @@ scan:
 
 ---
 
+## Pull request comments from forks
+
+**Issue:** A pull request opened from a fork cannot be commented on with the workflow's `GITHUB_TOKEN`. GitHub downgrades that token to read-only, even when the workflow asks for `pull-requests: write`.
+
+**Expected behavior:** `command: comment` detects the fork (and a 403 from the API) and writes the architecture diff to the job summary. The job succeeds. It does not post a second comment later from the same token.
+
+**Workaround:** Review the job summary, or push the branch to the base repository and re-run. RepoLens does not switch the workflow to `pull_request_target`.
+
+A shallow checkout (`fetch-depth: 1`) does not contain the base commit. The comment then says the code-health delta needs `fetch-depth: 0`. The file list can still be empty. Set `fetch-depth: 0` on `actions/checkout`.
+
+---
+
 ## 🔮 Planned Improvements
 
 ### Shipped since this list was last current
 - [x] Obsidian vault publisher (1.13.0)
 - [x] VS Code extension ([Marketplace](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox))
 - [x] MCP server, GitHub Action, and docs badge (1.14.0)
+- [x] Sticky architecture pull request comment, code-health badge, and gallery explained pages (in the repo, not yet on npm)
 - [x] Registry name `io.github.CHAPIBUNNY/repolens` (1.14.1)
 
 ### Future

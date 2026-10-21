@@ -1,4 +1,14 @@
-const FLAGS_WITH_VALUE = new Set(["--config", "--target"]);
+const FLAGS_WITH_VALUE = new Set([
+  "--config",
+  "--target",
+  "--format",
+  "--out",
+  "--base",
+  "--head",
+  "--url",
+  "--link",
+  "--label",
+]);
 const BOOLEAN_FLAGS = new Set([
   "--quick",
   "--non-interactive",

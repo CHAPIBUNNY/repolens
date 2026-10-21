@@ -3,6 +3,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { compactHealth } from "../src/badge.js";
 
 const DOC_CHAR_CAP = 150_000;
 
@@ -173,6 +174,11 @@ try {
       pages: scan.pages?.length || 0,
       languages,
       frameworks: scan.metadata?.frameworks || [],
+      moduleList: (scan.modules || []).slice(0, 40).map((item) => ({
+        key: item.key,
+        fileCount: item.fileCount,
+      })),
+      health: compactHealth(docSet.codeHealth),
     },
     documents,
   };

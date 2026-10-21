@@ -180,6 +180,17 @@ npx @chappibunny/repolens@latest publish
 
 ---
 
+## Architecture comment and badge
+
+Optional. Neither one changes `.repolens.yml`.
+
+- [ ] Pull request workflow uses `command: comment` with `fetch-depth: 0`
+- [ ] Workflow permissions are `contents: read` and `pull-requests: write` (no personal access token)
+- [ ] A fork pull request shows the diff in the job summary and does not fail
+- [ ] If you publish a badge, `repolens-badge.json` is on a public HTTPS URL and `badge-url` matches it
+
+---
+
 ## 🚀 GitHub Actions Configuration
 
 ### ✅ Workflow Migration (if upgrading from v0.3.x)

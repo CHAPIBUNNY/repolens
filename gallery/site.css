@@ -690,6 +690,34 @@ summary {
   }
 }
 
+.row-links {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.score-value {
+  margin: 8px 0 16px;
+  color: var(--primary);
+  font-size: 48px;
+  font-weight: 500;
+  line-height: 56px;
+}
+
+.score-denom {
+  color: var(--secondary);
+  font-size: 20px;
+  line-height: 28px;
+}
+
+.snippet {
+  background: var(--code);
+  padding: 16px;
+  overflow-x: auto;
+  border: 1px solid var(--divider);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

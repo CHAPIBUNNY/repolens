@@ -219,13 +219,14 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
   // Run afterRender hook
   if (pluginManager) {
     const rendered = await pluginManager.runHook("afterRender", documents);
-    return { documents: rendered, artifacts, config };
+    return { documents: rendered, artifacts, config, codeHealth: codeHealthResult };
   }
 
   return {
     documents,
     artifacts,
-    config
+    config,
+    codeHealth: codeHealthResult,
   };
 }
 

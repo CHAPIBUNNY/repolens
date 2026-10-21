@@ -108,6 +108,10 @@ Do not delete the lockfile in CI and re-resolve with `npm install`. npm 10 (the 
 
 When dependencies change, regenerate the lockfile with npm 11 or newer (`npx npm@11 install`) and commit it. npm 10's `--legacy-peer-deps` install can omit Rolldown's platform packages from the lockfile. Do not commit a lockfile produced on a CI runner.
 
+### Action modes that do not wait for npm
+
+`command: comment` and `command: badge` execute `scripts/pr-comment-run.js` and `scripts/badge-run.js` from the action checkout. They are available on `main` before the next `npm publish`. `publish`, `demo`, and `doctor` still install `@chappibunny/repolens@<version>`. A pull request must not publish the package. Shipping `repolens badge` and `repolens comment` on npm is a later release: bump `package.json`, tag, and let `release.yml` publish.
+
 ### npm Publishing
 
 The `release.yml` workflow publishes to npm automatically when a `v*` tag is pushed.
