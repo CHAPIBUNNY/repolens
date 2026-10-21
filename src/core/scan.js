@@ -512,6 +512,10 @@ export async function scanRepo(cfg) {
   const moduleCounts = new Map();
 
   for (const file of files) {
+    // Go test files belong to the package they exercise. Counting each
+    // *_test.go as its own module (the filename under module_roots) splits
+    // one package into a source module and a test module.
+    if (/_test\.go$/.test(norm(file))) continue;
     const key = moduleKeyForFile(file, cfg.module_roots || []);
     moduleCounts.set(key, (moduleCounts.get(key) || 0) + 1);
   }

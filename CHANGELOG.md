@@ -2,7 +2,20 @@
 
 All notable changes to RepoLens will be documented in this file.
 
-## Unreleased
+## 1.15.2
+
+### Dependency graph
+
+- Python `import` / `from ... import` statements, including relative imports and package roots under `src/` or a nested directory, become graph edges. The standard library is not listed as an external package
+- Go imports resolve through the root `go.mod` module path. Standard-library imports are omitted. `*_test.go` files are not graph nodes and are not counted as their own modules
+- JavaScript and TypeScript parsing skips comments, strings, and template text, so an import mentioned only in a JSDoc comment is not an edge
+- `import type`, `export type ... from`, and import lists whose specifiers are all `type` are not runtime edges and do not form circular dependencies. A mixed import that also has a value specifier still does
+- External package names ignore empty strings, absolute paths, URLs, `node:` builtins, and `#` subpaths
+
+### Pattern text
+
+- Path keywords match tokens. `ai` does not match `_main` or `email`, so a Python module is not labeled "AI/LLM integration" unless the path or an import actually names an AI package
+- "Custom React hooks" requires a `react` import. A test file named `hooks` stays a test. Domain and architecture lines cite the path or import that matched, instead of a canned capability sentence
 
 ### Pull request architecture comment
 
@@ -33,6 +46,8 @@ All notable changes to RepoLens will be documented in this file.
 ### CLI
 
 - `watch` prints the empty-scan hint (`No files matched scan.include`) once
+
+Exit codes stay 0 success, 1 runtime error or unknown command, and 2 validation failure (bad flags, missing config, missing target, doctor failure, 0 files scanned, nothing to watch, `badge` with nothing to score, `comment` without a base or head ref, `--strict` credentials, feedback without a terminal).
 
 ## 1.15.1
 

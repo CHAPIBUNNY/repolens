@@ -1,23 +1,25 @@
-// Dependency graph analysis with cycle detection
-// Parses import/require statements, builds a directed graph, detects cycles via DFS
+// Dependency graph analysis with cycle detection.
+// JavaScript, TypeScript, Python, and Go imports become edges.
+// Comments and strings are ignored. Type-only TypeScript imports are not edges.
 
 import fs from "node:fs/promises";
 import path from "node:path";
 import { info, warn } from "../utils/logger.js";
+import {
+  extractJsImports,
+  externalPackageName,
+  extractPythonImports,
+  extractGoImports,
+  indexPythonModules,
+  resolvePythonImport,
+  goPackageDir,
+  isGoStdlib,
+  parseGoModule,
+} from "./import-parsers.js";
 
-const CODE_EXTENSIONS = new Set([".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"]);
-
-// Patterns for extracting imports
-const IMPORT_PATTERNS = [
-  // ES module: import ... from "..."
-  /import\s+(?:[\w*{},\s]+\s+from\s+)?['"]([^'"]+)['"]/g,
-  // Dynamic import: import("...")
-  /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
-  // CommonJS: require("...")
-  /require\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
-  // Re-export: export ... from "..."
-  /export\s+(?:[\w*{},\s]+\s+from\s+)?['"]([^'"]+)['"]/g,
-];
+const JS_EXTENSIONS = new Set([".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"]);
+const PY_EXTENSIONS = new Set([".py", ".pyw"]);
+const GO_EXTENSIONS = new Set([".go"]);
 
 async function readFileSafe(filePath) {
   try {
@@ -25,6 +27,10 @@ async function readFileSafe(filePath) {
   } catch {
     return "";
   }
+}
+
+function isGoTestFile(file) {
+  return String(file).replace(/\\/g, "/").endsWith("_test.go");
 }
 
 function isRelativeImport(specifier) {
@@ -58,63 +64,110 @@ function normalizeFileKey(file) {
   return key;
 }
 
-export async function analyzeDependencyGraph(files, repoRoot) {
-  const result = {
-    nodes: [],       // { key, file, imports: string[], importedBy: string[] }
-    edges: [],       // { from, to }
-    cycles: [],      // [ [a, b, c, a], ... ]
-    externalDeps: [],// sorted unique bare-specifier imports
+function emptyResult() {
+  return {
+    nodes: [],
+    edges: [],
+    cycles: [],
+    externalDeps: [],
     stats: null,
     summary: null,
   };
+}
 
-  const codeFiles = files.filter(f => {
-    const ext = path.extname(f);
-    return CODE_EXTENSIONS.has(ext);
+async function loadGoModule(repoRoot) {
+  const text = await readFileSafe(path.join(repoRoot, "go.mod"));
+  return parseGoModule(text);
+}
+
+function goFilesInDir(goFiles, dir) {
+  const target = dir || "";
+  return goFiles.filter((file) => {
+    const fileDir = path.posix.dirname(file.replace(/\\/g, "/"));
+    const normalized = fileDir === "." ? "" : fileDir;
+    return normalized === target;
   });
+}
+
+export async function analyzeDependencyGraph(files, repoRoot) {
+  const result = emptyResult();
+
+  const jsFiles = files.filter((file) => JS_EXTENSIONS.has(path.extname(file)));
+  const pyFiles = files.filter((file) => PY_EXTENSIONS.has(path.extname(file)));
+  const goFiles = files.filter((file) => GO_EXTENSIONS.has(path.extname(file)) && !isGoTestFile(file));
+  const codeFiles = [...jsFiles, ...pyFiles, ...goFiles];
 
   if (codeFiles.length === 0) return result;
 
-  // Build adjacency: fileKey → Set<fileKey>
   const adjacency = new Map();
   const fileKeyToFile = new Map();
   const allFileKeys = new Set();
   const externalSet = new Set();
+  const externalByKey = new Map();
 
-  // Register all known file keys
-  for (const file of codeFiles) {
+  function register(file) {
     const key = normalizeFileKey(file);
     allFileKeys.add(key);
-    fileKeyToFile.set(key, file);
+    if (!fileKeyToFile.has(key)) fileKeyToFile.set(key, file);
     if (!adjacency.has(key)) adjacency.set(key, new Set());
+    if (!externalByKey.has(key)) externalByKey.set(key, new Set());
+    return key;
   }
 
-  // Parse imports and build edges
-  for (const file of codeFiles) {
+  function addExternal(fromKey, name) {
+    if (!name) return;
+    externalSet.add(name);
+    externalByKey.get(fromKey).add(name);
+  }
+
+  function addEdge(fromKey, toKey) {
+    if (!toKey || toKey === fromKey || !allFileKeys.has(toKey)) return;
+    adjacency.get(fromKey).add(toKey);
+  }
+
+  for (const file of codeFiles) register(file);
+
+  const pyIndex = indexPythonModules(pyFiles);
+  const goModulePath = goFiles.length > 0 ? await loadGoModule(repoRoot) : null;
+
+  for (const file of jsFiles) {
     const content = await readFileSafe(path.join(repoRoot, file));
     if (!content) continue;
-
     const fromKey = normalizeFileKey(file);
-
-    for (const pattern of IMPORT_PATTERNS) {
-      // Reset lastIndex since we reuse regex objects
-      const regex = new RegExp(pattern.source, pattern.flags);
-      let match;
-      while ((match = regex.exec(content)) !== null) {
-        const specifier = match[1];
-
-        if (isRelativeImport(specifier)) {
-          const resolved = resolveImportPath(file, specifier);
-          if (resolved && allFileKeys.has(resolved)) {
-            adjacency.get(fromKey).add(resolved);
-          }
-        } else if (!specifier.startsWith("node:")) {
-          // Bare specifier → external dependency
-          // Normalize scoped packages: @scope/pkg/path → @scope/pkg
-          const parts = specifier.startsWith("@") ? specifier.split("/").slice(0, 2) : specifier.split("/").slice(0, 1);
-          externalSet.add(parts.join("/"));
-        }
+    for (const imported of extractJsImports(content)) {
+      if (imported.typeOnly) continue;
+      if (isRelativeImport(imported.specifier)) {
+        addEdge(fromKey, resolveImportPath(file, imported.specifier));
+      } else {
+        addExternal(fromKey, externalPackageName(imported.specifier));
       }
+    }
+  }
+
+  for (const file of pyFiles) {
+    const content = await readFileSafe(path.join(repoRoot, file));
+    if (!content) continue;
+    const fromKey = normalizeFileKey(file);
+    for (const imported of extractPythonImports(content)) {
+      const resolved = resolvePythonImport(file, imported, pyIndex);
+      if (resolved.kind === "internal") addEdge(fromKey, normalizeFileKey(resolved.file));
+      else if (resolved.kind === "external") addExternal(fromKey, resolved.name);
+    }
+  }
+
+  for (const file of goFiles) {
+    const content = await readFileSafe(path.join(repoRoot, file));
+    if (!content) continue;
+    const fromKey = normalizeFileKey(file);
+    for (const importPath of extractGoImports(content)) {
+      const dir = goPackageDir(importPath, goModulePath, "");
+      if (dir !== null) {
+        for (const target of goFilesInDir(goFiles, dir)) {
+          addEdge(fromKey, normalizeFileKey(target));
+        }
+        continue;
+      }
+      if (!isGoStdlib(importPath)) addExternal(fromKey, importPath);
     }
   }
 
@@ -139,6 +192,7 @@ export async function analyzeDependencyGraph(files, repoRoot) {
       file: fileKeyToFile.get(key) || key,
       imports: [...(adjacency.get(key) || [])],
       importedBy: importedByMap.get(key) || [],
+      externalImports: [...(externalByKey.get(key) || [])].sort(),
     });
   }
 

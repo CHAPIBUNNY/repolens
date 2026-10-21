@@ -25,7 +25,7 @@ RepoLens follows semantic versioning (semver):
 | `migrate` | Stable | Migrate legacy workflows to current format |
 | `feedback` | Stable | Send feedback to the RepoLens team |
 | `mcp` | Stable | Start the stdio MCP server. `repolens-mcp` is the same entry |
-| `badge` | Stable | shields.io code-health JSON, SVG, or markdown. Added after 1.15.1; ships in the repo before the next npm publish |
+| `badge` | Stable | shields.io code-health JSON, SVG, or markdown. Ships in 1.15.2 |
 | `comment` | Stable | Architecture diff between two refs. Posts one sticky pull request comment when `GITHUB_TOKEN` is set |
 | `version` | Stable | Display version |
 | `help` | Stable | Show usage information |

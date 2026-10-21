@@ -25,7 +25,8 @@ from patterns    stack patterns      with insights       + Confluence pages
 - Detects build tools (Vite, Webpack, Turbo, esbuild)
 - Identifies test frameworks (Vitest, Jest, Playwright)
 - Scores code health for JavaScript/TypeScript, Python, and Go (regex complexity, not an AST)
-- Infers module relationships and dependencies
+- Builds an import graph for JavaScript/TypeScript, Python, and Go. Comments, strings, and TypeScript type-only imports are skipped. Go `*_test.go` files are not graph nodes
+- Infers module relationships and dependencies. Pattern names cite the path token or import that matched
 
 **Render Phase:**
 - Groups files into modules based on `module_roots`
@@ -107,7 +108,8 @@ repolens/
 │   │   ├── flow-inference.js      # Data flow detection
 │   │   ├── graphql-analyzer.js    # GraphQL schema detection
 │   │   ├── typescript-analyzer.js # TypeScript type graph analysis
-│   │   ├── dependency-graph.js    # Import graph with cycle detection
+│   │   ├── dependency-graph.js    # Import graph with cycle detection (JS/TS, Python, Go)
+│   │   ├── import-parsers.js      # Comment-aware JS/TS, Python, and Go import parsers
 │   │   ├── drift-detector.js      # Architecture drift detection
 │   │   ├── monorepo-detector.js   # npm, yarn, pnpm, and Lerna workspaces
 │   │   ├── codeowners.js          # CODEOWNERS ownership

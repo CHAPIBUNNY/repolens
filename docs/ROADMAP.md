@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.15.1  
+**Current Version:** 1.15.2  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.15.1)
+## What's Shipped (v0.1.0 → v1.15.2)
 
 Everything below is live, tested, and available on npm.
 
@@ -165,6 +165,15 @@ Everything below is live, tested, and available on npm.
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
 
+## v1.15.2 — Analysis accuracy, pull request comments, and the code-health badge
+
+- ✅ Dependency graph reads Python (`import` / `from`, relative imports, package roots) and Go (`go.mod` module paths). Comments, strings, and TypeScript type-only imports are not edges. Go `*_test.go` files are not separate modules
+- ✅ Pattern lines cite the path or import that matched. `ai` does not match `_main`. "Custom React hooks" requires a `react` import
+- ✅ `repolens comment` and GitHub Action `command: comment`: one sticky architecture diff (files, modules, dependencies, code-health delta, new hotspots). Fork pull requests write the job summary
+- ✅ `repolens badge` and GitHub Action `command: badge`: shields.io JSON, square SVG, and a README snippet. Gallery score page per repository
+- ✅ Gallery page titled "<repo> architecture explained" (`SoftwareSourceCode` JSON-LD), plus `sitemap.xml`, `robots.txt`, `llms.txt`, and `llms-full.txt`
+- ✅ MCP Rush listing badge on the README, MCP docs, and the gallery index. `watch` prints the empty-scan hint once
+
 ## v1.15.1 — Watch and code health
 
 - ✅ `watch` exits 2 when `scan.include` matches no files, including after `init --quick` in an empty directory
@@ -199,14 +208,6 @@ Everything below is live, tested, and available on npm.
 The [gallery](https://chapibunny.github.io/repolens/) is a static flat Material site of RepoLens output for public repositories. `.github/workflows/gallery.yml` rebuilds it. It is not a CLI feature and it is not part of the npm package.
 
 ---
-
-## In the repository, not yet published to npm
-
-These ship in this repository and in the composite action (`command: comment`, `command: badge`). They are not in the `@chappibunny/repolens@1.15.1` tarball. The next release can publish the CLI commands. This change does not publish npm.
-
-- Architecture diff on pull requests: files, modules, dependencies, code-health delta, new hotspots, one sticky comment, fork pull requests write the job summary
-- `repolens badge` and the gallery score page (shields.io JSON, square SVG, README snippet that links back)
-- Gallery page per repository titled "<repo> architecture explained" (`SoftwareSourceCode` JSON-LD), plus `sitemap.xml`, `robots.txt`, `llms.txt`, and `llms-full.txt`
 
 ## What's Next
 
