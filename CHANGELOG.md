@@ -2,6 +2,19 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.15.3
+
+### Dependency graph
+
+- Python imports inside `if TYPE_CHECKING:`, `if typing.TYPE_CHECKING:`, and `if <alias>.TYPE_CHECKING:` (for example `import typing as t`) are not runtime edges and do not form cycles. `from . import name` resolves to the sibling module
+- Node.js built-ins (`fs`, `child_process`, `events`, `node:*`, and the rest of the standard builtin list) are not external packages
+- Go hub rows are packages (`github.com/spf13/cobra`, `github.com/go-chi/chi/v5/middleware`), not individual `.go` files
+
+### Pattern text
+
+- Test directories and test files are not evidence for architecture patterns. A `tests/test_commands.py` module does not make the repo a "CLI tool architecture"
+- "API route pattern" requires an `api`, `routes`, `router`, `endpoint`, `controller`, or `handler` directory. A library file named `_api.py` does not match
+
 ## 1.15.2
 
 ### Dependency graph

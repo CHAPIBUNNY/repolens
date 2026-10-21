@@ -25,8 +25,8 @@ from patterns    stack patterns      with insights       + Confluence pages
 - Detects build tools (Vite, Webpack, Turbo, esbuild)
 - Identifies test frameworks (Vitest, Jest, Playwright)
 - Scores code health for JavaScript/TypeScript, Python, and Go (regex complexity, not an AST)
-- Builds an import graph for JavaScript/TypeScript, Python, and Go. Comments, strings, and TypeScript type-only imports are skipped. Go `*_test.go` files are not graph nodes
-- Infers module relationships and dependencies. Pattern names cite the path token or import that matched
+- Builds an import graph for JavaScript/TypeScript, Python, and Go. Comments, strings, TypeScript type-only imports, Python `TYPE_CHECKING` blocks, and Node.js built-ins are skipped. Go `*_test.go` files are not graph nodes. Go hub rows are packages, not files
+- Infers module relationships and dependencies. Pattern names cite the path token or import that matched. Test files are not evidence. "API route pattern" requires an `api`, `routes`, `router`, `endpoint`, `controller`, or `handler` directory
 
 **Render Phase:**
 - Groups files into modules based on `module_roots`
@@ -108,8 +108,8 @@ repolens/
 │   │   ├── flow-inference.js      # Data flow detection
 │   │   ├── graphql-analyzer.js    # GraphQL schema detection
 │   │   ├── typescript-analyzer.js # TypeScript type graph analysis
-│   │   ├── dependency-graph.js    # Import graph with cycle detection (JS/TS, Python, Go)
-│   │   ├── import-parsers.js      # Comment-aware JS/TS, Python, and Go import parsers
+│   │   ├── dependency-graph.js    # Import graph with cycle detection (JS/TS, Python, Go; Go hubs per package)
+│   │   ├── import-parsers.js      # Comment-aware JS/TS, Python (skips TYPE_CHECKING), and Go import parsers
 │   │   ├── drift-detector.js      # Architecture drift detection
 │   │   ├── monorepo-detector.js   # npm, yarn, pnpm, and Lerna workspaces
 │   │   ├── codeowners.js          # CODEOWNERS ownership

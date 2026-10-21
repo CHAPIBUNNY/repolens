@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.15.2  
+**Current Version:** 1.15.3  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.15.2)
+## What's Shipped (v0.1.0 → v1.15.3)
 
 Everything below is live, tested, and available on npm.
 
@@ -164,6 +164,13 @@ Everything below is live, tested, and available on npm.
 - ✅ `server.json` for the MCP Registry (`io.github.CHAPIBUNNY/repolens`) and `smithery.yaml`
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
+
+## v1.15.3 — Import and pattern accuracy
+
+- ✅ Python `TYPE_CHECKING` blocks, including `typing.TYPE_CHECKING` and `import typing as t`, are not cycle edges
+- ✅ Node.js built-ins are not listed as external packages
+- ✅ Go hubs are one row per package
+- ✅ Architecture patterns ignore test files. "API route pattern" requires a route directory, not a file named `_api.py`
 
 ## v1.15.2 — Analysis accuracy, pull request comments, and the code-health badge
 

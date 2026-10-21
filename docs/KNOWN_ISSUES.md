@@ -3,7 +3,7 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** October 2026  
-**Version:** 1.15.2
+**Version:** 1.15.3
 
 ---
 
@@ -16,6 +16,10 @@ This document tracks known issues, limitations, and edge cases in RepoLens. We'r
 ## Watch hangs when nothing matches (fixed in 1.15.1)
 
 After `init --quick` in an empty directory, `module_roots` is `.` (the directory exists) and `scan.include` matches no source files. 1.15.0 `watch` still printed `Waiting for changes...` and waited. 1.15.1 exits 2 and tells you to add source files or fix the globs.
+
+## TYPE_CHECKING imports and coarse patterns (fixed in 1.15.3)
+
+1.15.2 parsed Python imports, including imports that only run under `if TYPE_CHECKING:` or `if typing.TYPE_CHECKING:` (`import typing as t` in click). Those edges showed up as circular dependencies: 10 in click and 12 in httpx. 1.15.3 skips those blocks. Runtime imports, including imports inside functions, are still edges. Node built-ins such as `fs` and `node:path` are not external packages. Go hub tables group files into the `go.mod` package path. Test modules are not evidence for architecture patterns, and "API route pattern" requires a directory named `api`, `routes`, `router`, `endpoint`, `controller`, or `handler`.
 
 ## Dependency graph skipped Python and Go (fixed in 1.15.2)
 

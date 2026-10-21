@@ -7,6 +7,7 @@ import { scanRepo } from "../src/core/scan.js";
 import { inferDomain, pathHasKeyword } from "../src/analyzers/domain-inference.js";
 import { buildAIContext } from "../src/analyzers/context-builder.js";
 import { renderModuleCatalog } from "../src/renderers/render.js";
+import { renderDependencyGraph } from "../src/renderers/renderAnalysis.js";
 
 let tempDir;
 
@@ -69,6 +70,17 @@ describe("JavaScript and TypeScript import accuracy", () => {
     const result = await analyzeDependencyGraph(["index.js", "lib.js", "extra.js"], tempDir);
     expect(result.externalDeps).toEqual(["express"]);
     expect(result.edges.map((edge) => `${edge.from}->${edge.to}`).sort()).toEqual(["index->lib", "lib->extra"]);
+  });
+
+  it("does not list Node.js built-ins as external packages", async () => {
+    await write("index.js", `import fs from "fs";\nimport { spawn } from "child_process";\nimport EventEmitter from "events";\nimport path from "node:path";\nimport chalk from "chalk";\n`);
+    const result = await analyzeDependencyGraph(["index.js"], tempDir);
+    expect(result.externalDeps).toEqual(["chalk"]);
+    expect(result.externalDeps).not.toContain("fs");
+    expect(result.externalDeps).not.toContain("child_process");
+    expect(result.externalDeps).not.toContain("events");
+    expect(result.externalDeps).not.toContain("path");
+    expect(result.externalDeps).not.toContain("node:path");
   });
 });
 
@@ -148,6 +160,41 @@ describe("Python import accuracy", () => {
     expect(edges).toContain("tests/test_exceptions.py->tests/conftest.py");
     expect(result.externalDeps).not.toContain("conftest");
   });
+
+  it("does not create edges for TYPE_CHECKING imports", async () => {
+    await write("src/click/__init__.py", "");
+    await write("src/click/core.py", "import typing as t\nfrom .utils import echo\nif t.TYPE_CHECKING:\n    from .shell_completion import CompletionItem\n");
+    await write("src/click/utils.py", "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from .core import Context\n");
+    await write("src/click/shell_completion.py", "import typing\nif typing.TYPE_CHECKING:\n    from .utils import echo\n");
+    const files = [
+      "src/click/__init__.py",
+      "src/click/core.py",
+      "src/click/utils.py",
+      "src/click/shell_completion.py",
+    ];
+    const result = await analyzeDependencyGraph(files, tempDir);
+    const edges = result.edges.map((edge) => `${edge.from}->${edge.to}`);
+    expect(edges).toContain("src/click/core.py->src/click/utils.py");
+    expect(edges).not.toContain("src/click/core.py->src/click/shell_completion.py");
+    expect(edges).not.toContain("src/click/utils.py->src/click/core.py");
+    expect(edges).not.toContain("src/click/shell_completion.py->src/click/utils.py");
+    expect(result.cycles).toEqual([]);
+  });
+
+  it("resolves from-import names to sibling modules", async () => {
+    await write("pkg/__init__.py", "from .core import Command\n");
+    await write("pkg/core.py", "from . import types\n");
+    await write("pkg/types.py", "VALUE = 1\n");
+    const result = await analyzeDependencyGraph([
+      "pkg/__init__.py",
+      "pkg/core.py",
+      "pkg/types.py",
+    ], tempDir);
+    const edges = result.edges.map((edge) => `${edge.from}->${edge.to}`);
+    expect(edges).toContain("pkg/core.py->pkg/types.py");
+    expect(edges).not.toContain("pkg/core.py->pkg/__init__.py");
+    expect(result.cycles).toEqual([]);
+  });
 });
 
 describe("Go import accuracy", () => {
@@ -167,6 +214,23 @@ describe("Go import accuracy", () => {
     expect(edges).toContain("doc/man_docs.go->command.go");
     expect(result.externalDeps).toEqual(["github.com/spf13/pflag"]);
     expect(result.externalDeps).not.toContain("fmt");
+  });
+
+  it("lists one hub per Go package", async () => {
+    await write("go.mod", "module example.com/app\n\ngo 1.22\n");
+    await write("command.go", "package app\n");
+    await write("args.go", "package app\n");
+    for (let i = 0; i < 6; i += 1) {
+      await write(`doc/page${i}.go`, `package doc\n\nimport "example.com/app"\n`);
+    }
+    const files = ["command.go", "args.go", ...Array.from({ length: 6 }, (_, i) => `doc/page${i}.go`)];
+    const result = await analyzeDependencyGraph(files, tempDir);
+    expect(result.stats.hubs.map((hub) => hub.key)).toEqual(["example.com/app"]);
+    expect(result.stats.hubs[0].importedBy).toBe(6);
+    const rendered = renderDependencyGraph(result);
+    expect(rendered).toContain("`example.com/app`");
+    expect(rendered).not.toContain("`command.go`");
+    expect(rendered).not.toContain("`args.go`");
   });
 
   it("does not list Go test files as their own modules", async () => {
@@ -222,6 +286,57 @@ describe("pattern descriptions", () => {
       graph,
     );
     expect(catalog).toContain("Custom React hooks");
+  });
+
+  it("does not cite test files as CLI evidence", () => {
+    const context = buildAIContext(
+      {
+        filesCount: 2,
+        modules: [
+          { key: "tests/test_commands.py", fileCount: 4 },
+          { key: "src/click", fileCount: 12 },
+        ],
+        api: [],
+        pages: [],
+        metadata: {},
+      },
+      { project: { name: "click" } },
+      { nodes: [], edges: [], cycles: [], externalDeps: [], stats: { cycles: 0, totalEdges: 0 } },
+    );
+    expect(context.patterns.some((pattern) => pattern.startsWith("CLI tool architecture"))).toBe(false);
+    expect(context.patterns.some((pattern) => pattern.includes("tests/test_commands.py") && pattern.startsWith("Dedicated test infrastructure"))).toBe(true);
+  });
+
+  it("does not call a library file named _api an API route", () => {
+    const httpx = buildAIContext(
+      {
+        filesCount: 2,
+        modules: [
+          { key: "httpx/_api.py", fileCount: 1 },
+          { key: "httpx/_client.py", fileCount: 4 },
+        ],
+        api: [],
+        pages: [],
+        metadata: {},
+      },
+      { project: { name: "httpx" } },
+      { nodes: [], edges: [], cycles: [], externalDeps: ["certifi"], stats: { cycles: 0, totalEdges: 3 } },
+    );
+    expect(httpx.patterns.some((pattern) => pattern.startsWith("API route pattern"))).toBe(false);
+
+    const routes = buildAIContext(
+      {
+        filesCount: 1,
+        modules: [{ key: "src/api/users.js", fileCount: 3 }],
+        api: [],
+        pages: [],
+        metadata: {},
+      },
+      { project: { name: "app" } },
+      { nodes: [], edges: [], cycles: [], externalDeps: [], stats: { cycles: 0, totalEdges: 0 } },
+    );
+    const api = routes.patterns.find((pattern) => pattern.startsWith("API route pattern"));
+    expect(api).toContain("src/api/users.js");
   });
 
   it("cites the module that matched an AI path token", () => {

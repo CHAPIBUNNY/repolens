@@ -204,17 +204,48 @@ function inferModuleType(modulePath) {
   return "other";
 }
 
+function isTestEvidence(modulePath) {
+  const norm = String(modulePath || "").replace(/\\/g, "/");
+  if (/(^|\/)__(tests|mocks)__(\/|$)/.test(norm)) return true;
+  if (/(^|\/)(test|tests|spec|specs|fixtures|testdata)(\/|$)/.test(norm)) return true;
+  const base = norm.split("/").pop() || "";
+  if (/^(test_|spec_)/.test(base)) return true;
+  if (/(_test|_spec)\.[a-z0-9]+$/i.test(base)) return true;
+  if (/\.(test|spec)\.[a-z0-9]+$/i.test(base)) return true;
+  return false;
+}
+
+const API_DIRECTORY_SEGMENTS = new Set([
+  "api", "apis", "route", "routes", "router", "routers",
+  "endpoint", "endpoints", "controller", "controllers", "handler", "handlers",
+]);
+
+function hasApiDirectory(modulePath) {
+  return directoryPath(modulePath)
+    .split("/")
+    .some((segment) => API_DIRECTORY_SEGMENTS.has(segment.toLowerCase()));
+}
+
+function directoryPath(modulePath) {
+  const parts = String(modulePath || "").replace(/\\/g, "/").split("/");
+  const last = parts[parts.length - 1] || "";
+  if (/\.[a-z0-9]+$/i.test(last)) parts.pop();
+  return parts.join("/");
+}
+
 function inferArchitecturalPatterns(modules, depGraph = null) {
   const patterns = [];
-  const keys = modules.map(m => m.key.toLowerCase());
-  
+  const production = modules.filter((module) => !isTestEvidence(module.key));
+  const tests = modules.filter((module) => isTestEvidence(module.key));
+  const keys = production.map(m => m.key.toLowerCase());
+
   const has = (keyword) => keys.some((key) => (
     keyword.includes("/") ? key.includes(keyword) : pathHasKeyword(key, keyword)
   ));
-  const matchingKeys = (keywords) => {
+  const matchingKeys = (keywords, source = production) => {
     const found = [];
     for (const keyword of keywords) {
-      for (const module of modules) {
+      for (const module of source) {
         const key = module.key;
         const matched = keyword.includes("/")
           ? key.toLowerCase().includes(keyword)
@@ -224,8 +255,9 @@ function inferArchitecturalPatterns(modules, depGraph = null) {
     }
     return found;
   };
-  const cite = (label, keywords, extra = "") => {
-    const found = matchingKeys(keywords);
+  const hasApiRouteEvidence = () => production.some((module) => hasApiDirectory(module.key));
+  const cite = (label, keywords, extra = "", source = production) => {
+    const found = matchingKeys(keywords, source);
     if (found.length === 0 && !extra) return;
     const sample = found.slice(0, 3).map((key) => `\`${key}\``).join(", ");
     const more = found.length > 3 ? ` (+${found.length - 3} more)` : "";
@@ -244,6 +276,7 @@ function inferArchitecturalPatterns(modules, depGraph = null) {
   // Verify pattern: a module matching `keyword` has high fan-in (truly central)
   const verifyHub = (keyword) => {
     for (const [mKey, m] of moduleMetrics) {
+      if (isTestEvidence(mKey)) continue;
       if (mKey.toLowerCase().includes(keyword) && m.fanIn >= 3) return true;
     }
     return false;
@@ -252,6 +285,7 @@ function inferArchitecturalPatterns(modules, depGraph = null) {
   // Verify pattern: modules matching keyword have mostly outbound deps (orchestrators)
   const verifyOrchestrator = (keyword) => {
     for (const [mKey, m] of moduleMetrics) {
+      if (isTestEvidence(mKey)) continue;
       if (mKey.toLowerCase().includes(keyword) && m.fanOut >= 3) return true;
     }
     return false;
@@ -266,7 +300,14 @@ function inferArchitecturalPatterns(modules, depGraph = null) {
     cite("Centralized state management", ["store", "state", "redux", "zustand"]);
   }
 
-  if (has("api") || has("endpoint")) cite("API route pattern", ["api", "endpoint"]);
+  if (hasApiRouteEvidence()) {
+    const found = production
+      .filter((module) => hasApiDirectory(module.key))
+      .map((module) => module.key);
+    const sample = found.slice(0, 3).map((key) => `\`${key}\``).join(", ");
+    const more = found.length > 3 ? ` (+${found.length - 3} more)` : "";
+    patterns.push(`API route pattern — ${sample}${more}`);
+  }
 
   if (has("core") || has("kernel")) {
     const note = moduleMetrics.size > 0 && verifyHub("core")
@@ -306,7 +347,7 @@ function inferArchitecturalPatterns(modules, depGraph = null) {
     cite("AI/LLM integration", ["ai", "llm", "openai", "anthropic"], aiPackages.length ? `imports ${aiPackages.slice(0, 3).join(", ")}` : "");
   }
   if (has("deliver") || has("dispatch")) cite("Delivery pipeline", ["deliver", "dispatch"]);
-  if (has("test") || has("spec")) cite("Dedicated test infrastructure", ["test", "spec"]);
+  if (tests.length) cite("Dedicated test infrastructure", ["test", "spec"], "", tests);
 
   // Structural patterns from dep graph (not keyword-based)
   if (depGraph?.stats) {
