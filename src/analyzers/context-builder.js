@@ -1,6 +1,6 @@
 // Build structured AI context from deterministic scan results
 
-import { groupModulesByDomain } from "./domain-inference.js";
+import { groupModulesByDomain, pathHasKeyword } from "./domain-inference.js";
 
 /**
  * Compute per-module dependency metrics from the dep graph.
@@ -91,7 +91,7 @@ export function buildAIContext(scanResult, config, depGraph = null) {
     : [];
   
   // Group modules by business domain
-  const domainGroups = groupModulesByDomain(modules, customHints);
+  const domainGroups = groupModulesByDomain(modules, customHints, depGraph);
   
   // Compute module-level dependency metrics
   const moduleMetrics = computeModuleLevelMetrics(depGraph, modules);
@@ -175,32 +175,32 @@ export function buildAIContext(scanResult, config, depGraph = null) {
 }
 
 function inferModuleType(modulePath) {
-  const lower = modulePath.toLowerCase();
-  
-  if (lower.includes("test") || lower.includes("spec") || lower.includes("__test")) return "test";
-  if (lower.includes("api") || lower.includes("endpoint")) return "api";
-  if (lower.includes("component") || lower.includes("widget")) return "ui";
-  if (lower.includes("lib") || lower.includes("util") || lower.includes("helper") || lower.includes("common") || lower.includes("shared")) return "library";
-  if (lower.includes("hook")) return "hooks";
-  if (lower.includes("store") || lower.includes("state") || lower.includes("redux") || lower.includes("zustand")) return "state";
-  if (lower.includes("page") || lower.includes("route") || lower.includes("view")) return "route";
-  if (lower.includes("config") || lower.includes("setting") || lower.includes("env")) return "config";
-  if (lower.includes("core") || lower.includes("kernel") || lower.includes("foundation")) return "core";
-  if (lower.includes("render") || lower.includes("template") || lower.includes("format")) return "renderer";
-  if (lower.includes("publish") || lower.includes("output") || lower.includes("export")) return "publisher";
-  if (lower.includes("analyz") || lower.includes("inspect") || lower.includes("detect")) return "analyzer";
-  if (lower.includes("plugin") || lower.includes("extension") || lower.includes("addon")) return "plugin";
-  if (lower.includes("deliver") || lower.includes("dispatch") || lower.includes("send")) return "delivery";
-  if (lower.includes("doc") || lower.includes("generate")) return "documentation";
-  if (lower.includes("integrat") || lower.includes("connect") || lower.includes("adapter")) return "integration";
-  if (lower.includes("cli") || lower.includes("command") || lower.includes("bin")) return "cli";
-  if (lower.includes("ai") || lower.includes("ml") || lower.includes("model") || lower.includes("prompt")) return "ai";
-  if (lower.includes("auth") || lower.includes("login") || lower.includes("session")) return "auth";
-  if (lower.includes("data") || lower.includes("db") || lower.includes("model") || lower.includes("schema")) return "data";
-  if (lower.includes("middleware")) return "middleware";
-  if (lower.includes("service")) return "service";
-  if (lower.includes("app")) return "app";
-  
+  const has = (keyword) => pathHasKeyword(modulePath, keyword);
+
+  if (has("test") || has("spec")) return "test";
+  if (has("api") || has("endpoint")) return "api";
+  if (has("component") || has("widget")) return "ui";
+  if (has("lib") || has("util") || has("helper") || has("common") || has("shared")) return "library";
+  if (has("hook")) return "hooks";
+  if (has("store") || has("state") || has("redux") || has("zustand")) return "state";
+  if (has("page") || has("route") || has("view")) return "route";
+  if (has("config") || has("setting") || has("env")) return "config";
+  if (has("core") || has("kernel") || has("foundation")) return "core";
+  if (has("render") || has("template") || has("format")) return "renderer";
+  if (has("publish") || has("output") || has("export")) return "publisher";
+  if (has("analyz") || has("inspect") || has("detect")) return "analyzer";
+  if (has("plugin") || has("extension") || has("addon")) return "plugin";
+  if (has("deliver") || has("dispatch") || has("send")) return "delivery";
+  if (has("doc") || has("generate")) return "documentation";
+  if (has("integrat") || has("connect") || has("adapter")) return "integration";
+  if (has("cli") || has("command") || has("bin")) return "cli";
+  if (has("ai") || has("llm") || has("openai") || has("prompt")) return "ai";
+  if (has("auth") || has("login") || has("session")) return "auth";
+  if (has("data") || has("db") || has("schema")) return "data";
+  if (has("middleware")) return "middleware";
+  if (has("service")) return "service";
+  if (has("app")) return "app";
+
   return "other";
 }
 
@@ -208,7 +208,34 @@ function inferArchitecturalPatterns(modules, depGraph = null) {
   const patterns = [];
   const keys = modules.map(m => m.key.toLowerCase());
   
-  const has = (keyword) => keys.some(k => k.includes(keyword));
+  const has = (keyword) => keys.some((key) => (
+    keyword.includes("/") ? key.includes(keyword) : pathHasKeyword(key, keyword)
+  ));
+  const matchingKeys = (keywords) => {
+    const found = [];
+    for (const keyword of keywords) {
+      for (const module of modules) {
+        const key = module.key;
+        const matched = keyword.includes("/")
+          ? key.toLowerCase().includes(keyword)
+          : pathHasKeyword(key, keyword);
+        if (matched && !found.includes(key)) found.push(key);
+      }
+    }
+    return found;
+  };
+  const cite = (label, keywords, extra = "") => {
+    const found = matchingKeys(keywords);
+    if (found.length === 0 && !extra) return;
+    const sample = found.slice(0, 3).map((key) => `\`${key}\``).join(", ");
+    const more = found.length > 3 ? ` (+${found.length - 3} more)` : "";
+    const where = sample ? `${sample}${more}` : "";
+    const detail = [where, extra].filter(Boolean).join("; ");
+    patterns.push(detail ? `${label} — ${detail}` : label);
+  };
+  const externalNames = depGraph?.externalDeps || [];
+  const importsReact = externalNames.some((name) => name === "react" || name === "react-dom" || name.startsWith("react/"));
+  const importsAi = externalNames.some((name) => /(^|\/)(openai|anthropic|langchain|ollama)(\/|$)/i.test(name) || name.startsWith("@anthropic-ai/") || name.startsWith("@ai-sdk/"));
 
   // Compute module-level metrics for verification
   const moduleMetrics = depGraph ? computeModuleLevelMetrics(depGraph, modules) : new Map();
@@ -230,69 +257,56 @@ function inferArchitecturalPatterns(modules, depGraph = null) {
     return false;
   };
   
-  // Web framework patterns
-  if (has("app/")) patterns.push("Next.js App Router");
-  if (has("pages/")) patterns.push("Next.js Pages Router");
-  if (has("component") && has("lib")) patterns.push("Layered component architecture");
-  if (has("hook")) patterns.push("React hooks pattern");
-  if (has("store") || has("state") || has("redux") || has("zustand")) patterns.push("Centralized state management");
-  
-  // General patterns — verified against dep graph when available
-  if (has("api") || has("endpoint")) patterns.push("API route pattern");
+  // Web framework patterns. Each line names the modules (or imports) that triggered it.
+  if (has("app/")) cite("Next.js App Router", ["app/"]);
+  if (has("pages/")) cite("Next.js Pages Router", ["pages/"]);
+  if (has("component") && has("lib")) cite("Layered component architecture", ["component", "lib"]);
+  if (has("hook") && importsReact) cite("React hooks pattern", ["hook"], "imports react");
+  if (has("store") || has("state") || has("redux") || has("zustand")) {
+    cite("Centralized state management", ["store", "state", "redux", "zustand"]);
+  }
+
+  if (has("api") || has("endpoint")) cite("API route pattern", ["api", "endpoint"]);
 
   if (has("core") || has("kernel")) {
-    if (moduleMetrics.size > 0 && verifyHub("core")) {
-      patterns.push("Core/kernel architecture (verified — high fan-in)");
-    } else if (moduleMetrics.size > 0) {
-      patterns.push("Core/kernel architecture (naming only)");
-    } else {
-      patterns.push("Core/kernel architecture");
-    }
+    const note = moduleMetrics.size > 0 && verifyHub("core")
+      ? "high fan-in"
+      : "";
+    cite("Core/kernel architecture", ["core", "kernel"], note);
   }
 
   if (has("plugin") || has("extension")) {
-    if (moduleMetrics.size > 0 && (verifyHub("plugin") || verifyOrchestrator("plugin") || verifyHub("loader"))) {
-      patterns.push("Plugin system (verified — loader/registry detected)");
-    } else if (moduleMetrics.size > 0) {
-      patterns.push("Plugin system (naming only)");
-    } else {
-      patterns.push("Plugin system");
-    }
+    const verified = moduleMetrics.size > 0 && (verifyHub("plugin") || verifyOrchestrator("plugin") || verifyHub("loader"));
+    cite("Plugin system", ["plugin", "extension"], verified ? "loader or registry fan-in" : "");
   }
 
-  if (has("middleware")) patterns.push("Middleware pipeline");
+  if (has("middleware")) cite("Middleware pipeline", ["middleware"]);
 
   if (has("render") || has("template")) {
-    if (moduleMetrics.size > 0 && verifyOrchestrator("render")) {
-      patterns.push("Renderer pipeline (verified — multi-output)");
-    } else {
-      patterns.push("Renderer pipeline");
-    }
+    const note = moduleMetrics.size > 0 && verifyOrchestrator("render") ? "multi-output fan-out" : "";
+    cite("Renderer pipeline", ["render", "template"], note);
   }
 
   if (has("publish") || has("output")) {
-    if (moduleMetrics.size > 0 && verifyOrchestrator("publish")) {
-      patterns.push("Multi-output publishing (verified — multiple targets)");
-    } else {
-      patterns.push("Multi-output publishing");
-    }
+    const note = moduleMetrics.size > 0 && verifyOrchestrator("publish") ? "multiple publish targets" : "";
+    cite("Multi-output publishing", ["publish", "output"], note);
   }
 
-  if (has("analyz") || has("detect") || has("inspect")) patterns.push("Analysis pipeline");
-  if (has("cli") || has("command") || has("bin")) patterns.push("CLI tool architecture");
-  
+  if (has("analyz") || has("detect") || has("inspect")) cite("Analysis pipeline", ["analyz", "detect", "inspect"]);
+  if (has("cli") || has("command") || has("bin")) cite("CLI tool architecture", ["cli", "command", "bin"]);
+
   if (has("util") || has("helper") || has("lib")) {
-    if (moduleMetrics.size > 0 && verifyHub("util") || verifyHub("helper") || verifyHub("lib")) {
-      patterns.push("Shared utility layer (verified — high fan-in)");
-    } else {
-      patterns.push("Shared utility layer");
-    }
+    const verified = moduleMetrics.size > 0 && verifyHub("util") || verifyHub("helper") || verifyHub("lib");
+    cite("Shared utility layer", ["util", "helper", "lib"], verified ? "high fan-in" : "");
   }
-  
-  if (has("integrat") || has("adapter") || has("connect")) patterns.push("Integration adapters");
-  if (has("ai") || has("prompt") || has("provider")) patterns.push("AI/LLM integration");
-  if (has("deliver") || has("dispatch")) patterns.push("Delivery pipeline");
-  if (has("test") || has("spec")) patterns.push("Dedicated test infrastructure");
+
+  if (has("integrat") || has("adapter") || has("connect")) cite("Integration adapters", ["integrat", "adapter", "connect"]);
+  if (has("ai") || has("llm") || has("openai") || has("anthropic") || importsAi) {
+    const aiPackages = externalNames.filter((name) => /(^|\/)(openai|anthropic|langchain|ollama)(\/|$)/i.test(name) || name.startsWith("@anthropic-ai/") || name.startsWith("@ai-sdk/"));
+    cite("AI/LLM integration", ["ai", "llm", "openai", "anthropic"], aiPackages.length ? `imports ${aiPackages.slice(0, 3).join(", ")}` : "");
+  }
+  if (has("deliver") || has("dispatch")) cite("Delivery pipeline", ["deliver", "dispatch"]);
+  if (has("test") || has("spec")) cite("Dedicated test infrastructure", ["test", "spec"]);
 
   // Structural patterns from dep graph (not keyword-based)
   if (depGraph?.stats) {
@@ -334,7 +348,7 @@ export function buildModuleContext(modules, config, depGraph = null) {
       }))
     : [];
   
-  const domainGroups = groupModulesByDomain(modules, customHints);
+  const domainGroups = groupModulesByDomain(modules, customHints, depGraph);
   const moduleMetrics = computeModuleLevelMetrics(depGraph, modules);
   
   return modules.map(module => {

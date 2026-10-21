@@ -1,4 +1,5 @@
 import { computeModuleLevelMetrics, describeModuleDepRole } from "../analyzers/context-builder.js";
+import { moduleEvidence, pathHasKeyword } from "../analyzers/domain-inference.js";
 
 export function renderSystemOverview(cfg, scan, depGraph = null) {
   const projectName = cfg.project?.name || "Project";
@@ -109,38 +110,38 @@ export function renderSystemOverview(cfg, scan, depGraph = null) {
   return lines.join("\n");
 }
 
-function describeModule(key, depRole = null) {
-  const normalized = key.toLowerCase();
-  // Base description from path keywords
+function describeModule(key, depRole = null, evidence = {}) {
+  const has = (keyword) => pathHasKeyword(key, keyword);
   let base;
-  if (normalized.includes("core")) base = "Core business logic and shared foundations";
-  else if (normalized.includes("util")) base = "Shared utilities and helper functions";
-  else if (normalized.includes("api")) base = "API route handlers and endpoint definitions";
-  else if (normalized.includes("component")) base = "Reusable UI components";
-  else if (normalized.includes("hook")) base = "Custom React hooks";
-  else if (normalized.includes("page")) base = "Application page components";
-  else if (normalized.includes("lib")) base = "Library code and third-party integrations";
-  else if (normalized.includes("service")) base = "Service layer and external integrations";
-  else if (normalized.includes("model")) base = "Data models and schema definitions";
-  else if (normalized.includes("store") || normalized.includes("state")) base = "State management";
-  else if (normalized.includes("config")) base = "Configuration and settings";
-  else if (normalized.includes("test")) base = "Test suites and fixtures";
-  else if (normalized.includes("style") || normalized.includes("css")) base = "Styling and design tokens";
-  else if (normalized.includes("type")) base = "Type definitions and interfaces";
-  else if (normalized.includes("middleware")) base = "Request middleware and interceptors";
-  else if (normalized.includes("auth")) base = "Authentication and authorization";
-  else if (normalized.includes("render")) base = "Rendering logic and output formatters";
-  else if (normalized.includes("publish")) base = "Publishing and delivery integrations";
-  else if (normalized.includes("analyz")) base = "Code analysis and intelligence";
-  else if (normalized.includes("delivery")) base = "Content delivery and distribution";
-  else if (normalized.includes("integrat")) base = "Third-party service integrations";
-  else if (normalized.includes("doc")) base = "Documentation generation";
-  else if (normalized.includes("bin") || normalized.includes("cli")) base = "CLI entry point and commands";
-  else if (normalized.includes("plugin") || normalized.includes("extension")) base = "Plugin system and extensions";
-  else if (normalized.includes("prompt")) base = "Prompt engineering and templates";
-  else if (normalized.includes("provider")) base = "Service provider adapters";
-  else if (normalized.includes("generate") || normalized.includes("section")) base = "Content generation pipeline";
-  else if (normalized.includes("ai") || normalized.includes("ml")) base = "AI and machine learning integration";
+  if (has("test") || has("spec")) base = "Test suites and fixtures";
+  else if (has("core")) base = "Core business logic and shared foundations";
+  else if (has("util")) base = "Shared utilities and helper functions";
+  else if (has("api")) base = "API route handlers and endpoint definitions";
+  else if (has("component")) base = "Reusable UI components";
+  else if (has("hook") && evidence.react) base = "Custom React hooks";
+  else if (has("hook")) base = "Hook callbacks";
+  else if (has("page")) base = "Application page components";
+  else if (has("lib")) base = "Library code and third-party integrations";
+  else if (has("service")) base = "Service layer and external integrations";
+  else if (has("model")) base = "Data models and schema definitions";
+  else if (has("store") || has("state")) base = "State management";
+  else if (has("config")) base = "Configuration and settings";
+  else if (has("style") || has("css")) base = "Styling and design tokens";
+  else if (has("type")) base = "Type definitions and interfaces";
+  else if (has("middleware")) base = "Request middleware and interceptors";
+  else if (has("auth")) base = "Authentication and authorization";
+  else if (has("render")) base = "Rendering logic and output formatters";
+  else if (has("publish")) base = "Publishing and delivery integrations";
+  else if (has("analyz")) base = "Code analysis and intelligence";
+  else if (has("delivery")) base = "Content delivery and distribution";
+  else if (has("integrat")) base = "Third-party service integrations";
+  else if (has("doc")) base = "Documentation generation";
+  else if (has("bin") || has("cli")) base = "CLI entry point and commands";
+  else if (has("plugin") || has("extension")) base = "Plugin system and extensions";
+  else if (has("prompt") && evidence.ai) base = "Prompt templates for model calls";
+  else if (has("provider")) base = "Service provider adapters";
+  else if (has("generate") || has("section")) base = "Content generation pipeline";
+  else if (has("ai") || has("llm") || has("openai")) base = "AI and machine learning integration";
   else base = "Application module";
 
   // Enrich with dependency role if available
@@ -191,7 +192,7 @@ export function renderModuleCatalog(cfg, scan, ownershipMap = {}, depGraph = nul
 
   for (const module of scan.modules.slice(0, 100)) {
     const depRole = describeModuleDepRole(module.key, moduleMetrics);
-    const desc = describeModule(module.key, depRole);
+    const desc = describeModule(module.key, depRole, moduleEvidence(module.key, depGraph));
     const owners = ownershipMap[module.key];
     if (hasOwnership) {
       lines.push(`| \`${module.key}\` | ${module.fileCount} | ${desc} | ${owners ? owners.join(", ") : "—"} |`);

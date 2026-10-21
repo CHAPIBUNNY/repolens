@@ -3,7 +3,7 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** October 2026  
-**Version:** 1.15.1
+**Version:** 1.15.2
 
 ---
 
@@ -16,6 +16,14 @@ This document tracks known issues, limitations, and edge cases in RepoLens. We'r
 ## Watch hangs when nothing matches (fixed in 1.15.1)
 
 After `init --quick` in an empty directory, `module_roots` is `.` (the directory exists) and `scan.include` matches no source files. 1.15.0 `watch` still printed `Waiting for changes...` and waited. 1.15.1 exits 2 and tells you to add source files or fix the globs.
+
+## Dependency graph skipped Python and Go (fixed in 1.15.2)
+
+The import graph only read JavaScript and TypeScript. A Python or Go repository (click, httpx, cobra, chi) rendered `No source files were found to analyze for import dependencies.` 1.15.2 parses Python `import` / `from` (including relative imports) and Go imports against `go.mod`. Go `*_test.go` files are not separate modules.
+
+Imports inside comments were edges, which made `tj/commander.js` look circular. Type-only TypeScript imports (`import type`, `export type ... from`) were real cycles in sindresorhus/ky. A template literal produced an external package with an empty name. 1.15.2 ignores comments, strings, type-only imports, and empty specifiers.
+
+Path keywords used to be substrings, so httpx `_main.py` was "AI/LLM integration" and `test/hooks.ts` was "Custom React hooks" without a React import. 1.15.2 matches tokens and cites the path or import. React hook wording requires a `react` import.
 
 ## Code health skipped Python and Go (fixed in 1.15.1)
 

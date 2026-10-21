@@ -133,16 +133,54 @@ const DEFAULT_DOMAIN_HINTS = [
   }
 ];
 
-export function inferDomain(modulePath, customHints = []) {
+const REACT_HOOK_KEYWORDS = new Set(["hook", "hooks", "use"]);
+
+export function pathTokens(modulePath) {
+  return String(modulePath).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+}
+
+/** Match a path token, not a substring (`ai` does not match `_main` or `email`). */
+export function pathHasKeyword(modulePath, keyword) {
+  const needle = String(keyword).toLowerCase();
+  if (!needle) return false;
+  return pathTokens(modulePath).some((token) => {
+    if (token === needle || token === `${needle}s`) return true;
+    if (needle.length >= 5 && token.startsWith(needle)) return true;
+    return false;
+  });
+}
+
+export function moduleEvidence(moduleKey, depGraph) {
+  const key = String(moduleKey).replace(/\\/g, "/");
+  const nodes = (depGraph?.nodes || []).filter((node) => {
+    const file = String(node.file || node.key || "").replace(/\\/g, "/");
+    return file === key || file.startsWith(`${key}/`) || node.key === key;
+  });
+  const imports = new Set(nodes.flatMap((node) => node.externalImports || []));
+  const react = [...imports].some((name) => name === "react" || name === "react-dom" || name.startsWith("react/"));
+  const ai = [...imports].some((name) => /(^|\/)(openai|anthropic|langchain|ollama)(\/|$)/i.test(name) || name.startsWith("@anthropic-ai/") || name.startsWith("@ai-sdk/"));
+  return { react, ai };
+}
+
+function domainEvidenceText(hint, modulePath, keyword, evidence) {
+  const isDefault = DEFAULT_DOMAIN_HINTS.includes(hint);
+  if (!isDefault && hint.description) return hint.description;
+  const bits = [`path \`${modulePath}\` matches \`${keyword}\``];
+  if (REACT_HOOK_KEYWORDS.has(keyword) && evidence.react) bits.push("imports react");
+  if (hint.domain === "AI & Machine Learning" && evidence.ai) bits.push("imports an AI SDK");
+  return bits.join("; ");
+}
+
+export function inferDomain(modulePath, customHints = [], evidence = {}) {
   const hints = [...customHints, ...DEFAULT_DOMAIN_HINTS];
-  const lowerPath = modulePath.toLowerCase();
-  
+
   for (const hint of hints) {
     for (const keyword of hint.match) {
-      if (lowerPath.includes(keyword)) {
+      if (REACT_HOOK_KEYWORDS.has(keyword) && !evidence.react) continue;
+      if (pathHasKeyword(modulePath, keyword)) {
         return {
           domain: hint.domain,
-          description: hint.description,
+          description: domainEvidenceText(hint, modulePath, keyword, evidence),
           confidence: "pattern_match",
           matchedKeyword: keyword
         };
@@ -158,11 +196,11 @@ export function inferDomain(modulePath, customHints = []) {
   };
 }
 
-export function groupModulesByDomain(modules, customHints = []) {
+export function groupModulesByDomain(modules, customHints = [], depGraph = null) {
   const domainGroups = {};
   
   for (const module of modules) {
-    const inference = inferDomain(module.key, customHints);
+    const inference = inferDomain(module.key, customHints, moduleEvidence(module.key, depGraph));
     const domainName = inference.domain;
     
     if (!domainGroups[domainName]) {
