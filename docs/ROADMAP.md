@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.14.3  
+**Current Version:** 1.15.0  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.14.3)
+## What's Shipped (v0.1.0 → v1.15.0)
 
 Everything below is live, tested, and available on npm.
 
@@ -164,6 +164,14 @@ Everything below is live, tested, and available on npm.
 - ✅ `server.json` for the MCP Registry (`io.github.CHAPIBUNNY/repolens`) and `smithery.yaml`
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
+
+## v1.15.0 — CLI usability
+
+- ✅ `init --quick` detects Python, Go, Rust, Java, JavaScript, and other languages and writes matching globs and `module_roots`
+- ✅ Quick init is Markdown-only. The wizard can add Notion, Confluence, GitHub Wiki, and Obsidian
+- ✅ `doctor` fails when 0 files match. `demo` and `publish` exit 2 and skip empty docs
+- ✅ Per-command `--help`, `--target` checked up front, `publish --strict`, `watch` exits 2 when nothing is watchable
+- ✅ Bare `repolens` shows help. The ASCII banner is hidden when stdout is not a terminal or `CI` is set
 
 ## v1.14.3 — Cline setup
 

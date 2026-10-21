@@ -17,7 +17,6 @@ import {
 import { renderSystemMap } from "./renderers/renderMap.js";
 import { renderArchitectureDiff, buildArchitectureDiffData } from "./renderers/renderDiff.js";
 
-import { publishDocs } from "./publishers/index.js";
 import { upsertPrComment } from "./delivery/comment.js";
 import { runInit } from "./init.js";
 import { runMigrate } from "./migrate.js";
@@ -32,6 +31,9 @@ import { PluginManager } from "./plugins/manager.js";
 import { printHelp } from "./help.js";
 import { parseCliArgs } from "./cli-args.js";
 import { isNonInteractiveEnvironment } from "./utils/interactive.js";
+import { shouldPrintBanner } from "./utils/banner.js";
+import { detectRepoLanguages } from "./core/languages.js";
+import { publishDocs, missingPublisherCredentials } from "./publishers/index.js";
 import { 
   initTelemetry, 
   captureError, 
@@ -48,6 +50,18 @@ import {
 const EXIT_SUCCESS = 0;
 const EXIT_ERROR = 1;
 const EXIT_VALIDATION = 2;
+
+function exitIfNoFilesScanned(scan, cfg) {
+  if ((scan?.filesCount || 0) > 0) return;
+  const patterns = Array.isArray(cfg?.scan?.include) && cfg.scan.include.length
+    ? cfg.scan.include.join(", ")
+    : "(none)";
+  error("WARNING: 0 files scanned.");
+  error(`scan.include matched no files (${patterns}).`);
+  error("Empty documentation was not written.");
+  error("Update scan.include, or run `repolens init --quick` to detect this repository's language.");
+  process.exit(EXIT_VALIDATION);
+}
 
 function formatDuration(ms) {
   if (ms < 1000) return `${ms}ms`;
@@ -172,6 +186,7 @@ async function getPackageVersion() {
 }
 
 async function printBanner() {
+  if (!shouldPrintBanner()) return;
   const version = await getPackageVersion();
   console.log(`
 ██████╗ ███████╗██████╗  ██████╗ ██╗     ███████╗███╗   ██╗███████╗
@@ -228,7 +243,8 @@ async function main() {
   // Help and version return before telemetry and the update check.
   // bin/repolens.js answers --version/--help without loading this module.
   if (parsed.help) {
-    printHelp();
+    const topic = parsed.command && parsed.command !== "help" ? parsed.command : undefined;
+    printHelp(topic);
     return;
   }
 
@@ -244,7 +260,27 @@ async function main() {
     process.exit(EXIT_VALIDATION);
   }
 
+  if (parsed.flags["--target"]) {
+    const targetPath = parsed.flags["--target"];
+    let targetIsDirectory = false;
+    try {
+      const stat = await fs.stat(targetPath);
+      targetIsDirectory = stat.isDirectory();
+    } catch {
+      targetIsDirectory = false;
+    }
+    if (!targetIsDirectory) {
+      error(`Target directory not found: ${targetPath}`);
+      process.exit(EXIT_VALIDATION);
+    }
+  }
+
   const command = parsed.command;
+
+  if (!command) {
+    printHelp();
+    return;
+  }
 
   // MCP stdio must start before telemetry and the npm update check.
   // Those both can open the network, and logs must stay off stdout.
@@ -366,11 +402,15 @@ async function main() {
       error(err.message);
       process.exit(EXIT_VALIDATION);
     }
-    await runWatch(configPath);
+    const watchResult = await runWatch(configPath);
+    if (watchResult && watchResult.ok === false) {
+      await closeTelemetry();
+      process.exit(EXIT_VALIDATION);
+    }
     return;
   }
 
-  if (command === "publish" || !command) {
+  if (command === "publish") {
     await printBanner();
     
     const commandTimer = startTimer("publish");
@@ -399,6 +439,18 @@ async function main() {
       process.exit(EXIT_VALIDATION);
     }
 
+    if (parsed.flags["--strict"]) {
+      const missing = missingPublisherCredentials(cfg);
+      if (missing.length > 0) {
+        stopTimer(commandTimer);
+        error("Missing publisher credentials (--strict):");
+        for (const item of missing) error(`  ${item}`);
+        trackUsage("publish", "failure", { step: "strict-credentials" });
+        await closeTelemetry();
+        process.exit(EXIT_VALIDATION);
+      }
+    }
+
     // Prompt for AI enhancement if GITHUB_TOKEN is available
     const aiResult = await promptForAI(cfg);
 
@@ -421,6 +473,7 @@ async function main() {
       scan = await scanRepo(cfg);
       stopTimer(scanTimer);
       info(`Detected ${scan.modules?.length || 0} modules`);
+      exitIfNoFilesScanned(scan, cfg);
     } catch (err) {
       stopTimer(commandTimer);
       captureError(err, { command: "publish", step: "scan", patterns: cfg.scan?.patterns });
@@ -514,16 +567,20 @@ async function main() {
       info(`Using config: ${configPath}`);
       cfg = await loadConfig(configPath);
     } catch {
-      info("No .repolens.yml found — using default scan patterns");
+      const detected = await detectRepoLanguages(targetDir);
+      const languageNames = detected.languages.map((lang) => lang.label).join(", ");
+      info(languageNames
+        ? `No .repolens.yml found — scanning ${languageNames}`
+        : "No .repolens.yml found — using multi-language scan patterns");
       cfg = {
         configVersion: 1,
         project: { name: path.basename(targetDir) },
         publishers: ["markdown"],
         scan: {
-          include: ["**/*.{js,ts,jsx,tsx,mjs,cjs,py,go,rs,java,rb,php,cs,swift,kt}"],
-          ignore: ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**", "**/vendor/**", "**/target/**", "**/__pycache__/**"],
+          include: detected.include,
+          ignore: ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**", "**/vendor/**", "**/target/**", "**/__pycache__/**", "**/.venv/**"],
         },
-        module_roots: ["src", "lib", "app", "packages"],
+        module_roots: detected.moduleRoots,
         outputs: {
           pages: [
             { key: "system_overview", title: "System Overview" },
@@ -552,7 +609,8 @@ async function main() {
       const scan = await scanRepo(cfg);
       stopTimer(scanTimer);
       info(`Detected ${scan.modules?.length || 0} modules, ${scan.filesCount || 0} files`);
-      
+      exitIfNoFilesScanned(scan, cfg);
+
       const rawDiff = getGitDiff("origin/main", cfg.__repoRoot || targetDir);
       
       info("Generating documentation set...");

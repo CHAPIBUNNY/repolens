@@ -4,6 +4,7 @@ const BOOLEAN_FLAGS = new Set([
   "--non-interactive",
   "--dry-run",
   "--force",
+  "--strict",
   "--verbose",
   "--help",
   "-h",

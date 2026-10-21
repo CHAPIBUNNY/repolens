@@ -476,20 +476,25 @@ function isValidRoutePath(p) {
   return p.startsWith("/") || /^[a-zA-Z0-9]/.test(p);
 }
 
-export async function scanRepo(cfg) {
+export async function listMatchedFiles(cfg) {
   const repoRoot = cfg.__repoRoot;
-
   const rootResolved = path.resolve(repoRoot);
-  const files = (await fg(cfg.scan.include, {
+  const files = await fg(cfg.scan.include, {
     cwd: rootResolved,
-    ignore: cfg.scan.ignore,
+    ignore: cfg.scan?.ignore || [],
     onlyFiles: true,
     followSymbolicLinks: false,
     absolute: false
-  })).filter((file) => isInsideRoot(rootResolved, path.resolve(rootResolved, file)));
+  });
+  return files.filter((file) => isInsideRoot(rootResolved, path.resolve(rootResolved, file)));
+}
+
+export async function scanRepo(cfg) {
+  const repoRoot = cfg.__repoRoot;
+  const files = await listMatchedFiles(cfg);
 
   if (files.length === 0) {
-    warn("No files matched the scan patterns. Documentation will be mostly empty. Check scan.include in .repolens.yml.");
+    warn("No files matched the scan patterns. Check scan.include in .repolens.yml.");
   }
 
   // Performance guardrails

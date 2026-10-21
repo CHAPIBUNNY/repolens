@@ -1,6 +1,6 @@
 # RepoLens — Onboarding Guide
 
-Complete step-by-step setup for RepoLens 1.14.3: publishers (Notion, Confluence, GitHub Wiki, Obsidian, Markdown), AI enhancement, Discord notifications, the MCP server, and CI/CD automation.
+Complete step-by-step setup for RepoLens 1.15.0: publishers (Notion, Confluence, GitHub Wiki, Obsidian, Markdown), AI enhancement, Discord notifications, the MCP server, and CI/CD automation.
 
 > **Quick start:** For a 60-second setup, see the [Quick Start](README.md#-quick-start-60-seconds) in the README.
 
@@ -22,11 +22,14 @@ npx @chappibunny/repolens init
 - `.env.example` — Environment variable template
 - `README.repolens.md` — Quick reference guide
 
-**Default configuration works for:**
-- Next.js projects
-- React applications
-- Node.js backends
-- Monorepos with common structure
+**`repolens init --quick` writes Markdown only** and chooses `scan.include` / `module_roots` from the languages it finds (Python, Go, Rust, Java, JavaScript/TypeScript, and others). The wizard (`repolens init` with no `--quick`) can add Notion, Confluence, GitHub Wiki, and Obsidian.
+
+That quick setup fits:
+
+- Python packages (including a top-level package next to `setup.py`)
+- Go modules (`cmd`, `internal`, `pkg`)
+- Rust, Java/Kotlin, and JavaScript/TypeScript projects
+- Polyglot repos, which get a glob for each detected language
 
 ---
 
@@ -401,7 +404,7 @@ Get notified when documentation changes significantly — rich embeds with cover
 
 ## Use the GitHub Action
 
-Instead of a hand-written `npx` step, you can call the composite action in `action.yml`. It runs the published `@chappibunny/repolens` package. The `v1.14.3` tag and the npm release both have to exist first.
+Instead of a hand-written `npx` step, you can call the composite action in `action.yml`. It runs the published `@chappibunny/repolens` package. The `v1.15.0` tag and the npm release both have to exist first.
 
 ```yaml
 name: Architecture docs
@@ -417,7 +420,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
-      - uses: CHAPIBUNNY/repolens@v1.14.3
+      - uses: CHAPIBUNNY/repolens@v1.15.0
         with:
           command: publish
           config: .repolens.yml

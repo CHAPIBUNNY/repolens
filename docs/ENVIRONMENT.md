@@ -94,3 +94,5 @@ REPOLENS_AI_API_KEY=...
 
 **Local Development:** Create `.env` file in project root  
 **GitHub Actions:** Add as repository secrets in Settings → Secrets and variables → Actions
+
+`repolens publish` skips a publisher whose credentials are unset. `repolens publish --strict` exits 2 instead, and names each missing variable. Markdown has no credentials. `init --quick` does not enable Notion or Confluence; add those in the wizard or in `publishers` when the variables above are set.

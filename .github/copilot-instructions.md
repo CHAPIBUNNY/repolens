@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.14.3  
+**Version:** 1.15.0  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -173,11 +173,13 @@ scripts/                  # Helper scripts
 ### Key Commands
 
 - `repolens init` - **Interactive wizard** — configure publishers, AI, credentials (default)
-- `repolens init --quick` - Minimal scaffolding, skip wizard
-- `repolens doctor` - Validate repository setup (config, environment, etc.)
-- `repolens publish` - Scan repo, generate docs (with optional AI), publish to outputs
-- `repolens demo` - Generate local docs without API keys (quick preview)
-- `repolens watch` - Watch for file changes and regenerate docs (Markdown only)
+- `repolens` with no arguments prints help and does not publish
+- `repolens <command> --help` prints that command's flags
+- `repolens init --quick` - Markdown-only scaffolding. Globs and module_roots follow the detected language (Python, Go, Rust, Java, JavaScript, and others)
+- `repolens doctor` - Validate repository setup. Fails when scan.include matches 0 files
+- `repolens publish` - Scan repo, generate docs (with optional AI), publish to outputs. Exits 2 when 0 files match. `--strict` fails when publisher credentials are missing
+- `repolens demo` - Generate local docs without API keys. Language-aware when no config exists. Exits 2 when 0 files match
+- `repolens watch` - Watch for file changes and regenerate docs (Markdown only). Exits 2 when no module_roots directory exists
 - `repolens migrate` - Migrate legacy workflows + config files (adds `configVersion: 1` if missing)
 - `repolens uninstall` - Remove all RepoLens-generated files
 - `repolens feedback` - Send feedback to the RepoLens team

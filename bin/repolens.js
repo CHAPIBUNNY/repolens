@@ -2,19 +2,22 @@
 import { readFileSync } from "node:fs";
 
 const argv = process.argv.slice(2);
-const wantsHelp = argv.includes("--help") || argv.includes("-h") || argv[0] === "help";
-const wantsVersion = argv.includes("--version") || argv.includes("-v") || argv[0] === "version";
+const command = argv.find((arg) => !arg.startsWith("-"));
+const wantsHelp = argv.includes("--help") || argv.includes("-h") || command === "help";
+const wantsVersion = argv.includes("--version") || argv.includes("-v") || command === "version";
 
-// --version and --help must not load the scanner, publishers, or telemetry.
+// --version, --help, and a bare invocation must not load the scanner,
+// publishers, or telemetry. `repolens <command> --help` prints that command.
 if (wantsVersion && !wantsHelp) {
   const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
   console.log(pkg.version || "0.0.0");
   process.exit(0);
 }
 
-if (wantsHelp) {
+if (argv.length === 0 || wantsHelp) {
   const { printHelp } = await import("../src/help.js");
-  printHelp();
+  const topic = wantsHelp && command && command !== "help" ? command : undefined;
+  printHelp(topic);
   process.exit(0);
 }
 

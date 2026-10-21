@@ -34,6 +34,19 @@ export function classifyDiffLine(line) {
   return { bucket: "modified", file };
 }
 
+/**
+ * Plain message for a failed git diff.
+ * A directory that is not a repository says so. The old internal
+ * "git diff failed, returning empty diff" line is not used.
+ */
+export function gitDiffFailureMessage(stderr = "", message = "") {
+  const text = `${stderr}\n${message}`;
+  if (/not a git repository/i.test(text)) {
+    return "not a git repository";
+  }
+  return "git diff could not be read; continuing with an empty diff.";
+}
+
 export function getGitDiff(baseRef = "origin/main", cwd = process.cwd(), headRef) {
   if (!isSafeGitRef(baseRef)) {
     warn("git diff skipped: base ref contains unsupported characters.");
@@ -60,7 +73,8 @@ export function getGitDiff(baseRef = "origin/main", cwd = process.cwd(), headRef
       stdio: ["ignore", "pipe", "pipe"],
     });
   } catch (error) {
-    warn("git diff failed, returning empty diff.");
+    const stderr = typeof error.stderr === "string" ? error.stderr : "";
+    warn(gitDiffFailureMessage(stderr, error.message));
     return emptyDiff();
   }
 

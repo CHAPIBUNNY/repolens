@@ -3,9 +3,15 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** October 2026  
-**Version:** 1.14.3
+**Version:** 1.15.0
 
 ---
+
+## Empty scans on non-JavaScript repos (fixed in 1.15.0)
+
+`init --quick` in 1.14.x wrote JavaScript-only globs (`src/**/*.{ts,tsx,js,jsx,md}`) and `module_roots` such as `app`, `lib`, and `components`. On a Python repository such as psf/requests, `demo` then matched 0 files, wrote near-empty docs, and exited 0.
+
+1.15.0 detects the language and writes fitting globs. `doctor` fails when 0 files match. `demo` and `publish` exit 2 and do not write those docs.
 
 ## 🔄 Migration Tool (`repolens migrate`)
 

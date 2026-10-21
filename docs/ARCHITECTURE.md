@@ -13,7 +13,9 @@ from patterns    stack patterns      with insights       + Confluence pages
 ```
 
 **Scan Phase:**
+- `init --quick` detects languages (Python, Go, Rust, Java, JavaScript, and others) and writes `scan.include` plus `module_roots` that fit the repository. `demo` without a config uses the same detection
 - Uses `fast-glob` to match your `scan.include` patterns
+- `demo` and `publish` exit 2 when nothing matches, before any empty docs are written. `doctor` fails the same way
 - Filters out `scan.ignore` patterns
 - Reads package.json for framework/tool detection
 - Analyzes file paths for Next.js routes, API endpoints

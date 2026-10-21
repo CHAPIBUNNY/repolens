@@ -9,7 +9,9 @@ project:
   name: "my-awesome-app"
   docs_title_prefix: "MyApp"
 
-# Configure output destinations
+# Configure output destinations.
+# `repolens init --quick` writes Markdown only and fills scan.include from
+# the languages it detects. The wizard can add the other publishers.
 publishers:
   - notion
   - confluence
@@ -116,7 +118,7 @@ features:
 | `configVersion` | number | **Yes** | Schema version (must be `1`) |
 | `project.name` | string | Yes | Project name |
 | `project.docs_title_prefix` | string | No | Prefix for documentation titles (default: project name) |
-| `publishers` | array | Yes | Output targets: `notion`, `confluence`, `github_wiki`, `obsidian`, `markdown` (+ plugin publishers) |
+| `publishers` | array | Yes | Output targets: `notion`, `confluence`, `github_wiki`, `obsidian`, `markdown` (+ plugin publishers). `init --quick` lists `markdown` only. `publish --strict` exits 2 when a listed publisher is missing credentials. |
 | `plugins` | array | No | Plugin paths or npm package names |
 | `notion.branches` | array | No | Branch whitelist for Notion publishing. Supports globs. |
 | `notion.includeBranchInTitle` | boolean | No | Add `[branch-name]` to titles (default: `true`) |

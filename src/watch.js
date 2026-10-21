@@ -40,13 +40,30 @@ export async function runWatch(configPath) {
   info("Starting watch mode (Markdown only)...");
   info("Press Ctrl+C to stop.\n");
 
-  // Initial build
-  await rebuild(configPath);
-
-  // Determine directories to watch from config
   const cfg = await loadConfig(configPath);
   const repoRoot = cfg.__repoRoot || process.cwd();
   const moduleRoots = cfg.module_roots || ["src", "app", "lib"];
+
+  const watchable = [];
+  for (const root of moduleRoots) {
+    const dirPath = path.resolve(repoRoot, root);
+    try {
+      fs.accessSync(dirPath);
+      watchable.push({ root, dirPath });
+    } catch {
+      // Directory doesn't exist, skip
+    }
+  }
+
+  if (watchable.length === 0) {
+    const hint = "No directories to watch. Check module_roots in .repolens.yml — none of the configured roots exist.";
+    warn(hint);
+    error(hint);
+    return { ok: false, message: hint };
+  }
+
+  // Initial build only when there is something to watch.
+  await rebuild(configPath);
 
   let debounceTimer = null;
 
@@ -56,26 +73,15 @@ export async function runWatch(configPath) {
   };
 
   const watchers = [];
-  for (const root of moduleRoots) {
-    const dirPath = path.resolve(repoRoot, root);
-    try {
-      fs.accessSync(dirPath);
-      const watcher = fs.watch(dirPath, { recursive: true }, (eventType, filename) => {
-        if (filename && !filename.includes("node_modules")) {
-          info(`Change detected: ${root}/${filename}`);
-          onChange();
-        }
-      });
-      watchers.push(watcher);
-      info(`Watching: ${root}/`);
-    } catch {
-      // Directory doesn't exist, skip
-    }
-  }
-
-  if (watchers.length === 0) {
-    warn("No directories to watch. Check module_roots in .repolens.yml");
-    return;
+  for (const { root, dirPath } of watchable) {
+    const watcher = fs.watch(dirPath, { recursive: true }, (eventType, filename) => {
+      if (filename && !filename.includes("node_modules")) {
+        info(`Change detected: ${root}/${filename}`);
+        onChange();
+      }
+    });
+    watchers.push(watcher);
+    info(`Watching: ${root}/`);
   }
 
   info("\nWaiting for changes...\n");

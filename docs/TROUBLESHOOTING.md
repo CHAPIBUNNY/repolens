@@ -369,6 +369,24 @@ permissions:
 
 ---
 
+## Target directory, empty scans, and git
+
+### `Target directory not found: <path>`
+
+`--target` must already exist. RepoLens exits 2 before scanning. Create the directory, or run the command from inside the repository and omit `--target`.
+
+### `not a git repository`
+
+The directory has no `.git`. RepoLens still scans files. It does not print `git diff failed, returning empty diff`, and it does not report a code-health average of 100/100 when no source files were analyzed.
+
+### `No directories to watch`
+
+`repolens watch` exits 2 when none of the `module_roots` directories exist. Point `module_roots` at folders that are in the repository, or create those folders.
+
+### `Missing publisher credentials (--strict)`
+
+`repolens publish --strict` exits 2 when Notion, Confluence, or GitHub Wiki is configured without its environment variables, or when `obsidian` is configured without `obsidian.vault`. Without `--strict`, those publishers are skipped. Markdown needs no credentials. `init --quick` writes Markdown only; the wizard adds the others.
+
 ## Doctor Command
 
 Run the built-in diagnostic tool to check your setup:
@@ -391,7 +409,7 @@ This validates:
 | Known repo roots detected | Warning only |
 | Version is up to date | Informational |
 
-Exit codes: `0` = all checks pass, `1` = blocking failures found.
+Exit codes for `repolens doctor`: `0` = all checks pass, `2` = blocking failures found (missing files, invalid config, or 0 files matched). The same code `2` is used for a missing `--target`, `demo`/`publish` scanning 0 files, `watch` with nothing to watch, and `publish --strict` with missing publisher credentials. Code `1` is a runtime error or an unknown command. `repolens --help` and `repolens <command> --help` list the same codes.
 
 ---
 

@@ -2,7 +2,7 @@
 
 RepoLens can run as a local [Model Context Protocol](https://modelcontextprotocol.io) server. Coding agents call it over stdio. The server reads the workspace and returns architecture documentation. It does not publish to Notion, Confluence, or the wiki.
 
-The command is `repolens mcp`. The npm package also installs a `repolens-mcp` binary that starts the same server.
+The command is `repolens mcp`. `repolens mcp --help` prints that command's usage and does not start the server. The npm package also installs a `repolens-mcp` binary that starts the same server. `repolens-mcp --help` prints the same MCP usage.
 
 ## Tools
 
