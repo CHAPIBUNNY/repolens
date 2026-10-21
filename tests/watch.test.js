@@ -72,6 +72,10 @@ describe("watch module — real filesystem events", () => {
   // ── Helpers per-test ──────────────────────────────────────────────
   async function configureAndImport(moduleRoots) {
     const { loadConfig } = await import("../src/core/config.js");
+    const { scanRepo } = await import("../src/core/scan.js");
+    scanRepo.mockResolvedValue({
+      filesCount: 10, modules: [], api: [], pages: [], metadata: {},
+    });
     loadConfig.mockResolvedValue({
       __repoRoot: tmpDir,
       module_roots: moduleRoots,
@@ -97,6 +101,21 @@ describe("watch module — real filesystem events", () => {
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("No directories to watch"),
     );
+  });
+
+  it("returns when roots exist but scan.include matches no files", async () => {
+    fs.mkdirSync(path.join(tmpDir, "src"));
+    const { runWatch, warn, error, info, scanRepo } = await configureAndImport([".", "src"]);
+    scanRepo.mockResolvedValue({
+      filesCount: 0, modules: [], api: [], pages: [], metadata: {},
+    });
+
+    await runWatch(path.join(tmpDir, ".repolens.yml"));
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("No files matched scan.include"));
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("Nothing to watch"));
+    expect(info).not.toHaveBeenCalledWith(expect.stringContaining("Waiting for changes"));
+    expect(fs.watch).not.toHaveBeenCalled();
   });
 
   it("sets up watchers for existing directories", async () => {

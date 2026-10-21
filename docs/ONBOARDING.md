@@ -1,6 +1,6 @@
 # RepoLens — Onboarding Guide
 
-Complete step-by-step setup for RepoLens 1.15.0: publishers (Notion, Confluence, GitHub Wiki, Obsidian, Markdown), AI enhancement, Discord notifications, the MCP server, and CI/CD automation.
+Complete step-by-step setup for RepoLens 1.15.1: publishers (Notion, Confluence, GitHub Wiki, Obsidian, Markdown), AI enhancement, Discord notifications, the MCP server, and CI/CD automation.
 
 > **Quick start:** For a 60-second setup, see the [Quick Start](README.md#-quick-start-60-seconds) in the README.
 
@@ -404,7 +404,7 @@ Get notified when documentation changes significantly — rich embeds with cover
 
 ## Use the GitHub Action
 
-Instead of a hand-written `npx` step, you can call the composite action in `action.yml`. It runs the published `@chappibunny/repolens` package. The `v1.15.0` tag and the npm release both have to exist first.
+Instead of a hand-written `npx` step, you can call the composite action in `action.yml`. It runs the published `@chappibunny/repolens` package. The `v1.15.1` tag and the npm release both have to exist first.
 
 ```yaml
 name: Architecture docs
@@ -420,7 +420,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
-      - uses: CHAPIBUNNY/repolens@v1.15.0
+      - uses: CHAPIBUNNY/repolens@v1.15.1
         with:
           command: publish
           config: .repolens.yml

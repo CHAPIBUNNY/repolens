@@ -1,5 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { computeComplexity, extractFunctions, analyzeComplexity, computeCodeHealth } from "../src/analyzers/complexity-analyzer.js";
+import {
+  computeComplexity,
+  computePythonComplexity,
+  computeGoComplexity,
+  extractFunctions,
+  extractPythonFunctions,
+  extractGoFunctions,
+  analyzeComplexity,
+  computeCodeHealth,
+} from "../src/analyzers/complexity-analyzer.js";
 import { renderCodeHealth } from "../src/renderers/renderAnalysis.js";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -256,6 +265,102 @@ describe("analyzeComplexity", () => {
     `);
     const result = await analyzeComplexity(["mix.js"], tmpDir);
     expect(result.files[0].maxFunctionComplexity).toBeGreaterThan(1);
+  });
+
+  it("analyzes Python modules and skips tests", async () => {
+    await writeFile("requests/api.py", `
+def get(url):
+    """if this docstring mentioned control flow it would not count"""
+    if not url:
+        return None
+    for _ in range(2):
+        if url and ready or cached:
+            return url
+    return None
+
+async def close():
+    return None
+`);
+    await writeFile("requests/test_api.py", "def test_get():\n    assert True\n");
+    await writeFile("tests/test_more.py", "def test_more():\n    if True:\n        pass\n");
+    const result = await analyzeComplexity(
+      ["requests/api.py", "requests/test_api.py", "tests/test_more.py"],
+      tmpDir,
+    );
+    expect(result.files.map(f => f.file)).toEqual(["requests/api.py"]);
+    expect(result.functions.map(f => f.name)).toEqual(["get", "close"]);
+    expect(result.files[0].complexity).toBeGreaterThan(1);
+    const health = computeCodeHealth(result, { nodes: [] }, { byFile: {} }, { findings: [] });
+    expect(health.stats.totalFiles).toBe(1);
+    expect(health.stats.avgScore).not.toBeNull();
+    expect(health.summary).toContain("1 files analyzed");
+    expect(health.summary).not.toMatch(/No source files/i);
+  });
+
+  it("analyzes Go packages and skips _test.go", async () => {
+    await writeFile("pkg/sum.go", `
+package pkg
+
+func Sum(n int) int {
+	if n < 0 {
+		return 0
+	}
+	total := 0
+	for i := 0; i < n; i++ {
+		if i > 0 && total >= 0 {
+			total += i
+		}
+	}
+	return total
+}
+
+func (c *Client) Do(req *Request) {
+	if req == nil {
+		return
+	}
+}
+`);
+    await writeFile("pkg/sum_test.go", "package pkg\n\nfunc TestSum(t *testing.T) {\n\tif true {\n\t}\n}\n");
+    const result = await analyzeComplexity(["pkg/sum.go", "pkg/sum_test.go"], tmpDir);
+    expect(result.files.map(f => f.file)).toEqual(["pkg/sum.go"]);
+    expect(result.functions.map(f => f.name)).toEqual(["Sum", "Do"]);
+    const health = computeCodeHealth(result, { nodes: [] }, { byFile: {} }, { findings: [] });
+    expect(health.summary).toContain("1 files analyzed");
+    expect(health.summary).not.toMatch(/No source files/i);
+  });
+});
+
+describe("computePythonComplexity", () => {
+  it("counts branches and ignores comments and strings", () => {
+    expect(computePythonComplexity("x = 1\n")).toBe(1);
+    expect(computePythonComplexity("if x:\n    pass\nelif y:\n    pass\n")).toBe(3);
+    expect(computePythonComplexity("# if x:\nx = 1\n")).toBe(1);
+    expect(computePythonComplexity('msg = "if x and y"\nx = 1\n')).toBe(1);
+    const body = "if not url:\n    return None\nfor _ in range(2):\n    if url and ready or cached:\n        return url\n";
+    expect(computePythonComplexity(body)).toBeGreaterThan(1);
+  });
+
+  it("extracts def and async def", () => {
+    const funcs = extractPythonFunctions("def get(url):\n    if url:\n        return url\n\nasync def close():\n    return None\n");
+    expect(funcs.map(f => f.name)).toEqual(["get", "close"]);
+    expect(funcs[0].complexity).toBeGreaterThan(funcs[1].complexity);
+  });
+});
+
+describe("computeGoComplexity", () => {
+  it("counts if, for, case, and logical operators", () => {
+    expect(computeGoComplexity("x := 1\n")).toBe(1);
+    expect(computeGoComplexity("if x {\n}\n")).toBe(2);
+    expect(computeGoComplexity("switch x {\ncase 1:\ncase 2:\n}\n")).toBe(3);
+    expect(computeGoComplexity("// if x\nx := 1\n")).toBe(1);
+    expect(computeGoComplexity('s := "if x && y"\nx := 1\n')).toBe(1);
+    expect(computeGoComplexity("s := `if x`\nx := 1\n")).toBe(1);
+  });
+
+  it("extracts functions and methods", () => {
+    const funcs = extractGoFunctions("func Sum(n int) int {\n\tif n < 0 {\n\t\treturn 0\n\t}\n\treturn n\n}\n\nfunc (c *Client) Do(req *Request) {\n}\n");
+    expect(funcs.map(f => f.name)).toEqual(["Sum", "Do"]);
+    expect(funcs[0].complexity).toBeGreaterThan(funcs[1].complexity);
   });
 });
 

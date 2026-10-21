@@ -2,6 +2,15 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.15.1
+
+### Watch and code health
+
+- `watch` exits 2 when `scan.include` matches no files, including after `init --quick` in an empty directory. It prints a hint to fix `scan.include` and `module_roots` and does not wait for changes
+- Code health analyzes Python (`.py`, `.pyw`) and Go (`.go`) as well as JavaScript and TypeScript. A Python or Go repository no longer logs `Code health: no source files analyzed` when source files were scanned. Test modules (`test_*.py`, `*_test.py`, `*_test.go`, and `tests/`) are skipped
+
+Exit codes stay 0 success, 1 runtime error or unknown command, and 2 validation failure (bad flags, missing config, missing target, doctor failure, 0 files scanned, nothing to watch, `--strict` credentials, feedback without a terminal).
+
 ## 1.15.0
 
 ### CLI usability

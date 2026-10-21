@@ -37,9 +37,6 @@ async function rebuild(configPath) {
  * @param {string} configPath - Resolved path to .repolens.yml
  */
 export async function runWatch(configPath) {
-  info("Starting watch mode (Markdown only)...");
-  info("Press Ctrl+C to stop.\n");
-
   const cfg = await loadConfig(configPath);
   const repoRoot = cfg.__repoRoot || process.cwd();
   const moduleRoots = cfg.module_roots || ["src", "app", "lib"];
@@ -61,6 +58,20 @@ export async function runWatch(configPath) {
     error(hint);
     return { ok: false, message: hint };
   }
+
+  // A root can exist (including "." after init --quick in an empty directory)
+  // while scan.include still matches nothing. Do not wait forever in that case.
+  const scan = await scanRepo(cfg);
+  if ((scan?.filesCount || 0) === 0) {
+    const patterns = (cfg.scan?.include || []).join(", ") || "(none)";
+    const hint = `No files matched scan.include (${patterns}). Nothing to watch. Check scan.include and module_roots in .repolens.yml. Add source files or update the globs, then run watch again.`;
+    warn(hint);
+    error(hint);
+    return { ok: false, message: hint };
+  }
+
+  info("Starting watch mode (Markdown only)...");
+  info("Press Ctrl+C to stop.\n");
 
   // Initial build only when there is something to watch.
   await rebuild(configPath);

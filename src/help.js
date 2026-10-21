@@ -3,7 +3,8 @@ const EXIT_CODES = `Exit codes:
   1  runtime error, or an unknown command
   2  invalid flags, missing config, target directory not found,
      a failed doctor check (including 0 files matched),
-     demo or publish scanned 0 files, watch has nothing to watch,
+     demo or publish scanned 0 files, watch has nothing to watch
+     (missing module_roots, or scan.include matches no files),
      publish --strict is missing publisher credentials,
      or feedback has no terminal`;
 
@@ -149,8 +150,10 @@ Options:
   --verbose             Print debug logs
   --help, -h            Show this help
 
-Watches directories listed in module_roots. If none of those directories
-exist, watch exits 2 and tells you to fix module_roots. Press Ctrl+C to stop
+Watches directories listed in module_roots and regenerates Markdown when
+files change. Exits 2 when none of those directories exist, and when
+scan.include matches no files (including after init --quick in an empty
+directory). It does not wait for changes in that case. Press Ctrl+C to stop
 when a watch is running.
 
 ${EXIT_CODES}

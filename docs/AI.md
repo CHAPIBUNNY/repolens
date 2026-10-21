@@ -1,6 +1,6 @@
 # AI-Enhanced Documentation
 
-As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is in the current version (v1.15.0). The MCP server stays on the deterministic path unless a tool call sets `deterministic: false`.
+As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is in the current version (v1.15.1). The MCP server stays on the deterministic path unless a tool call sets `deterministic: false`.
 
 ## Overview
 

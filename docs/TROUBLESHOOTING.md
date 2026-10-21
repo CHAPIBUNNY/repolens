@@ -383,6 +383,14 @@ The directory has no `.git`. RepoLens still scans files. It does not print `git 
 
 `repolens watch` exits 2 when none of the `module_roots` directories exist. Point `module_roots` at folders that are in the repository, or create those folders.
 
+### `No files matched scan.include`
+
+`repolens watch` also exits 2 when the configured directories exist but `scan.include` matches no source files. That happens after `init --quick` in an empty directory (`module_roots` is `.`, which exists, and the globs match nothing). Add source files or edit the globs, then run watch again. Watch does not print `Waiting for changes...` in that case.
+
+### `Code health: no source files analyzed`
+
+Code health scores JavaScript, TypeScript, Python, and Go. Other languages are scanned for documentation but do not get a health score. Python tests (`test_*.py`, `*_test.py`, `tests/`) and Go tests (`*_test.go`) are left out of the score.
+
 ### `Missing publisher credentials (--strict)`
 
 `repolens publish --strict` exits 2 when Notion, Confluence, or GitHub Wiki is configured without its environment variables, or when `obsidian` is configured without `obsidian.vault`. Without `--strict`, those publishers are skipped. Markdown needs no credentials. `init --quick` writes Markdown only; the wizard adds the others.
