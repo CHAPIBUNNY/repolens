@@ -41,6 +41,11 @@ describe("mcp registry metadata", () => {
     const readme = read("README.md");
     const mcp = read("docs/MCP.md");
     const changelog = read("CHANGELOG.md");
+    const mcprush = "[![RepoLens MCP server](https://mcprush.com/badge/chapibunny-repolens-mcp/card.svg)](https://mcprush.com/to/chapibunny-repolens-mcp?ref=badge)";
+    expect(readme).toContain(mcprush);
+    expect(readme).toContain("[MCP Rush](https://mcprush.com/to/chapibunny-repolens-mcp?ref=badge)");
+    expect(mcp).toContain(mcprush);
+    expect(read("llms-install.md")).toContain(mcprush);
     expect(readme).toContain("Install in Cursor");
     expect(readme).toContain("https://cursor.com/install-mcp?name=repolens&config=");
     expect(readme).toContain("Install in VS Code");

@@ -17,7 +17,7 @@
 [![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=repolens&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBjaGFwcGlidW5ueS9yZXBvbGVucyIsIm1jcCJdfQ%3D%3D)
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=repolens&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40chappibunny%2Frepolens%22%2C%22mcp%22%5D%7D)
 
-**Links:** [Gallery](https://chapibunny.github.io/repolens/) · [npm](https://www.npmjs.com/package/@chappibunny/repolens) · [MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.CHAPIBUNNY/repolens) · [VS Code extension](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox) · [GitHub Action](action.yml)
+**Links:** [Gallery](https://chapibunny.github.io/repolens/) · [npm](https://www.npmjs.com/package/@chappibunny/repolens) · [MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.CHAPIBUNNY/repolens) · [MCP Rush](https://mcprush.com/to/chapibunny-repolens-mcp?ref=badge) · [VS Code extension](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox) · [GitHub Action](action.yml)
 
 **Your architecture docs are already outdated.** RepoLens fixes that.
 
@@ -209,6 +209,8 @@ Cursor, Cline, Claude Desktop, Claude Code, and VS Code Copilot can call RepoLen
 
 [![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=repolens&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBjaGFwcGlidW5ueS9yZXBvbGVucyIsIm1jcCJdfQ%3D%3D)
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=repolens&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40chappibunny%2Frepolens%22%2C%22mcp%22%5D%7D)
+
+[![RepoLens MCP server](https://mcprush.com/badge/chapibunny-repolens-mcp/card.svg)](https://mcprush.com/to/chapibunny-repolens-mcp?ref=badge)
 
 Copy-paste configs for Cursor, Claude Desktop, and VS Code are in [docs/MCP.md](docs/MCP.md).
 

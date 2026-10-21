@@ -2,6 +2,16 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## Unreleased
+
+### Docs
+
+- MCP Rush listing badge on the README MCP section (text link only in the top links row), `docs/MCP.md`, `llms-install.md`, and the gallery index
+
+### CLI
+
+- `watch` prints the empty-scan hint (`No files matched scan.include`) once
+
 ## 1.15.1
 
 ### Watch and code health

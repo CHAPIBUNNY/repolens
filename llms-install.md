@@ -1,5 +1,7 @@
 # Installing the RepoLens MCP server (for AI agents)
 
+[![RepoLens MCP server](https://mcprush.com/badge/chapibunny-repolens-mcp/card.svg)](https://mcprush.com/to/chapibunny-repolens-mcp?ref=badge)
+
 1. Requires Node.js 18 or newer. Nothing else needs to be installed; `npx` fetches the package.
 2. Add this to the MCP settings file (Cline: `cline_mcp_settings.json`):
 

@@ -65,7 +65,6 @@ export async function runWatch(configPath) {
   if ((scan?.filesCount || 0) === 0) {
     const patterns = (cfg.scan?.include || []).join(", ") || "(none)";
     const hint = `No files matched scan.include (${patterns}). Nothing to watch. Check scan.include and module_roots in .repolens.yml. Add source files or update the globs, then run watch again.`;
-    warn(hint);
     error(hint);
     return { ok: false, message: hint };
   }

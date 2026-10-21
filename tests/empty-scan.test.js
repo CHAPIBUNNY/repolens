@@ -172,9 +172,10 @@ ${VALID_PAGES}
     const result = await runCli(["watch", "--config", path.join(dir, ".repolens.yml")], {}, dir);
     expect(result.exitCode).toBe(2);
     const output = `${result.stdout}\n${result.stderr}`;
-    expect(output).toContain("No files matched scan.include");
     expect(output).toContain("Nothing to watch");
     expect(output).not.toContain("Waiting for changes");
+    const hintLines = output.split("\n").filter((line) => line.includes("No files matched scan.include"));
+    expect(hintLines).toHaveLength(1);
   }, 20000);
 
   it("demo reports code health for a Go package", async () => {

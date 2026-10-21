@@ -6,7 +6,10 @@ export const LINKS = {
   npm: "https://www.npmjs.com/package/@chappibunny/repolens",
   github: "https://github.com/CHAPIBUNNY/repolens",
   vscode: "https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox",
+  mcprush: "https://mcprush.com/to/chapibunny-repolens-mcp?ref=badge",
 };
+
+const MCPRUSH_BADGE = "https://mcprush.com/badge/chapibunny-repolens-mcp/card.svg";
 
 const AUDIENCE = {
   "non-technical": "Stakeholders",
@@ -245,6 +248,7 @@ function ctaBlock() {
     <a href="${LINKS.npm}">npm</a>
     <a href="${LINKS.github}">GitHub</a>
     <a href="${LINKS.vscode}">VS Code extension</a>
+    <a href="${LINKS.mcprush}">MCP Rush</a>
   </p>
 </aside>`;
 }
@@ -288,6 +292,7 @@ function layout({ title, description, canonical, image, home, logo, css, depth, 
       <a href="${LINKS.npm}">npm</a>
       <a href="${LINKS.github}">GitHub</a>
       <a href="${LINKS.vscode}">VS Code</a>
+      <a href="${LINKS.mcprush}">MCP Rush</a>
     </nav>
   </header>
   ${body}
@@ -310,6 +315,14 @@ function chrome(origin, basePath) {
     css: sitePath(basePath, "assets/site.css"),
     image: pageUrl(origin, basePath, "assets/logo.png"),
   };
+}
+
+function mcpListing() {
+  return `<aside class="mcp-listing">
+  <h2>MCP server</h2>
+  <p>Coding agents start it with <code>npx -y @chappibunny/repolens mcp</code>. The listing is on MCP Rush.</p>
+  <p><a href="${LINKS.mcprush}"><img src="${MCPRUSH_BADGE}" alt="RepoLens MCP server" width="360"></a></p>
+</aside>`;
 }
 
 function descriptionOf(text, fallback) {
@@ -376,6 +389,7 @@ export function renderIndex({ origin, basePath, generatedOn, version, pages, ski
     <h1>Architecture docs, already written.</h1>
     <p class="lede">RepoLens scanned ${pages.length} of ${curatedCount} public repositories and wrote the same document set it writes for your code: modules, API surface, dependency graph, and the rest. Deterministic mode. No API keys.</p>
     ${ctaBlock()}
+    ${mcpListing()}
     <nav class="lang-jump" aria-label="Languages">${jumps}</nav>
   </section>
   ${sections}
@@ -383,7 +397,7 @@ export function renderIndex({ origin, basePath, generatedOn, version, pages, ski
 <footer class="footer">
   <p>Generated ${escapeHtml(generatedOn)} by RepoLens ${escapeHtml(version)}. Test suites, vendored code, and build output are not scanned. Subset notes are on each page. Code excerpts stay under the upstream license.</p>
   ${skippedHtml}
-  <p><a href="${LINKS.github}">RepoLens on GitHub</a> · <a href="${LINKS.npm}">npm</a> · <a href="${LINKS.vscode}">VS Code extension</a></p>
+  <p><a href="${LINKS.github}">RepoLens on GitHub</a> · <a href="${LINKS.npm}">npm</a> · <a href="${LINKS.mcprush}">MCP Rush</a> · <a href="${LINKS.vscode}">VS Code extension</a></p>
 </footer>`;
 
   return layout({
@@ -483,7 +497,7 @@ export function renderRepo(page, { origin, basePath, generatedOn, version }) {
 </main>
 <footer class="footer">
   <p>Generated ${escapeHtml(generatedOn)} by RepoLens ${escapeHtml(version)} in deterministic mode. No API keys. Architecture notes on this page were produced from the public source of ${escapeHtml(page.owner + "/" + page.repo)} (${escapeHtml(page.license)}). Code excerpts remain under that project's license. RepoLens does not claim copyright over the upstream project.</p>
-  <p><a href="${escapeAttr(sitePath(basePath, ""))}">All repositories</a> · <a href="${source}">Upstream source</a> · <a href="${LINKS.npm}">npm</a> · <a href="${LINKS.github}">RepoLens</a> · <a href="${LINKS.vscode}">VS Code extension</a></p>
+  <p><a href="${escapeAttr(sitePath(basePath, ""))}">All repositories</a> · <a href="${source}">Upstream source</a> · <a href="${LINKS.npm}">npm</a> · <a href="${LINKS.mcprush}">MCP Rush</a> · <a href="${LINKS.github}">RepoLens</a> · <a href="${LINKS.vscode}">VS Code extension</a></p>
 </footer>`;
 
   return layout({
@@ -609,6 +623,8 @@ export function selfTest() {
     ["flat theme color", index.includes('content="#1565C0"') && repo.includes('content="#1565C0"')],
     ["repo stats row", repo.includes('class="stats"') && repo.includes("Generate this for your repo:")],
     ["no inline radius", !/border-radius\s*:/.test(index + repo) && !/box-shadow\s*:/.test(index + repo)],
+    ["mcprush badge on the index", index.includes(MCPRUSH_BADGE) && index.includes('alt="RepoLens MCP server"') && index.includes(LINKS.mcprush) && index.includes('class="mcp-listing"') && !index.includes('class="card"')],
+    ["repo page links mcprush without the card", repo.includes(LINKS.mcprush) && !repo.includes(MCPRUSH_BADGE)],
   );
   const failed = checks.filter(([, ok]) => !ok).map(([name]) => name);
   if (failed.length) {
