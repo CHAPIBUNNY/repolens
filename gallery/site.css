@@ -219,6 +219,34 @@ h3 {
   border-left: 1px solid var(--divider);
 }
 
+.mcp-listing {
+  margin: 0 0 24px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-left: 4px solid var(--primary);
+}
+
+.mcp-listing h2 {
+  margin: 0 0 8px;
+}
+
+.mcp-listing p {
+  margin: 0;
+}
+
+.mcp-listing p + p {
+  margin-top: 16px;
+}
+
+.mcp-listing img {
+  display: block;
+  width: 360px;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--divider);
+}
+
 .lang-jump {
   display: flex;
   flex-wrap: wrap;

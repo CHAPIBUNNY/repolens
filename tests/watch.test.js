@@ -109,11 +109,14 @@ describe("watch module — real filesystem events", () => {
     scanRepo.mockResolvedValue({
       filesCount: 0, modules: [], api: [], pages: [], metadata: {},
     });
+    warn.mockClear();
+    error.mockClear();
 
     await runWatch(path.join(tmpDir, ".repolens.yml"));
 
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("No files matched scan.include"));
-    expect(error).toHaveBeenCalledWith(expect.stringContaining("Nothing to watch"));
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("No files matched scan.include"));
+    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("No files matched scan.include"));
     expect(info).not.toHaveBeenCalledWith(expect.stringContaining("Waiting for changes"));
     expect(fs.watch).not.toHaveBeenCalled();
   });
