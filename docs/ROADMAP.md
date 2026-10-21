@@ -200,6 +200,14 @@ The [gallery](https://chapibunny.github.io/repolens/) is a static flat Material 
 
 ---
 
+## In the repository, not yet published to npm
+
+These ship in this repository and in the composite action (`command: comment`, `command: badge`). They are not in the `@chappibunny/repolens@1.15.1` tarball. The next release can publish the CLI commands. This change does not publish npm.
+
+- Architecture diff on pull requests: files, modules, dependencies, code-health delta, new hotspots, one sticky comment, fork pull requests write the job summary
+- `repolens badge` and the gallery score page (shields.io JSON, square SVG, README snippet that links back)
+- Gallery page per repository titled "<repo> architecture explained" (`SoftwareSourceCode` JSON-LD), plus `sitemap.xml`, `robots.txt`, `llms.txt`, and `llms-full.txt`
+
 ## What's Next
 
 ### Integrations

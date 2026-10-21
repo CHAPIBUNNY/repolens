@@ -77,7 +77,30 @@ jobs:
           pr-comment: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
 ```
 
-`command` is `publish`, `demo`, or `doctor`. `pr-comment: false` skips the architecture diff comment. Marketplace listing steps are in [RELEASE.md](RELEASE.md).
+`command` is `publish`, `demo`, `doctor`, `comment`, or `badge`. On the `v1.15.1` tag, only the first three exist and they run the published package. `comment` and `badge` run from the action checkout (`CHAPIBUNNY/repolens@main` until the next release tag). `pr-comment: false` skips the architecture diff comment.
+
+Copy-paste the architecture comment. `fetch-depth: 0` is required. Fork pull requests skip the comment and write the job summary. The token needs `pull-requests: write` only for the comment; `contents: read` is for checkout.
+
+```yaml
+name: RepoLens architecture comment
+on:
+  pull_request:
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  architecture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          fetch-depth: 0
+      - uses: CHAPIBUNNY/repolens@main
+        with:
+          command: comment
+```
+
+`command: badge` writes `repolens-badge.json` and `repolens-badge.svg`. Set `badge-url` to the public HTTPS URL of the JSON (GitHub Pages or another host) so the job summary includes a shields.io snippet. Marketplace listing steps are in [RELEASE.md](RELEASE.md).
 </details>
 
 Want to see the output before installing? [See it on real repos](https://chapibunny.github.io/repolens/).

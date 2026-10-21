@@ -304,6 +304,27 @@ REPOLENS_AI_TIMEOUT_MS=120000  # 2 minutes
 
 ---
 
+## Architecture comment and badge
+
+### The pull request has no RepoLens comment
+
+**Cause:** The workflow used `CHAPIBUNNY/repolens@v1.15.1` with `command: comment`. That tag does not contain the comment mode. Or the pull request is from a fork. Or checkout used the default fetch depth, so the base commit is missing and the job failed earlier.
+
+**Fix:**
+
+- Use `CHAPIBUNNY/repolens@main` (or the next release tag) with `command: comment`
+- Set `fetch-depth: 0`
+- Set `permissions: contents: read` and `pull-requests: write`
+- For a fork, open the job summary. RepoLens writes the diff there and exits 0
+
+### shields.io shows "invalid response"
+
+**Cause:** `badge-url` is not a public HTTPS URL, or the JSON file was not uploaded. shields.io fetches the URL itself. A workflow artifact URL is not a stable public URL.
+
+**Fix:** Commit `repolens-badge.json` to GitHub Pages (or another public host) and set `badge-url` to that file. The JSON must include `schemaVersion`, `label`, `message`, and `color`.
+
+---
+
 ## CI/CD Issues
 
 ### `Invalid workflow file`

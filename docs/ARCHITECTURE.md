@@ -78,7 +78,9 @@ bin/repolens.js
 
 ```
 repolens/
-├── action.yml               # Composite GitHub Action (published npm package)
+├── action.yml               # Composite action. publish/demo/doctor use npm; comment and badge use this repo
+├── llms.txt                 # Short description for assistants (also generated on the gallery)
+├── llms-full.txt            # Longer install, CLI, MCP, action, and badge description
 ├── server.json              # MCP Registry metadata
 ├── smithery.yaml            # Smithery stdio launch
 ├── bin/
@@ -136,8 +138,11 @@ repolens/
 │   │   └── markdown.js      # Local Markdown generation
 │   ├── integrations/
 │   │   └── discord.js       # Discord webhook notifications
+│   ├── badge.js             # shields.io code-health JSON, square SVG, markdown snippet
 │   ├── delivery/
-│   │   └── comment.js       # PR comment delivery
+│   │   ├── comment.js       # Short PR comment used by publish
+│   │   ├── architecture-comment.js  # Sticky architecture diff (files, modules, deps, health)
+│   │   └── comment-constants.js     # Comment marker and footer links
 │   ├── plugins/
 │   │   ├── loader.js        # Plugin resolution and dynamic import
 │   │   └── manager.js       # Plugin registry and lifecycle orchestration

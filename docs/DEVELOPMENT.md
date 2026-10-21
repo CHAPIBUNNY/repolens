@@ -31,7 +31,7 @@ npm test
 - Security fuzzing and rate-limit stress tests
 - Watch mode and migration (including e2e)
 - Robustness (timeout, partial-publish, error isolation)
-- MCP tools, the docs badge, the GitHub Action input checks, and registry metadata
+- MCP tools, the docs badge, the code-health badge, the architecture pull request comment, the GitHub Action input checks, and registry metadata
 
 `npm test` prints the current pass count.
 
@@ -63,7 +63,9 @@ node gallery/build.mjs
 
 The generator calls the scanners directly with AI disabled. It does not read API keys. Clones live in `gallery/.cache/repos` and can be reused. A repository with a non-permissive license, or a missing license file, is skipped.
 
-The site is static and has no CSS framework. `gallery/site.css` is flat Material: Roboto or the system font stack, an 8px spacing grid, square corners, no shadows, and no gradients. One primary colour and one accent sit on white and light grey. The index is a dense table (name, language, modules, files, license, and a link). Each repository page uses the same app bar, dividers, and type scale.
+The site is static and has no CSS framework. `gallery/site.css` is flat Material: Roboto or the system font stack, an 8px spacing grid, square corners, no shadows, and no gradients. One primary colour and one accent sit on white and light grey. The index is a dense table (name, language, modules, files, code-health score, license, and links). There are no rounded card containers.
+
+Each repository gets three HTML pages: the document set, `<slug>/explained/` titled "<name> architecture explained" (Open Graph, canonical URL, JSON-LD `SoftwareSourceCode`), and `<slug>/score/` with a shields.io README snippet that links back to that page. `badge.json` and `badge.svg` sit next to them. `sitemap.xml` lists all three. `robots.txt`, `llms.txt`, and `llms-full.txt` are written at the site root. The repository root copies of `llms.txt` and `llms-full.txt` are the same text without the per-repository links.
 
 `.github/workflows/gallery.yml` runs that command on a weekly schedule and on manual dispatch, then deploys `gallery/dist`. GitHub Pages has to be set to **GitHub Actions** once before the first deploy can succeed.
 

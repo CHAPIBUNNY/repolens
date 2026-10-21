@@ -16,14 +16,19 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  badgeFilesForPage,
+  gallerySitemapEntries,
   pageUrl,
+  renderExplained,
   renderIndex,
   renderNotFound,
   renderRepo,
   renderRobots,
+  renderScore,
   renderSitemap,
   selfTest,
 } from "./render.mjs";
+import { renderSiteLlmsFull, renderSiteLlmsTxt } from "../src/docs/llms-text.js";
 
 const GALLERY_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(GALLERY_DIR, "..");
@@ -298,21 +303,33 @@ async function main() {
   }));
   for (const page of pages) {
     const dir = path.join(DIST, page.slug);
-    await fs.mkdir(dir, { recursive: true });
+    await fs.mkdir(path.join(dir, "explained"), { recursive: true });
+    await fs.mkdir(path.join(dir, "score"), { recursive: true });
     await fs.writeFile(path.join(dir, "index.html"), renderRepo(page, site));
+    await fs.writeFile(path.join(dir, "explained", "index.html"), renderExplained(page, site));
+    await fs.writeFile(path.join(dir, "score", "index.html"), renderScore(page, site));
+    const badges = badgeFilesForPage(page);
+    await fs.writeFile(path.join(dir, "badge.json"), badges.json);
+    await fs.writeFile(path.join(dir, "badge.svg"), badges.svg);
   }
   await fs.writeFile(path.join(DIST, "404.html"), renderNotFound(site));
 
   const lastmod = generatedOn;
-  const urls = [
-    { loc: pageUrl(SITE_ORIGIN, BASE_PATH, ""), lastmod },
-    ...pages.map((page) => ({ loc: pageUrl(SITE_ORIGIN, BASE_PATH, `${page.slug}/`), lastmod })),
-  ];
+  const urls = gallerySitemapEntries({
+    origin: SITE_ORIGIN,
+    basePath: BASE_PATH,
+    pages,
+    lastmod,
+  });
+  const llmsUrl = pageUrl(SITE_ORIGIN, BASE_PATH, "llms.txt");
   await fs.writeFile(path.join(DIST, "sitemap.xml"), renderSitemap(urls));
   await fs.writeFile(
     path.join(DIST, "robots.txt"),
-    renderRobots(pageUrl(SITE_ORIGIN, BASE_PATH, "sitemap.xml"))
+    renderRobots(pageUrl(SITE_ORIGIN, BASE_PATH, "sitemap.xml"), llmsUrl)
   );
+  const llmsOpts = { origin: SITE_ORIGIN, basePath: BASE_PATH, pages };
+  await fs.writeFile(path.join(DIST, "llms.txt"), renderSiteLlmsTxt(llmsOpts));
+  await fs.writeFile(path.join(DIST, "llms-full.txt"), renderSiteLlmsFull(llmsOpts));
   await copyAssets();
   log(`wrote ${pages.length} pages to ${path.relative(ROOT, DIST)} (${skipped.length} skipped)`);
 }

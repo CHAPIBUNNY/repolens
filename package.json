@@ -23,7 +23,9 @@
     "package.json",
     "README.md",
     "CHANGELOG.md",
-    "llms-install.md"
+    "llms-install.md",
+    "llms.txt",
+    "llms-full.txt"
   ],
   "keywords": [
     "cli",

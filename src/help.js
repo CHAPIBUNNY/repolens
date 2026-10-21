@@ -5,6 +5,8 @@ const EXIT_CODES = `Exit codes:
      a failed doctor check (including 0 files matched),
      demo or publish scanned 0 files, watch has nothing to watch
      (missing module_roots, or scan.include matches no files),
+     badge scored 0 source files,
+     comment is missing a base or head ref,
      publish --strict is missing publisher credentials,
      or feedback has no terminal`;
 
@@ -224,6 +226,63 @@ ${EXIT_CODES}
 Examples:
   repolens mcp
 `,
+
+  badge: `
+RepoLens badge — shields.io code-health badge
+
+Usage:
+  repolens badge [--target <path>] [--format json|svg|markdown|all]
+                 [--out <path>] [--url <url>] [--link <url>] [--label <text>]
+
+Options:
+  --target <path>       Repository to score (default: current directory)
+  --format <kind>       json (default), svg, markdown, or all
+  --out <path>          Write the badge file instead of stdout
+  --url <url>           Public HTTPS URL of the JSON file (markdown snippet)
+  --link <url>          Page the badge links to
+  --label <text>        shields.io label (default: code health)
+  --help, -h            Show this help
+
+Prints a shields.io endpoint JSON document for the code-health score.
+\`--format svg\` prints a square SVG (no rounded corners). \`--format all\`
+writes JSON and SVG and prints a markdown snippet. shields.io fetches the
+JSON URL, so host the file on GitHub Pages or another public HTTPS URL.
+Exit 2 when no JavaScript, TypeScript, Python, or Go source files are scored.
+This command does not publish to npm and does not call an AI provider.
+
+${EXIT_CODES}
+
+Examples:
+  repolens badge
+  repolens badge --format svg --out repolens-badge.svg
+  repolens badge --format markdown --url https://user.github.io/repo/repolens-badge.json --link https://user.github.io/repo/
+`,
+
+  comment: `
+RepoLens comment — architecture diff for a pull request
+
+Usage:
+  repolens comment [--target <path>] [--base <ref>] [--head <ref>]
+
+Options:
+  --target <path>       Repository to compare (default: current directory)
+  --base <ref>          Base commit or ref
+  --head <ref>          Head commit or ref
+  --help, -h            Show this help
+
+Compares base and head: files, modules, dependencies, the code-health
+delta, and hotspots that are new on head. On pull_request, with
+GITHUB_TOKEN and GITHUB_REPOSITORY set, it creates or updates one sticky
+comment (HTML marker, edited in place). Fork pull requests skip the
+comment and append the same markdown to the GitHub job summary.
+Without a token, the markdown is printed. Both commits must be present
+(\`fetch-depth: 0\` in Actions). Needs pull-requests: write, not a PAT.
+
+${EXIT_CODES}
+
+Examples:
+  repolens comment --base origin/main --head HEAD
+`,
 };
 
 const GLOBAL_HELP = `
@@ -245,13 +304,22 @@ Commands:
   uninstall   Remove RepoLens-generated files from a repository
   feedback    Send feedback to the RepoLens team
   mcp         Start the stdio MCP server (also available as repolens-mcp)
+  badge       Print a shields.io code-health badge (JSON, SVG, or markdown)
+  comment     Print or post an architecture diff for a pull request
   version     Print the current RepoLens version
   help        Show this help message
 
 Options:
   --config <path>   Path to .repolens.yml (auto-discovered if omitted)
-  --target <path>   Repository path for init, doctor, migrate, demo, uninstall.
-                    Must already exist.
+  --target <path>   Repository path for init, doctor, migrate, demo, uninstall,
+                    badge, and comment. Must already exist.
+  --format <kind>   badge: json (default), svg, markdown, or all
+  --out <path>      badge: write JSON/SVG to this file instead of stdout
+  --url <url>       badge: public URL of the JSON file, embedded in the markdown
+  --link <url>      badge: page the badge links to
+  --label <text>    badge: shields.io label (default: code health)
+  --base <ref>      comment: base commit or ref
+  --head <ref>      comment: head commit or ref
   --quick           Scaffold without the wizard (also --non-interactive).
                     Markdown only; globs follow the detected language.
   --strict          publish: exit 2 when publisher credentials are missing
@@ -285,6 +353,9 @@ Examples:
   repolens watch
   repolens uninstall --target /tmp/my-repo
   repolens mcp
+  repolens badge
+  repolens badge --format markdown --url https://example.github.io/repo/repolens-badge.json
+  repolens comment --base origin/main --head HEAD
   repolens --version
 `;
 

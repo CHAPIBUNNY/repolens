@@ -82,7 +82,10 @@ REPOLENS_AI_API_KEY=...
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `REPOLENS_PR_COMMENT` | No | `false` or `0` skips the architecture diff comment even on `pull_request`. The GitHub Action sets this from the `pr-comment` input |
+| `REPOLENS_PR_COMMENT` | No | `false` or `0` skips the architecture diff comment even on `pull_request`. The GitHub Action sets this from the `pr-comment` input. `command: comment` always comments. When `pr-comment` is true, the action posts from its own source and passes `false` into the published package so the pull request gets one comment |
+| `REPOLENS_BADGE_OUT` | No | Path for badge JSON when `command` is `badge`. Default `repolens-badge.json`. The SVG is written beside it |
+| `REPOLENS_BADGE_URL` | No | Public http(s) URL of that JSON. shields.io fetches it. Embedded in the markdown snippet |
+| `REPOLENS_BADGE_LINK` | No | Page the badge links to. The gallery score pages link back to themselves |
 
 ## Telemetry
 

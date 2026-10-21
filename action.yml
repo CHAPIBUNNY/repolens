@@ -6,7 +6,11 @@ branding:
   color: blue
 inputs:
   command:
-    description: RepoLens command to run. One of publish, demo, or doctor.
+    description: >
+      RepoLens command. publish, demo, and doctor run the published npm package.
+      comment posts one sticky architecture-diff pull request comment from this
+      action's source (modules, files, dependencies, code-health delta, new hotspots).
+      badge writes a shields.io code-health JSON endpoint and SVG from this action's source.
     required: false
     default: publish
   config:
@@ -18,9 +22,26 @@ inputs:
     required: false
     default: "20"
   pr-comment:
-    description: Set to true to allow the architecture diff pull request comment. false skips it even on pull_request.
+    description: >
+      Set to true to post the architecture diff comment after publish, demo, or doctor.
+      The comment is written by this action (not the published package) so the pull
+      request gets one sticky comment. false skips it. command: comment always posts.
     required: false
     default: "false"
+  badge-out:
+    description: File path for the badge JSON when command is badge. The SVG is written beside it.
+    required: false
+    default: repolens-badge.json
+  badge-url:
+    description: >
+      Public HTTPS URL of the badge JSON. Used in the shields.io markdown snippet
+      when command is badge. shields.io fetches this URL. Leave empty to print a placeholder.
+    required: false
+    default: ""
+  badge-link:
+    description: URL the badge links to. Defaults to the RepoLens gallery when empty.
+    required: false
+    default: ""
   version:
     description: Published @chappibunny/repolens version to run with npx.
     required: false
@@ -36,6 +57,9 @@ runs:
         REPOLENS_NODE_VERSION: ${{ inputs.node-version }}
         REPOLENS_PR_COMMENT: ${{ inputs.pr-comment }}
         REPOLENS_VERSION: ${{ inputs.version }}
+        REPOLENS_BADGE_OUT: ${{ inputs.badge-out }}
+        REPOLENS_BADGE_URL: ${{ inputs.badge-url }}
+        REPOLENS_BADGE_LINK: ${{ inputs.badge-link }}
       run: node "$GITHUB_ACTION_PATH/scripts/github-action.js" --check
 
     - name: Setup Node.js
@@ -51,4 +75,7 @@ runs:
         REPOLENS_NODE_VERSION: ${{ inputs.node-version }}
         REPOLENS_PR_COMMENT: ${{ inputs.pr-comment }}
         REPOLENS_VERSION: ${{ inputs.version }}
+        REPOLENS_BADGE_OUT: ${{ inputs.badge-out }}
+        REPOLENS_BADGE_URL: ${{ inputs.badge-url }}
+        REPOLENS_BADGE_LINK: ${{ inputs.badge-link }}
       run: node "$GITHUB_ACTION_PATH/scripts/github-action.js"
