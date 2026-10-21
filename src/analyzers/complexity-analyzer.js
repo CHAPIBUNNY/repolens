@@ -6,7 +6,17 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { info } from "../utils/logger.js";
 
-const JS_EXTENSIONS = [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx"];
+const LANGUAGE_BY_EXTENSION = {
+  ".js": "javascript",
+  ".mjs": "javascript",
+  ".cjs": "javascript",
+  ".ts": "javascript",
+  ".tsx": "javascript",
+  ".jsx": "javascript",
+  ".py": "python",
+  ".pyw": "python",
+  ".go": "go",
+};
 
 // Skip test files, build outputs, etc.
 const SKIP_PATTERNS = [
@@ -19,6 +29,10 @@ const SKIP_PATTERNS = [
   /\.min\.[jt]s$/,
   /\.d\.ts$/,
   /\.repolens\//,
+  /__pycache__\//,
+  /(?:^|\/)test_[^/]*\.py$/,
+  /_test\.py$/,
+  /_test\.go$/,
 ];
 
 function shouldSkip(filePath) {
@@ -66,6 +80,100 @@ export function computeComplexity(source) {
   return complexity;
 }
 
+function blankExceptNewlines(match) {
+  return match.replace(/[^\n]/g, " ");
+}
+
+function stripPythonNoise(source) {
+  let stripped = source.replace(/"""[\s\S]*?"""/g, blankExceptNewlines);
+  stripped = stripped.replace(/'''[\s\S]*?'''/g, blankExceptNewlines);
+  stripped = stripped.replace(/"(?:[^"\\\n]|\\.)*"/g, '""');
+  stripped = stripped.replace(/'(?:[^'\\\n]|\\.)*'/g, "''");
+  stripped = stripped.replace(/#.*$/gm, "");
+  return stripped;
+}
+
+function stripGoNoise(source) {
+  let stripped = source.replace(/`[^`]*`/g, blankExceptNewlines);
+  stripped = stripped.replace(/"(?:[^"\\\n]|\\.)*"/g, '""');
+  stripped = stripped.replace(/'(?:[^'\\\n]|\\.)*'/g, "''");
+  stripped = stripped.replace(/\/\*[\s\S]*?\*\//g, blankExceptNewlines);
+  stripped = stripped.replace(/\/\/.*$/gm, "");
+  return stripped;
+}
+
+/**
+ * Cyclomatic complexity for Python. Regex approximation: if, elif, for,
+ * while, except, and, or. Comments and strings are ignored.
+ */
+export function computePythonComplexity(source) {
+  const stripped = stripPythonNoise(source);
+  let complexity = 1;
+  const patterns = [
+    /\bif\b/g,
+    /\belif\b/g,
+    /\bfor\b/g,
+    /\bwhile\b/g,
+    /\bexcept\b/g,
+    /\band\b/g,
+    /\bor\b/g,
+  ];
+  for (const pattern of patterns) {
+    const matches = stripped.match(pattern);
+    if (matches) complexity += matches.length;
+  }
+  return complexity;
+}
+
+/**
+ * Cyclomatic complexity for Go. Regex approximation: if, for, case
+ * (switch and select branches), &&, and ||. Comments and strings are ignored.
+ */
+export function computeGoComplexity(source) {
+  const stripped = stripGoNoise(source);
+  let complexity = 1;
+  const patterns = [
+    /\bif\b/g,
+    /\bfor\b/g,
+    /\bcase\b/g,
+    /&&/g,
+    /\|\|/g,
+  ];
+  for (const pattern of patterns) {
+    const matches = stripped.match(pattern);
+    if (matches) complexity += matches.length;
+  }
+  return complexity;
+}
+
+function languageForFile(file) {
+  return LANGUAGE_BY_EXTENSION[path.extname(file).toLowerCase()] || null;
+}
+
+function complexityForLanguage(language, source) {
+  if (language === "python") return computePythonComplexity(source);
+  if (language === "go") return computeGoComplexity(source);
+  return computeComplexity(source);
+}
+
+function collectFunctions(source, pattern, nameGroup, complexityFn) {
+  const functions = [];
+  let match;
+  while ((match = pattern.exec(source)) !== null) {
+    const startLine = source.slice(0, match.index).split("\n").length;
+    functions.push({ name: match[nameGroup], line: startLine, index: match.index });
+  }
+  functions.sort((a, b) => a.index - b.index);
+  return functions.map((fn, i) => {
+    const end = i + 1 < functions.length ? functions[i + 1].index : source.length;
+    return {
+      name: fn.name,
+      line: fn.line,
+      complexity: complexityFn(source.slice(fn.index, end)),
+    };
+  });
+}
+
 /**
  * Extract function-level complexity from source code.
  * Returns per-function complexity for the top-level functions.
@@ -110,24 +218,50 @@ export function extractFunctions(source) {
   return results;
 }
 
+/** Python `def` / `async def` names and their approximate complexity. */
+export function extractPythonFunctions(source) {
+  return collectFunctions(
+    source,
+    /^[ \t]*(?:async[ \t]+)?def[ \t]+(\w+)[ \t]*\(/gm,
+    1,
+    computePythonComplexity,
+  );
+}
+
+/** Go `func Name` and `func (recv) Name` declarations. */
+export function extractGoFunctions(source) {
+  return collectFunctions(
+    source,
+    /^func[ \t]+(?:\([^)\n]*\)[ \t]+)?(\w+)[ \t]*\(/gm,
+    1,
+    computeGoComplexity,
+  );
+}
+
+function functionsForLanguage(language, source) {
+  if (language === "python") return extractPythonFunctions(source);
+  if (language === "go") return extractGoFunctions(source);
+  return extractFunctions(source);
+}
+
 /**
- * Analyze complexity for all JS/TS files in the project.
+ * Analyze complexity for JavaScript/TypeScript, Python, and Go files.
  * @param {string[]} files - File paths relative to repoRoot
  * @param {string} repoRoot - Absolute path to repo root
  * @returns {Promise<Object>} Complexity analysis results
  */
 export async function analyzeComplexity(files, repoRoot) {
-  const jsFiles = files
-    .filter(f => JS_EXTENSIONS.some(ext => f.endsWith(ext)))
+  const sourceFiles = files
+    .filter(f => languageForFile(f))
     .filter(f => !shouldSkip(f));
 
   const result = {
     files: [],
     functions: [],
-    filesAnalyzed: jsFiles.length,
+    filesAnalyzed: sourceFiles.length,
   };
 
-  for (const file of jsFiles) {
+  for (const file of sourceFiles) {
     let content;
     try {
       content = await fs.readFile(path.join(repoRoot, file), "utf8");
@@ -135,9 +269,10 @@ export async function analyzeComplexity(files, repoRoot) {
       continue;
     }
 
-    const fileComplexity = computeComplexity(content);
+    const language = languageForFile(file);
+    const fileComplexity = complexityForLanguage(language, content);
     const lineCount = content.split("\n").length;
-    const funcs = extractFunctions(content);
+    const funcs = functionsForLanguage(language, content);
 
     result.files.push({
       file,

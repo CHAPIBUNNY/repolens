@@ -15,7 +15,7 @@ from patterns    stack patterns      with insights       + Confluence pages
 **Scan Phase:**
 - `init --quick` detects languages (Python, Go, Rust, Java, JavaScript, and others) and writes `scan.include` plus `module_roots` that fit the repository. `demo` without a config uses the same detection
 - Uses `fast-glob` to match your `scan.include` patterns
-- `demo` and `publish` exit 2 when nothing matches, before any empty docs are written. `doctor` fails the same way
+- `demo` and `publish` exit 2 when nothing matches, before any empty docs are written. `doctor` fails the same way. `watch` exits 2 when `module_roots` are missing or `scan.include` matches no files
 - Filters out `scan.ignore` patterns
 - Reads package.json for framework/tool detection
 - Analyzes file paths for Next.js routes, API endpoints
@@ -24,6 +24,7 @@ from patterns    stack patterns      with insights       + Confluence pages
 - Extracts frameworks (Next.js, React, Vue, Express, etc.)
 - Detects build tools (Vite, Webpack, Turbo, esbuild)
 - Identifies test frameworks (Vitest, Jest, Playwright)
+- Scores code health for JavaScript/TypeScript, Python, and Go (regex complexity, not an AST)
 - Infers module relationships and dependencies
 
 **Render Phase:**
@@ -110,7 +111,7 @@ repolens/
 │   │   ├── codeowners.js          # CODEOWNERS ownership
 │   │   ├── jsdoc-analyzer.js      # JSDoc and TSDoc on the API surface
 │   │   ├── security-patterns.js   # Security hotspots
-│   │   └── complexity-analyzer.js # Cyclomatic complexity and code health
+│   │   └── complexity-analyzer.js # Complexity and code health (JS/TS, Python, Go)
 │   ├── ai/
 │   │   ├── provider.js          # Provider-agnostic AI generation
 │   │   ├── prompts.js           # Strict prompt templates

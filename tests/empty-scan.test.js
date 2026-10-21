@@ -9,9 +9,10 @@ import { missingPublisherCredentials } from "../src/publishers/index.js";
 
 const cliPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../src/cli.js");
 
-function runCli(args, env = {}) {
+function runCli(args, env = {}, cwd) {
   return new Promise((resolve) => {
     execFile("node", [cliPath, ...args], {
+      cwd,
       env: {
         ...process.env,
         NODE_ENV: "",
@@ -101,7 +102,10 @@ ${VALID_PAGES}
 
     const result = await runCli(["demo", "--target", dir]);
     expect(result.exitCode).toBe(0);
-    expect(`${result.stdout}\n${result.stderr}`).toContain("Python");
+    const output = `${result.stdout}\n${result.stderr}`;
+    expect(output).toContain("Python");
+    expect(output).toContain("Code health: avg");
+    expect(output).not.toContain("no source files analyzed");
     const docs = await fs.readdir(path.join(dir, ".repolens"));
     expect(docs.length).toBeGreaterThan(0);
   }, 20000);
@@ -156,6 +160,35 @@ ${VALID_PAGES}
     expect(result.exitCode).toBe(2);
     expect(result.stderr).toContain("No directories to watch");
     expect(result.stderr).toContain("module_roots");
+  }, 20000);
+
+  it("watch exits 2 after init --quick when no source files match", async () => {
+    const dir = await tempDir();
+    await fs.writeFile(path.join(dir, "README.md"), "# empty\n");
+
+    const init = await runCli(["init", "--quick", "--target", dir]);
+    expect(init.exitCode).toBe(0);
+
+    const result = await runCli(["watch", "--config", path.join(dir, ".repolens.yml")], {}, dir);
+    expect(result.exitCode).toBe(2);
+    const output = `${result.stdout}\n${result.stderr}`;
+    expect(output).toContain("No files matched scan.include");
+    expect(output).toContain("Nothing to watch");
+    expect(output).not.toContain("Waiting for changes");
+  }, 20000);
+
+  it("demo reports code health for a Go package", async () => {
+    const dir = await tempDir();
+    await fs.writeFile(path.join(dir, "go.mod"), "module example.com/demo\n\ngo 1.22\n");
+    await fs.mkdir(path.join(dir, "pkg"));
+    await fs.writeFile(path.join(dir, "pkg", "sum.go"), "package pkg\n\nfunc Sum(n int) int {\n\tif n < 0 {\n\t\treturn 0\n\t}\n\ttotal := 0\n\tfor i := 0; i < n; i++ {\n\t\ttotal += i\n\t}\n\treturn total\n}\n");
+    await fs.writeFile(path.join(dir, "pkg", "sum_test.go"), "package pkg\n\nfunc TestSum(t *testing.T) {}\n");
+
+    const result = await runCli(["demo", "--target", dir]);
+    expect(result.exitCode).toBe(0);
+    const output = `${result.stdout}\n${result.stderr}`;
+    expect(output).toContain("Code health: avg");
+    expect(output).not.toContain("no source files analyzed");
   }, 20000);
 });
 

@@ -14,7 +14,7 @@ describe("mcp registry metadata", () => {
   it("keeps server.json aligned with package.json mcpName and version", () => {
     const pkg = JSON.parse(read("package.json"));
     const server = JSON.parse(read("server.json"));
-    expect(pkg.version).toBe("1.15.0");
+    expect(pkg.version).toBe("1.15.1");
     expect(pkg.mcpName).toBe("io.github.CHAPIBUNNY/repolens");
     expect(server.description).toBe(
       "Architecture docs from a repo: overview, modules, API surface, routes, dependency graph, diffs."

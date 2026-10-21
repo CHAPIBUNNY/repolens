@@ -29,7 +29,7 @@ RepoLens scans your repository, generates living architecture documentation, and
 
 ## 🎬 Demo
 
-> **Try it now** — no installation required. `npx @chappibunny/repolens demo` previews the repository you point it at. It detects common languages (Python, Go, Rust, Java, JavaScript/TypeScript, and others). If the scan matches no source files, demo exits 2 and does not write empty docs.
+> **Try it now** — no installation required. `npx @chappibunny/repolens demo` previews the repository you point it at. It detects common languages (Python, Go, Rust, Java, JavaScript/TypeScript, and others). If the scan matches no source files, demo exits 2 and does not write empty docs. Code health scores JavaScript/TypeScript, Python, and Go.
 
 **[See it on real repos](https://chapibunny.github.io/repolens/)** — architecture pages RepoLens generated for Express, FastAPI, Django, Gin, mdBook, and other public projects. Deterministic mode, no API keys.
 
@@ -181,7 +181,7 @@ Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki,
 | `npx @chappibunny/repolens publish --strict` | Exit 2 when a configured publisher is missing credentials |
 | `npx @chappibunny/repolens demo` | Local preview — no API keys. Exits 2 when 0 files match |
 | `npx @chappibunny/repolens doctor` | Validate your setup, including that scan globs match files |
-| `npx @chappibunny/repolens watch` | Auto-regenerate docs on file changes. Exits 2 if nothing is watchable |
+| `npx @chappibunny/repolens watch` | Auto-regenerate docs on file changes. Exits 2 if `module_roots` are missing or `scan.include` matches no files |
 | `npx @chappibunny/repolens migrate` | Upgrade from v0.3.0 workflows ([details](docs/MIGRATION.md)) |
 | `npx @chappibunny/repolens uninstall` | Remove all RepoLens files (config, docs, workflow) |
 | `npx @chappibunny/repolens uninstall --force` | Remove without confirmation prompt |
@@ -197,7 +197,7 @@ Step-by-step setup for publishers, AI features, Notion, Confluence, GitHub Wiki,
 |---|---|
 | `0` | Success, including a cancelled wizard or help with no other work |
 | `1` | Runtime error, or an unknown command |
-| `2` | Invalid flags, missing config, target directory not found, a failed `doctor` check (including 0 files matched), `demo` or `publish` scanned 0 files, `watch` has nothing to watch, `publish --strict` is missing publisher credentials, or `feedback` has no terminal |
+| `2` | Invalid flags, missing config, target directory not found, a failed `doctor` check (including 0 files matched), `demo` or `publish` scanned 0 files, `watch` has nothing to watch (missing `module_roots`, or `scan.include` matches no files), `publish --strict` is missing publisher credentials, or `feedback` has no terminal |
 
 `--target` must already exist. A missing path exits 2 with `Target directory not found: <path>` before any scan. `repolens <command> --help` prints that command's flags. The ASCII banner is omitted when stdout is not a terminal or `CI` is set.
 
@@ -237,7 +237,7 @@ If `npx` reports `Unknown command: mcp`, an `.npmrc` with `min-release-age` (or 
 
 ## GitHub Action
 
-`action.yml` is a composite action named **RepoLens Architecture Docs**. It runs the published npm package (`npx --yes @chappibunny/repolens@1.15.0`). Inputs are `command` (`publish`, `demo`, or `doctor`), `config`, `node-version`, `pr-comment`, and `version`.
+`action.yml` is a composite action named **RepoLens Architecture Docs**. It runs the published npm package (`npx --yes @chappibunny/repolens@1.15.1`). Inputs are `command` (`publish`, `demo`, or `doctor`), `config`, `node-version`, `pr-comment`, and `version`.
 
 ```yaml
 name: Architecture docs
@@ -253,7 +253,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
-      - uses: CHAPIBUNNY/repolens@v1.15.0
+      - uses: CHAPIBUNNY/repolens@v1.15.1
         with:
           command: publish
           config: .repolens.yml
@@ -261,7 +261,7 @@ jobs:
           pr-comment: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
 ```
 
-The action is listed on the GitHub Marketplace only after a release is published with **Publish this Action to the GitHub Marketplace** checked. Those steps are in [docs/RELEASE.md](docs/RELEASE.md). The tag `v1.15.0` has to exist before `uses: CHAPIBUNNY/repolens@v1.15.0` resolves, and `@chappibunny/repolens@1.15.0` has to be on npm before the action can install it.
+The action is listed on the GitHub Marketplace only after a release is published with **Publish this Action to the GitHub Marketplace** checked. Those steps are in [docs/RELEASE.md](docs/RELEASE.md). The tag `v1.15.1` has to exist before `uses: CHAPIBUNNY/repolens@v1.15.1` resolves, and `@chappibunny/repolens@1.15.1` has to be on npm before the action can install it.
 
 ## Add the badge to your repo
 
@@ -281,7 +281,7 @@ Generated docs also link to the [gallery](https://chapibunny.github.io/repolens/
 
 Published system maps are Unicode diagrams drawn from import edges. RepoLens does not emit Mermaid.
 
-The publisher set is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). 1.14.0 adds the MCP server, the Marketplace action, and the docs badge. 1.14.1 sets the registry name to `io.github.CHAPIBUNNY/repolens`. 1.14.2 adds the gallery link to the badge line, `glama.json`, and `CITATION.cff`. 1.14.3 adds Cline setup docs and `llms-install.md`. 1.15.0 detects repository languages in `init --quick`, refuses empty scans, and adds per-command help. Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The publisher set is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). 1.14.0 adds the MCP server, the Marketplace action, and the docs badge. 1.14.1 sets the registry name to `io.github.CHAPIBUNNY/repolens`. 1.14.2 adds the gallery link to the badge line, `glama.json`, and `CITATION.cff`. 1.14.3 adds Cline setup docs and `llms-install.md`. 1.15.0 detects repository languages in `init --quick`, refuses empty scans, and adds per-command help. 1.15.1 makes `watch` exit 2 when those globs match nothing, and scores code health for Python and Go as well as JavaScript and TypeScript. Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ### System Overview (Technical Profile)
 

@@ -2,7 +2,13 @@
 
 This guide helps you upgrade RepoLens across breaking changes and major versions.
 
-**Current Version:** 1.15.0  
+**Current Version:** 1.15.1  
+
+## Upgrading to 1.15.1
+
+No config migration. `configVersion` stays `1`.
+
+`watch` exits 2 when `scan.include` matches no files, instead of printing `Waiting for changes...` and waiting. Code health now scores Python and Go files. JavaScript and TypeScript scoring is unchanged.
 
 ## Upgrading to 1.15.0
 
@@ -229,7 +235,7 @@ RepoLens checks for updates automatically:
 ┌────────────────────────────────────────────────────────────┐
 │                   📦 Update Available                      │
 ├────────────────────────────────────────────────────────────┤
-│  Current: 0.5.0    → Latest: 1.15.0                       │
+│  Current: 0.5.0    → Latest: 1.15.1                       │
 │                                                            │
 │  Run one of these commands to update:                     │
 │                                                            │
@@ -266,7 +272,7 @@ npm install @chappibunny/repolens@latest
 
 ## Version History
 
-Versions after 1.2.0 are summarized in [CHANGELOG.md](../CHANGELOG.md) and [ROADMAP.md](ROADMAP.md). 1.13.0 adds the Obsidian vault publisher. 1.14.0 adds the MCP server, the GitHub Action, and the docs badge. 1.14.1 corrects the MCP Registry name to `io.github.CHAPIBUNNY/repolens`. 1.15.0 changes CLI defaults (language-aware `init --quick`, empty-scan exit 2) and does not change `configVersion`. Nothing in 1.3.0–1.15.0 requires a config migration. `branding` is optional.
+Versions after 1.2.0 are summarized in [CHANGELOG.md](../CHANGELOG.md) and [ROADMAP.md](ROADMAP.md). 1.13.0 adds the Obsidian vault publisher. 1.14.0 adds the MCP server, the GitHub Action, and the docs badge. 1.14.1 corrects the MCP Registry name to `io.github.CHAPIBUNNY/repolens`. 1.15.0 changes CLI defaults (language-aware `init --quick`, empty-scan exit 2) and does not change `configVersion`. 1.15.1 adds Python and Go code health and makes `watch` exit 2 when the globs match nothing. Nothing in 1.3.0–1.15.1 requires a config migration. `branding` is optional.
 
 ### v1.2.0 (March 2026)
 - `repolens migrate` now also patches `.repolens.yml` (adds `configVersion: 1` if missing)

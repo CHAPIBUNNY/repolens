@@ -3,7 +3,7 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** October 2026  
-**Version:** 1.15.0
+**Version:** 1.15.1
 
 ---
 
@@ -12,6 +12,14 @@ This document tracks known issues, limitations, and edge cases in RepoLens. We'r
 `init --quick` in 1.14.x wrote JavaScript-only globs (`src/**/*.{ts,tsx,js,jsx,md}`) and `module_roots` such as `app`, `lib`, and `components`. On a Python repository such as psf/requests, `demo` then matched 0 files, wrote near-empty docs, and exited 0.
 
 1.15.0 detects the language and writes fitting globs. `doctor` fails when 0 files match. `demo` and `publish` exit 2 and do not write those docs.
+
+## Watch hangs when nothing matches (fixed in 1.15.1)
+
+After `init --quick` in an empty directory, `module_roots` is `.` (the directory exists) and `scan.include` matches no source files. 1.15.0 `watch` still printed `Waiting for changes...` and waited. 1.15.1 exits 2 and tells you to add source files or fix the globs.
+
+## Code health skipped Python and Go (fixed in 1.15.1)
+
+Code health used to score only JavaScript and TypeScript, so `demo` on a Python repository such as psf/requests logged `Code health: no source files analyzed` even after the scan found `.py` files. 1.15.1 scores Python and Go as well. Test modules are skipped.
 
 ## 🔄 Migration Tool (`repolens migrate`)
 
