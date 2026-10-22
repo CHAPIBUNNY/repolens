@@ -304,6 +304,8 @@ A shallow checkout (`fetch-depth: 1`) does not contain the base commit. The comm
 - [x] Registry name `io.github.CHAPIBUNNY/repolens` (1.14.1)
 
 ### Future
+- [ ] Java and C# language support
+- [ ] Grounded AI explanations and Q&A
 - [ ] Cross-repository architecture analysis
 - [ ] Slack notifications
 - [ ] Custom webhook support

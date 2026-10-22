@@ -502,6 +502,8 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - Breaking change detection (export signature comparison)
 - Cross-repository architecture analysis
 - GitHub App, Slack notifications, custom webhooks
+- Java and C# language support
+- Grounded AI explanations and Q&A (`repolens ask`, MCP ask tool)
 - Interactive HTML output and ADR generation
 
 ### Shipped
