@@ -218,18 +218,17 @@ The [gallery](https://chapibunny.github.io/repolens/) is a static flat Material 
 
 ## What's Next
 
-### Integrations
-- [ ] GitHub App for automated setup and status checks
-- [ ] Slack notifications
-- [ ] Custom webhook support
+Planned in this order:
 
-### Analysis
-- [ ] Cross-repository architecture analysis
-- [ ] Security boundary validation
-
-### Developer Experience
-- [ ] Interactive HTML documentation output
-- [ ] Architecture decision records (ADR) generation
+1. [ ] GitHub App for automated setup and status checks
+2. [ ] Java and C# language support — analyzers for Java (Maven/Gradle modules, package/import graph, Spring conventions) and C# (`.sln`/`.csproj` projects, namespace/`using` graph), giving the same module map, dependency graph, cycles, hubs, patterns, and PR comment as JS/TS/Python/Go
+3. [ ] Grounded AI explanations and Q&A — builds on the existing optional AI layer (`REPOLENS_AI_ENABLED`): plain-English "why it matters + suggested fix" under the PR architecture-diff comment, `repolens ask "<question>"` CLI and an MCP `ask` tool answering from RepoLens's own graph with file citations, and VS Code hover explanations per module. Off by default, bring-your-own key, every claim backed by a real graph edge
+4. [ ] Slack notifications
+5. [ ] Custom webhook support
+6. [ ] Cross-repository architecture analysis
+7. [ ] Security boundary validation
+8. [ ] Interactive HTML documentation output
+9. [ ] Architecture decision records (ADR) generation
 
 ---
 

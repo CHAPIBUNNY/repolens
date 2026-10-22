@@ -448,6 +448,8 @@ v1.0+ features complete — CLI, config schema, and plugin interface are frozen.
 
 **Next:**
 - [ ] GitHub App for automated setup and status checks
+- [ ] Java and C# language support
+- [ ] Grounded AI explanations and Q&A (`repolens ask`, PR comment, MCP, VS Code hover)
 - [ ] Slack notifications
 - [ ] Custom webhook support
 - [ ] Cross-repository architecture analysis

@@ -7,6 +7,7 @@ All notable changes to RepoLens will be documented in this file.
 ### Docs
 
 - Added [AI_POLICY.md](AI_POLICY.md) and a pull request template with an AI-assistance disclosure. CONTRIBUTING.md and README.md link to both
+- Roadmap: added Java and C# language support and grounded AI explanations and Q&A as items 2 and 3 of What's Next (docs/ROADMAP.md, README.md, docs/KNOWN_ISSUES.md)
 
 ## 1.15.3
 
