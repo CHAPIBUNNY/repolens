@@ -2,6 +2,12 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## Unreleased
+
+### Docs
+
+- Added [AI_POLICY.md](AI_POLICY.md) and a pull request template with an AI-assistance disclosure. CONTRIBUTING.md and README.md link to both
+
 ## 1.15.3
 
 ### Dependency graph

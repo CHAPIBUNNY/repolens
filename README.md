@@ -431,6 +431,8 @@ When you open a pull request, RepoLens posts:
 - **Build plugins**: Extend RepoLens with custom renderers and publishers
 - **Share feedback**: `npx @chappibunny/repolens feedback`
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [AI Policy](AI_POLICY.md). AI-assisted PRs are welcome when disclosed, reviewed, and tested.
+
 ---
 
 ## 🗺️ Roadmap
