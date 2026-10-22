@@ -109,6 +109,9 @@ Please follow these guidelines when submitting a pull request.
 - Ensure the feature or bug fix has an associated issue
 - Ensure tests pass
 - Update documentation if necessary
+- Read the [AI Policy](AI_POLICY.md) if you used AI tools
+
+Opening a pull request fills in [the PR template](.github/pull_request_template.md). Complete every section, including the AI-assistance disclosure.
 
 ## Pull Request Expectations
 
@@ -120,6 +123,12 @@ A good pull request should:
 - Reference related issues when applicable
 
 Small, focused pull requests are preferred over large sweeping changes.
+
+---
+
+# AI-Assisted Contributions
+
+AI-assisted contributions are welcome. Disclose AI use in your PR, and review and test every change yourself. See [AI_POLICY.md](AI_POLICY.md).
 
 ---
 
