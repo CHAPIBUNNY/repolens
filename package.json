@@ -90,7 +90,7 @@
     "dotenv": "^18.0.8",
     "fast-glob": "^3.3.3",
     "js-yaml": "^4.3.2",
-    "zod": "3.25.76"
+    "zod": "4.6.7"
   },
   "optionalDependencies": {
     "@sentry/node": "^10.42.0"
