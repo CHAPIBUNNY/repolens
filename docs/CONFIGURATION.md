@@ -105,6 +105,8 @@ outputs:
 
 # Feature flags (optional). Keys are document-plan keys.
 # false drops that document, except system_overview, module_catalog, and route_map.
+# route_map and graphql_schema are also skipped when no routes or GraphQL schema are found,
+# unless documentation.sections lists them.
 # Ignored when documentation.sections is set.
 features:
   executive_summary: true

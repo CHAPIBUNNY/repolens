@@ -17,7 +17,7 @@ const DEFAULT_DOMAIN_HINTS = [
     description: "Content publishing, management, and delivery"
   },
   { 
-    match: ["search", "filter", "query", "index", "catalog", "browse"], 
+    match: ["search", "query", "index", "catalog", "browse"], 
     domain: "Search & Discovery",
     description: "Search functionality, filtering, and content discovery"
   },
@@ -62,7 +62,7 @@ const DEFAULT_DOMAIN_HINTS = [
     description: "Database access, models, and data persistence"
   },
   {
-    match: ["config", "setting", "env", "constant"],
+    match: ["config", "setting", "env"],
     domain: "Configuration",
     description: "Application configuration and environment settings"
   },
@@ -92,7 +92,7 @@ const DEFAULT_DOMAIN_HINTS = [
     description: "Content and artifact publishing, deployment, and distribution"
   },
   {
-    match: ["analyz", "inspect", "detect", "lint", "scan", "parse"],
+    match: ["analyz", "inspect", "detect", "lint", "scan"],
     domain: "Analysis & Detection",
     description: "Code analysis, pattern detection, and static inspection"
   },
@@ -187,10 +187,31 @@ export function stripEntryFileName(modulePath) {
   return parts.join("/");
 }
 
+// Folder names that only say "code lives here". `lib/ogg` is about ogg, not about being a lib.
+export const GENERIC_CONTAINER_SEGMENTS = new Set(["src", "lib", "libs", "source", "sources", "packages", "pkg", "internal"]);
+
+/**
+ * Drop generic container folders (`src`, `lib`, ...) from a path so they do not pick a
+ * domain on their own. Returns "" when nothing else is left (`lib`, `src/lib`).
+ */
+export function stripContainerSegments(modulePath) {
+  return String(modulePath)
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter((segment) => segment && !GENERIC_CONTAINER_SEGMENTS.has(segment.toLowerCase()))
+    .join("/");
+}
+
+/** True when the path has a generic container folder (`lib/ogg`, `src`). */
+export function hasContainerSegment(modulePath) {
+  return String(modulePath).replace(/\\/g, "/").split("/").some((segment) => GENERIC_CONTAINER_SEGMENTS.has(segment.toLowerCase()));
+}
+
 export function inferDomain(modulePath, customHints = [], evidence = {}) {
   const customSet = new Set(customHints);
   const hints = [...customHints, ...DEFAULT_DOMAIN_HINTS];
-  const defaultPath = stripEntryFileName(modulePath);
+  const entryStripped = stripEntryFileName(modulePath);
+  const defaultPath = stripContainerSegments(entryStripped);
 
   for (const hint of hints) {
     // User-defined hints see the full path. Built-in guesses ignore entry file names.
@@ -208,6 +229,16 @@ export function inferDomain(modulePath, customHints = [], evidence = {}) {
     }
   }
   
+  // A source folder with no keyword of its own is core code, not "uncategorized".
+  if (hasContainerSegment(entryStripped)) {
+    return {
+      domain: "Core Source",
+      description: "The project's own source code, grouped by folder",
+      confidence: "none",
+      matchedKeyword: null
+    };
+  }
+
   return {
     domain: "Other",
     description: "Uncategorized module",

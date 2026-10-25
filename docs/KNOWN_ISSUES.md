@@ -3,7 +3,7 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** October 2026  
-**Version:** 1.15.4
+**Version:** 1.15.5
 
 ---
 
@@ -17,9 +17,20 @@ This document tracks known issues, limitations, and edge cases in RepoLens. We'r
 
 After `init --quick` in an empty directory, `module_roots` is `.` (the directory exists) and `scan.include` matches no source files. 1.15.0 `watch` still printed `Waiting for changes...` and waited. 1.15.1 exits 2 and tells you to add source files or fix the globs.
 
+## Output labels that misread a plain-JavaScript library (fixed in 1.15.5)
+
+Running 1.15.4 on mattiasw/ExifReader (a library with a flat `src/` and a build-helper `bin/`) gave twelve wrong or unhelpful results: 65 one-file modules for `src/`, "command-line tool" in the summary and route map, a primary pattern named after `bin/analyze.js`, the CLI description copied onto unrelated patterns, `bin/build-pages.js` typed as a route module, "TypeScript" from a `.d.ts` file and type tests, `tag-filter.js` as "Search & Discovery", a test helper as the biggest coupling hotspot, runtime and development packages in one list, `innerHTML = ''` and build-time `execSync` as high severity, a 100/100 health score next to 16 orphan files, and empty Route Map and GraphQL pages. It also left two 1.15.4 leftovers: every `lib/*` folder in one "Shared Utilities" domain and a noisy "lib Integration Flow". 1.15.5 fixes all of them.
+
+What is still approximate:
+
+- Folders with no domain keyword of their own (`lib/ogg`, `lib/id3v2`) share one **Core Source** domain. RepoLens does not guess a domain name from a folder name. Add `domains` hints in `.repolens.yml` to split them.
+- A package with both a library entry and a `bin` is a library unless its `package.json` description does not say library, parser, SDK, toolkit, or framework and says CLI or command-line (in the description or keywords). Python and Go projects have no package metadata check and keep the older pattern-based guess.
+- Security findings in `examples/`, `docs/`, `scripts/`, `tools/`, benchmark folders, and `build*.js` files are listed as low severity. A fixed string assigned to `innerHTML` is not reported. `innerHTML` with `${...}` or concatenation still is. Hardcoded credentials keep their own severity everywhere.
+- The runtime and development split reads the root `package.json`. A package missing from it counts as runtime only when product code imports it.
+
 ## Output labels that misread a mature library (fixed in 1.15.4)
 
-Running 1.15.3 on Borewit/music-metadata (v12, 10 years old) gave nine wrong or unhelpful results: the project named `.` under `--target .`, "Early-stage (1/3 indicators)", `lib/index.ts` as "Search & Discovery", `lib/core.ts` as "Core/kernel architecture", every format folder as "Utility and helper functions", two cycles listed as an architectural pattern, the package's own name as an external dependency, Developer Onboarding listed as a missing AI section after it was written, and data flows with 0 steps. 1.15.4 fixes all nine. Maturity in a shallow clone leaves commit age out of the score. Domains are still inferred from path keywords, so every folder under `lib/` still lands in "Shared Utilities". Descriptions of unknown folders are only their name plus "module".
+Running 1.15.3 on Borewit/music-metadata (v12, 10 years old) gave nine wrong or unhelpful results: the project named `.` under `--target .`, "Early-stage (1/3 indicators)", `lib/index.ts` as "Search & Discovery", `lib/core.ts` as "Core/kernel architecture", every format folder as "Utility and helper functions", two cycles listed as an architectural pattern, the package's own name as an external dependency, Developer Onboarding listed as a missing AI section after it was written, and data flows with 0 steps. 1.15.4 fixes all nine. Maturity in a shallow clone leaves commit age out of the score. Descriptions of unknown folders are only their name plus "module". (1.15.5 fixes the two leftovers: folders under `lib/` no longer all land in "Shared Utilities", and the "lib Integration Flow" is gone.)
 
 ## TYPE_CHECKING imports and coarse patterns (fixed in 1.15.3)
 

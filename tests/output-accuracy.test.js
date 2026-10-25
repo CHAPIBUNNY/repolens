@@ -137,7 +137,7 @@ describe("3. entry and barrel files are not classified by name", () => {
   it("does not map lib/index.ts to Search & Discovery", () => {
     expect(inferDomain("lib/index.ts").domain).not.toBe("Search & Discovery");
     expect(inferDomain("index.ts").domain).toBe("Other");
-    expect(inferDomain("src/main.py").domain).toBe("Other");
+    expect(inferDomain("src/main.py").domain).toBe("Core Source");
   });
 
   it("still classifies a real search directory", () => {

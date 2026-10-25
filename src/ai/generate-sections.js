@@ -13,7 +13,9 @@ import {
   renderStructuredToMarkdown,
 } from "./prompts.js";
 import { identifyFlowDependencies, filterNoiseFlows } from "../analyzers/flow-inference.js";
+import { isCliProject, isLibraryProject } from "../analyzers/context-builder.js";
 import { scoreMaturity } from "../analyzers/maturity.js";
+import { isNonProductPath, isTestPath } from "../utils/path-roles.js";
 import { info, warn } from "../utils/logger.js";
 
 // Strip conversational patterns that LLMs sometimes inject into documentation
@@ -162,7 +164,8 @@ function getFallbackExecutiveSummary(context, enrichment = {}) {
   const frameworkList = context.techStack.frameworks.join(", ") || "general-purpose";
   const languageList = context.techStack.languages.join(", ") || "multiple languages";
   const testFrameworks = context.techStack.testFrameworks || [];
-  const isCLI = (context.patterns || []).some(p => p.toLowerCase().includes("cli"));
+  const isCLI = isCliProject(context);
+  const isLibrary = isLibraryProject(context);
   const projectName = context.project.name || "This system";
 
   // Maturity comes from repo signals (version, history, tests, CI, docs, dependency health)
@@ -178,7 +181,8 @@ function getFallbackExecutiveSummary(context, enrichment = {}) {
   const maturityMax = maturity.max;
 
   // Determine project type for better descriptions
-  const projectType = isCLI ? "command-line tool" : 
+  const projectType = isCLI ? "command-line tool" :
+    isLibrary ? "library" :
     (context.project.apiRoutesDetected > 0 && context.project.pagesDetected > 0) ? "full-stack application" :
     context.project.apiRoutesDetected > 0 ? "API service" :
     context.project.pagesDetected > 0 ? "web application" : "software system";
@@ -190,7 +194,7 @@ function getFallbackExecutiveSummary(context, enrichment = {}) {
 | Aspect | Summary |
 |--------|---------|
 | **What** | ${projectName} is ${withArticle(maturityLabel.toLowerCase())} ${projectType} |
-| **Built With** | ${frameworkList} + ${languageList} |
+| **Built With** | ${[...context.techStack.frameworks, languageList].join(", ")} |
 | **Scale** | ${context.project.modulesDetected} modules across ${context.project.filesScanned} files |
 | **Maturity** | ${maturityLabel} (${maturityScore}/${maturityMax} indicators) |
 
@@ -202,6 +206,8 @@ function getFallbackExecutiveSummary(context, enrichment = {}) {
 
   if (isCLI) {
     output += `It operates as a **command-line interface**, enabling users to interact with the system through terminal commands. This architecture is optimized for automation, scripting, and integration into CI/CD pipelines.`;
+  } else if (isLibrary) {
+    output += `It is a **library**: other programs import it as a dependency and call its public API. It serves no routes or pages of its own.`;
   } else if (context.project.apiRoutesDetected > 0 && context.project.pagesDetected > 0) {
     output += `It provides both a **user-facing interface** (${context.project.pagesDetected} pages) and a **programmatic API** (${context.project.apiRoutesDetected} endpoints), serving as a complete solution for end users and system integrations alike.`;
   } else if (context.project.apiRoutesDetected > 0) {
@@ -222,7 +228,7 @@ The system is organized around **${context.domains.length} functional domains**,
   output += `|--------|------------|-------|\n`;
   for (const d of topDomains) {
     const desc = d.description || inferDomainCapability(d.name);
-    output += `| **${d.name}** | ${desc} | ${d.moduleCount} modules, ${d.fileCount} files |\n`;
+    output += `| **${d.name}** | ${desc} | ${d.moduleCount} module${d.moduleCount === 1 ? "" : "s"}, ${d.fileCount} file${d.fileCount === 1 ? "" : "s"} |\n`;
   }
   if (context.domains.length > 6) {
     output += `| *+${context.domains.length - 6} more* | Additional functional areas | — |\n`;
@@ -281,9 +287,9 @@ The system is organized around **${context.domains.length} functional domains**,
     output += `| Metric | Value | Status |\n`;
     output += `|--------|-------|--------|\n`;
     output += `| Internal imports | ${stats.totalEdges} edges | ${stats.totalEdges > 0 ? "✅ Connected" : "⚠️ Isolated"} |\n`;
-    output += `| External Packages | ${stats.externalDeps} | ${stats.externalDeps < 50 ? "✅ Manageable" : stats.externalDeps < 100 ? "⚠️ Consider audit" : "🔴 High dependency count"} |\n`;
+    output += `| External Packages | ${externalPackagesLabel(stats)} | ${stats.externalDeps < 50 ? "✅ Manageable" : stats.externalDeps < 100 ? "⚠️ Consider audit" : "🔴 High dependency count"} |\n`;
     output += `| Circular Dependencies | ${stats.cycles === 0 ? "cycle-free" : stats.cycles} | ${stats.cycles === 0 ? "✅ None" : `🔴 ${stats.cycles} detected`} |\n`;
-    output += `| Orphan Files | ${stats.orphanFiles} | ${stats.orphanFiles === 0 ? "✅ All connected" : `⚠️ ${stats.orphanFiles} unused`} |\n`;
+    output += `| Orphan Files | ${stats.orphanFiles} | ${orphanStatus(stats)} |\n`;
 
     // Key insights
     output += `\n### Key Insights\n\n`;
@@ -294,19 +300,19 @@ The system is organized around **${context.domains.length} functional domains**,
     }
     if (stats.hubs && stats.hubs.length > 0) {
       const topHub = stats.hubs[0];
-      if (topHub.importedBy > stats.totalFiles * 0.3) {
-        output += `- ⚠️ **Coupling hotspot** — \`${topHub.key}\` is imported by ${topHub.importedBy} files (${Math.round(topHub.importedBy / stats.totalFiles * 100)}% of codebase). Consider splitting.\n`;
+      if (topHub.importedBy > sourceFileCount(stats) * 0.3) {
+        output += `- ⚠️ **Coupling hotspot** — \`${topHub.key}\` is imported by ${topHub.importedBy} files (${Math.round(topHub.importedBy / sourceFileCount(stats) * 100)}% of codebase). Consider splitting.\n`;
       } else {
         output += `- ✅ **Healthy coupling** — Most-imported module (\`${topHub.key}\`) serves ${topHub.importedBy} files without excessive centralization.\n`;
       }
     }
-    if (stats.orphanFiles > stats.totalFiles * 0.1) {
+    if (orphanRatio(stats) > ORPHAN_WARN_RATIO) {
       output += `- ⚠️ **Potential dead code** — ${stats.orphanFiles} files (${Math.round(stats.orphanFiles / stats.totalFiles * 100)}%) are not imported anywhere.\n`;
     }
   }
 
   // Data flows summary
-  const summaryFlows = filterNoiseFlows(flows).filter(f => !f.name?.toLowerCase().includes('test'));
+  const summaryFlows = filterNoiseFlows(flows).filter(f => !f.name?.toLowerCase().includes('test') && !isTestPath(f.modules?.[0]));
   if (summaryFlows.length > 0) {
     output += `\n## Key Data Flows\n\n`;
     output += `The system processes information through **${summaryFlows.length} identified flow${summaryFlows.length === 1 ? "" : "s"}**:\n\n`;
@@ -321,7 +327,7 @@ The system is organized around **${context.domains.length} functional domains**,
   
   const observations = [];
   if (context.patterns.length > 0) {
-    observations.push(`The codebase follows **${context.patterns.join(", ")}** architectural patterns, providing a familiar structure for developers.`);
+    observations.push(`The codebase follows **${context.patterns.map(patternLabel).join(", ")}** architectural patterns, providing a familiar structure for developers.`);
   }
   if (context.domains.length >= 5) {
     observations.push(`With ${context.domains.length} distinct domains, the system has clear separation of concerns suitable for team-based development.`);
@@ -331,6 +337,8 @@ The system is organized around **${context.domains.length} functional domains**,
   }
   if (isCLI) {
     observations.push(`As a CLI tool, this system is automation-friendly and can integrate into existing workflows and pipelines.`);
+  } else if (isLibrary) {
+    observations.push(`As a library, its public API is the contract: changes to exported functions affect every project that depends on it.`);
   }
   
   for (const obs of observations) {
@@ -347,7 +355,8 @@ The system is organized around **${context.domains.length} functional domains**,
 function getFallbackSystemOverview(context, enrichment = {}) {
   const { depGraph } = enrichment;
   const testFrameworks = context.techStack.testFrameworks || [];
-  const isCLI = (context.patterns || []).some(p => p.toLowerCase().includes("cli"));
+  const isCLI = isCliProject(context);
+  const isLibrary = isLibraryProject(context);
   const projectName = context.project.name || "This system";
 
   // Calculate scale classification
@@ -381,6 +390,8 @@ function getFallbackSystemOverview(context, enrichment = {}) {
   }
   if (isCLI) {
     output += `\n| **Interface Type** | Command-Line Tool |`;
+  } else if (isLibrary) {
+    output += `\n| **Interface Type** | Library (imported API) |`;
   }
 
   output += `
@@ -515,9 +526,9 @@ The system is built on a modern technology foundation:\n\n`;
     output += `| Metric | Value | Assessment |\n`;
     output += `|--------|-------|------------|\n`;
     output += `| Internal Imports | ${stats.totalEdges} | ${stats.totalEdges > 0 ? "Modules are connected" : "No internal imports"} |\n`;
-    output += `| External Packages | ${stats.externalDeps} | ${stats.externalDeps < 50 ? "Lean dependencies" : stats.externalDeps < 100 ? "Moderate dependencies" : "Many dependencies"} |\n`;
+    output += `| External Packages | ${externalPackagesLabel(stats)} | ${stats.externalDeps < 50 ? "Lean dependencies" : stats.externalDeps < 100 ? "Moderate dependencies" : "Many dependencies"} |\n`;
     output += `| Circular Dependencies | ${stats.cycles} | ${stats.cycles === 0 ? "✅ Clean" : "⚠️ Needs attention"} |\n`;
-    output += `| Orphan Files | ${stats.orphanFiles} | ${stats.orphanFiles === 0 ? "✅ All connected" : `⚠️ ${stats.orphanFiles} unused`} |\n`;
+    output += `| Orphan Files | ${stats.orphanFiles} | ${orphanStatus(stats)} |\n`;
     
     if (stats.hubs && stats.hubs.length > 0) {
       output += `\n**Hub modules** (most imported):\n\n`;
@@ -682,7 +693,8 @@ ${context.domains.map(d => `| ${d.name} | ${d.moduleCount} | ${d.fileCount} | ${
 
 function getFallbackArchitectureOverview(context, enrichment = {}) {
   const { depGraph, driftResult } = enrichment;
-  const isCLI = (context.patterns || []).some(p => p.toLowerCase().includes("cli"));
+  const isCLI = isCliProject(context);
+  const isLibrary = isLibraryProject(context);
   const projectName = context.project.name || "This system";
   const testFrameworks = context.techStack.testFrameworks || [];
 
@@ -693,9 +705,9 @@ function getFallbackArchitectureOverview(context, enrichment = {}) {
 `;
 
   if (context.patterns.length > 0) {
-    output += `**${projectName}** follows a **${context.patterns[0]}** architecture`;
+    output += `**${projectName}** follows a **${patternLabel(context.patterns[0])}** architecture`;
     if (context.patterns.length > 1) {
-      output += ` with elements of **${context.patterns.slice(1).join(", ")}**`;
+      output += ` with elements of **${context.patterns.slice(1).map(patternLabel).join(", ")}**`;
     }
     output += `.\n\n`;
     
@@ -799,6 +811,8 @@ function getFallbackArchitectureOverview(context, enrichment = {}) {
   }
   if (isCLI) {
     output += `| **Interface** | CLI | Terminal-driven interaction |\n`;
+  } else if (isLibrary) {
+    output += `| **Interface** | Library | Imported by other programs through its public API |\n`;
   }
 
   // Dependency health with deep analysis
@@ -813,9 +827,9 @@ function getFallbackArchitectureOverview(context, enrichment = {}) {
     output += `| Metric | Value | Status | Recommendation |\n`;
     output += `|--------|-------|--------|----------------|\n`;
     output += `| Import Edges | ${stats.totalEdges} | ${stats.totalEdges > 0 ? "✅" : "⚠️"} | ${stats.totalEdges > 0 ? "Healthy module connectivity" : "Consider connecting modules"} |\n`;
-    output += `| External Packages | ${stats.externalDeps} | ${stats.externalDeps < 50 ? "✅" : stats.externalDeps < 100 ? "⚠️" : "🔴"} | ${stats.externalDeps >= 100 ? "Audit for unused dependencies" : stats.externalDeps >= 50 ? "Review dependency necessity" : "Lean dependency set"} |\n`;
+    output += `| External Packages | ${externalPackagesLabel(stats)} | ${stats.externalDeps < 50 ? "✅" : stats.externalDeps < 100 ? "⚠️" : "🔴"} | ${stats.externalDeps >= 100 ? "Audit for unused dependencies" : stats.externalDeps >= 50 ? "Review dependency necessity" : "Lean dependency set"} |\n`;
     output += `| Circular Deps | ${stats.cycles} | ${stats.cycles === 0 ? "✅" : "🔴"} | ${stats.cycles === 0 ? "Clean module boundaries" : "Refactor to break cycles"} |\n`;
-    output += `| Orphan Files | ${stats.orphanFiles} | ${stats.orphanFiles === 0 ? "✅" : "⚠️"} | ${stats.orphanFiles === 0 ? "All code is connected" : "Review for dead code"} |\n`;
+    output += `| Orphan Files | ${stats.orphanFiles} | ${orphanRatio(stats) > ORPHAN_WARN_RATIO ? "⚠️" : "✅"} | ${stats.orphanFiles === 0 ? "All code is connected" : orphanRatio(stats) > ORPHAN_WARN_RATIO ? "Review for dead code" : "A few unconnected files (examples, type tests, entry points) are normal"} |\n`;
 
     // Architectural strengths and concerns
     output += `\n### Architectural Strengths\n\n`;
@@ -826,7 +840,7 @@ function getFallbackArchitectureOverview(context, enrichment = {}) {
     if (stats.orphanFiles === 0) {
       strengths.push("**Fully connected codebase** — Every file is part of the dependency graph. No dead code or forgotten modules.");
     }
-    if (stats.hubs && stats.hubs.length > 0 && stats.hubs[0].importedBy < stats.totalFiles * 0.3) {
+    if (stats.hubs && stats.hubs.length > 0 && stats.hubs[0].importedBy < sourceFileCount(stats) * 0.3) {
       strengths.push("**Balanced coupling** — No single module dominates the import graph. This reduces change risk and enables parallel development.");
     }
     if (testFrameworks.length > 0) {
@@ -848,8 +862,8 @@ function getFallbackArchitectureOverview(context, enrichment = {}) {
     if (stats.orphanFiles > stats.totalFiles * 0.2) {
       concerns.push(`**High orphan file ratio** — ${stats.orphanFiles}/${stats.totalFiles} files (${Math.round(stats.orphanFiles / stats.totalFiles * 100)}%) are not imported. Consider removing dead code. Priority: Medium.`);
     }
-    if (stats.hubs && stats.hubs.length > 0 && stats.hubs[0].importedBy >= stats.totalFiles * 0.3) {
-      concerns.push(`**Central coupling hotspot** — \`${stats.hubs[0].key}\` is imported by ${stats.hubs[0].importedBy} files (${Math.round(stats.hubs[0].importedBy / stats.totalFiles * 100)}%). Consider breaking into smaller modules. Priority: Medium.`);
+    if (stats.hubs && stats.hubs.length > 0 && stats.hubs[0].importedBy >= sourceFileCount(stats) * 0.3) {
+      concerns.push(`**Central coupling hotspot** — \`${stats.hubs[0].key}\` is imported by ${stats.hubs[0].importedBy} files (${Math.round(stats.hubs[0].importedBy / sourceFileCount(stats) * 100)}%). Consider breaking into smaller modules. Priority: Medium.`);
     }
     if (stats.externalDeps > 100) {
       concerns.push(`**Heavy external dependencies** — ${stats.externalDeps} packages increase security surface and maintenance burden. Audit regularly. Priority: Low.`);
@@ -932,7 +946,7 @@ Data flows describe how information moves through **${projectName}** — from ex
 `;
 
   // Combine heuristic flows with dep-graph-derived flows, filtering out test file flows
-  const allFlows = filterNoiseFlows(flows).filter(f => !f.name?.toLowerCase().includes('test'));
+  const allFlows = filterNoiseFlows(flows).filter(f => !f.name?.toLowerCase().includes('test') && !isTestPath(f.modules?.[0]));
 
   // Generate additional flows from dependency graph hub chains
   if (depGraph?.nodes && depGraph.nodes.length > 0 && allFlows.length < 3) {
@@ -1135,7 +1149,7 @@ function getFallbackDeveloperOnboarding(context, enrichment = {}) {
   const frameworkList = context.techStack.frameworks.join(", ") || "general-purpose tools";
   const languageList = context.techStack.languages.join(", ") || "standard languages";
   const testFrameworks = context.techStack.testFrameworks || [];
-  const isCLI = (context.patterns || []).some(p => p.toLowerCase().includes("cli"));
+  const isCLI = isCliProject(context);
   const projectName = context.project.name || "this project";
   const routes = context.routes || {};
   const pages = routes.pages || [];
@@ -1166,7 +1180,7 @@ This guide will help you get up to speed quickly. **${projectName}** is a ${fram
 | **Build Tools** | ${context.techStack.buildTools.join(", ") || "Standard toolchain"} |
 ${testFrameworks.length > 0 ? `| **Testing** | ${testFrameworks.join(", ")} |\n` : ""}| **Size** | ${context.project.modulesDetected} modules, ${context.project.filesScanned} files |
 | **Domains** | ${context.domains.length} functional areas |
-${isCLI ? "| **Type** | Command-line interface |\n" : ""}${context.project.apiRoutesDetected > 0 ? `| **API** | ${context.project.apiRoutesDetected} endpoints |\n` : ""}${context.project.pagesDetected > 0 ? `| **UI** | ${context.project.pagesDetected} pages |\n` : ""}
+${isCLI ? "| **Type** | Command-line interface |\n" : isLibraryProject(context) ? "| **Type** | Library |\n" : ""}${context.project.apiRoutesDetected > 0 ? `| **API** | ${context.project.apiRoutesDetected} endpoints |\n` : ""}${context.project.pagesDetected > 0 ? `| **UI** | ${context.project.pagesDetected} pages |\n` : ""}
 
 ---
 
@@ -1292,7 +1306,7 @@ ${context.repoRoots.map(root => {
   }
 
   // Data flows for understanding behavior
-  const onboardingFlows = filterNoiseFlows(flows).filter(f => !f.name?.toLowerCase().includes('test'));
+  const onboardingFlows = filterNoiseFlows(flows).filter(f => !f.name?.toLowerCase().includes('test') && !isTestPath(f.modules?.[0]));
   if (onboardingFlows.length > 0) {
     output += `---\n\n## How Data Flows\n\n`;
     output += `Understanding these flows helps you see how the system processes information end-to-end:\n\n`;
@@ -1354,8 +1368,8 @@ ${context.repoRoots.map(root => {
   if (depGraph?.stats?.cycles > 0) {
     pitfalls.push(`**Circular dependencies** — This codebase has ${depGraph.stats.cycles} circular import${depGraph.stats.cycles === 1 ? '' : 's'}. Be careful not to introduce more.`);
   }
-  if (depGraph?.stats?.hubs?.length > 0 && depGraph.stats.hubs[0].importedBy >= depGraph.stats.totalFiles * 0.3) {
-    pitfalls.push(`**High-impact modules** — \`${depGraph.stats.hubs[0].key.split("/").pop()}\` is used by ${Math.round(depGraph.stats.hubs[0].importedBy / depGraph.stats.totalFiles * 100)}% of the codebase. Changes here need thorough testing.`);
+  if (depGraph?.stats?.hubs?.length > 0 && depGraph.stats.hubs[0].importedBy >= sourceFileCount(depGraph.stats) * 0.3) {
+    pitfalls.push(`**High-impact modules** — \`${depGraph.stats.hubs[0].key.split("/").pop()}\` is used by ${Math.round(depGraph.stats.hubs[0].importedBy / sourceFileCount(depGraph.stats) * 100)}% of the codebase. Changes here need thorough testing.`);
   }
   if (context.monorepo) {
     pitfalls.push(`**Monorepo boundaries** — Remember to build dependent packages when making changes.`);
@@ -1409,38 +1423,46 @@ function formatModuleType(type) {
     state: "State Management",
     route: "Route/Page Modules",
     app: "Application Core",
+    source: "Source Modules",
     other: "Other Modules",
   };
   return labels[type] || type;
 }
 
-// Helper: derive flows from dependency graph hub chains
+// File names that name a folder or an entry point rather than a piece of the system.
+const BARREL_NAMES = new Set(["index", "main", "mod", "__init__", "lib", "src", "app", "source", "pkg", "internal"]);
+
+// Helper: derive flows from dependency graph hub chains.
+// A hub is an integration point only when it imports something itself. Barrels (`lib/index`),
+// leaf helpers (error classes, constants), tests, and examples are not flows.
 function inferFlowsFromDepGraph(depGraph) {
   const flows = [];
   if (!depGraph?.nodes || depGraph.nodes.length === 0) return flows;
 
-  // Find hub nodes – modules imported by many others
-  const hubThreshold = Math.max(3, Math.floor(depGraph.nodes.length * 0.05));
-  const hubs = depGraph.nodes
-    .filter(n => n.importedBy.length >= hubThreshold)
-    .sort((a, b) => b.importedBy.length - a.importedBy.length)
+  const productNodes = depGraph.nodes.filter(n => !isNonProductPath(n.key));
+  const hubThreshold = Math.max(3, Math.floor(productNodes.length * 0.05));
+  const hubs = productNodes
+    .filter(n => !BARREL_NAMES.has(String(n.key.split("/").pop()).toLowerCase()))
+    .filter(n => n.imports.length > 0)
+    .map(n => ({ node: n, importers: n.importedBy.filter(i => !isNonProductPath(i)) }))
+    .filter(h => h.importers.length >= hubThreshold)
+    .sort((a, b) => b.importers.length - a.importers.length)
     .slice(0, 3);
 
-  for (const hub of hubs) {
-    const testPattern = /(?:^|\/)(?:tests?|__tests?__|spec|__spec__)\/|\.(test|spec)\.[jt]sx?$/i;
-    const importers = hub.importedBy.filter(i => !testPattern.test(i)).slice(0, 5);
+  for (const { node: hub, importers: allImporters } of hubs) {
+    const importers = allImporters.slice(0, 5);
     const downstream = hub.imports.slice(0, 3);
     const shortName = hub.key.split("/").pop();
 
     flows.push({
       name: `${shortName} Integration Flow`,
-      description: `\`${hub.key}\` is a central module imported by ${hub.importedBy.length} files, acting as an integration point for data and logic`,
+      description: `\`${hub.key}\` is a central module imported by ${allImporters.length} files, acting as an integration point for data and logic`,
       steps: [
         ...importers.map(i => `\`${i.split("/").pop()}\` imports \`${shortName}\``),
         ...(downstream.length > 0 ? [`\`${shortName}\` depends on ${downstream.map(d => `\`${d.split("/").pop()}\``).join(", ")}`] : []),
       ],
       modules: [hub.key, ...importers.slice(0, 3)],
-      critical: hub.importedBy.length >= hubThreshold * 2,
+      critical: allImporters.length >= hubThreshold * 2,
     });
   }
 
@@ -1566,9 +1588,37 @@ function getLayerResponsibility(type) {
     state: "Manages application-wide data synchronization",
     route: "Maps URL paths to page components and handles navigation",
     app: "Orchestrates application initialization and core bootstrapping",
+    source: "The project's own source code",
     other: "General purpose functionality",
   };
   return responsibilities[type] || "Supporting application functionality";
+}
+
+// Orphan files above this share of all code files are a warning, and they cost health points.
+// Below it they are normal (generated entry points, type tests, examples) and shown as fine.
+const ORPHAN_WARN_RATIO = 0.05;
+
+function orphanRatio(stats) {
+  return stats.orphanFiles / Math.max(stats.totalFiles, 1);
+}
+
+function orphanStatus(stats) {
+  if (stats.orphanFiles === 0) return "✅ All connected";
+  const pct = Math.round(orphanRatio(stats) * 100);
+  return orphanRatio(stats) > ORPHAN_WARN_RATIO
+    ? `⚠️ ${stats.orphanFiles} unused (${pct}%)`
+    : `✅ ${stats.orphanFiles} (${pct}%), within normal range`;
+}
+
+// Files the product itself is made of. Hub shares are measured against these, not against tests.
+function sourceFileCount(stats) {
+  return Math.max(stats.sourceFiles ?? stats.totalFiles, 1);
+}
+
+// "12 (1 runtime, 11 development tooling)" when the split is known.
+function externalPackagesLabel(stats) {
+  if (stats.externalRuntime === undefined || stats.externalDev === undefined || stats.externalDev === 0) return `${stats.externalDeps}`;
+  return `${stats.externalDeps} (${stats.externalRuntime} runtime, ${stats.externalDev} dev/test tooling)`;
 }
 
 // Helper: calculate codebase health score
@@ -1579,9 +1629,10 @@ function calculateHealthScore(stats, context) {
   if (stats.cycles > 0) score -= Math.min(30, stats.cycles * 10);
   
   // Orphan files indicate potential dead code
-  const orphanRatio = stats.orphanFiles / Math.max(stats.totalFiles, 1);
-  if (orphanRatio > 0.2) score -= 20;
-  else if (orphanRatio > 0.1) score -= 10;
+  const ratio = orphanRatio(stats);
+  if (ratio > 0.2) score -= 20;
+  else if (ratio > 0.1) score -= 10;
+  else if (ratio > ORPHAN_WARN_RATIO) score -= 5;
   
   // Too many external dependencies
   if (stats.externalDeps > 100) score -= 15;
@@ -1590,9 +1641,6 @@ function calculateHealthScore(stats, context) {
   // No test framework detected
   const hasTests = (context.techStack.testFrameworks || []).length > 0;
   if (!hasTests) score -= 10;
-  
-  // Give bonus for clean, connected codebase
-  if (stats.cycles === 0 && stats.totalEdges > 0) score = Math.min(100, score + 5);
   
   return Math.max(0, Math.min(100, score));
 }
@@ -1642,10 +1690,40 @@ function inferFrameworkPurpose(frameworks) {
   return purposes.length > 0 ? purposes.join(", ") : "Application runtime";
 }
 
+// A pattern line is "Label — evidence" (`CLI tool architecture — \`bin\``). Only the label
+// says what the pattern is; the evidence is file names and must not pick the description.
+function patternLabel(pattern) {
+  return String(pattern).split(" — ")[0].trim();
+}
+
+const PATTERN_COPY = [
+  [/^next\.?js app router/i, "Routes are defined by folders under `app/`, with server and client components mixed per route.", "File-based routing, nested layouts, streaming"],
+  [/^next\.?js pages router/i, "Routes are defined by files under `pages/`, one file per URL.", "File-based routing, simple mental model"],
+  [/^layered component/i, "UI components sit in their own layer and call shared library code rather than reaching into each other.", "Reusable UI, clear dependency direction"],
+  [/^react hooks/i, "Stateful logic is packaged as custom hooks that components share.", "Reusable stateful logic, testable in isolation"],
+  [/^centralized state/i, "Application state lives in a dedicated store that components read from and write to.", "Predictable data flow, easier debugging"],
+  [/^api route/i, "HTTP endpoints live in route or handler folders, separate from UI code.", "Clear external interface, versionable"],
+  [/^core\/kernel/i, "Foundational logic lives in `core/` or `kernel/` folders that other modules build on.", "Stable foundation, shared behavior in one place"],
+  [/^plugin system/i, "The system supports extensibility through plugins or extensions loaded at runtime.", "Extensibility, community contributions, core stability"],
+  [/^middleware pipeline/i, "Requests or data pass through a chain of middleware steps.", "Composable steps, cross-cutting concerns in one place"],
+  [/^renderer pipeline/i, "Output is produced by renderer or template modules, one per output type.", "Output formats can change without touching the data layer"],
+  [/^multi-output publishing/i, "Results are published to several targets through separate publisher modules.", "Add a target without touching the others"],
+  [/^analysis pipeline/i, "Analyzer or detector modules inspect input and feed their findings forward.", "Each analysis step is testable alone"],
+  [/^cli tool/i, "The system runs as a command-line interface, accepting user input through terminal commands and producing structured output.", "Automation-friendly, scriptable, integrates with CI/CD pipelines"],
+  [/^shared utility/i, "Common helpers sit in shared modules that other modules import instead of duplicating code.", "Less duplication, one place to fix a helper"],
+  [/^integration adapters/i, "Adapters wrap outside services behind a local interface.", "Outside services can be swapped or mocked"],
+  [/^ai\/llm/i, "The code calls an AI or LLM provider or SDK.", "Intelligent features behind a provider boundary"],
+  [/^delivery pipeline/i, "Dispatch and delivery modules move finished content to its destination.", "Delivery channels are isolated from content creation"],
+  [/^dedicated test/i, "Tests live in their own folders, apart from production code.", "Safe refactoring, regression protection"],
+  [/^acyclic dependency/i, "No circular imports were found: modules depend on each other in one direction only, so each layer can be read, tested, and changed on its own.", "Safe refactoring, predictable build order, simple testing"],
+];
+
 // Helper: explain an architectural pattern
 function explainPattern(pattern) {
-  const lower = pattern.toLowerCase();
-  if (/cli/i.test(lower)) return "The system operates as a command-line interface, accepting user input through terminal commands and producing structured output.";
+  const label = patternLabel(pattern);
+  const known = PATTERN_COPY.find(([regex]) => regex.test(label));
+  if (known) return known[1];
+  const lower = label.toLowerCase();
   if (/monorepo/i.test(lower)) return "Multiple related packages are managed in a single repository, enabling coordinated development and shared tooling.";
   if (/microservice/i.test(lower)) return "The system is decomposed into independently deployable services communicating over network protocols.";
   if (/mvc|model.?view/i.test(lower)) return "The application separates data (Model), presentation (View), and business logic (Controller) into distinct layers.";
@@ -1653,14 +1731,15 @@ function explainPattern(pattern) {
   if (/api.?first/i.test(lower)) return "The system is designed API-first, with a well-defined interface contract that drives both backend and frontend development.";
   if (/layered/i.test(lower)) return "The codebase is organized into horizontal layers (e.g., presentation, business, data) with clear boundaries.";
   if (/modular/i.test(lower)) return "Functionality is divided into self-contained modules with explicit interfaces and minimal coupling.";
-  if (/plugin/i.test(lower)) return "The system supports extensibility through a plugin architecture allowing third-party additions.";
-  return "A structured approach to organizing code and managing complexity.";
+  return `Detected from the code layout: ${label}.`;
 }
 
 // Helper: get benefits of a pattern
 function getBenefitsForPattern(pattern) {
-  const lower = pattern.toLowerCase();
-  if (/cli/i.test(lower)) return "Automation-friendly, scriptable, integrates with CI/CD pipelines";
+  const label = patternLabel(pattern);
+  const known = PATTERN_COPY.find(([regex]) => regex.test(label));
+  if (known) return known[2];
+  const lower = label.toLowerCase();
   if (/monorepo/i.test(lower)) return "Shared tooling, atomic cross-package changes, unified versioning";
   if (/microservice/i.test(lower)) return "Independent deployment, tech flexibility, team autonomy";
   if (/mvc|model.?view/i.test(lower)) return "Separation of concerns, testability, parallel development";
@@ -1668,7 +1747,6 @@ function getBenefitsForPattern(pattern) {
   if (/api.?first/i.test(lower)) return "Clear contracts, parallel development, documentation-driven";
   if (/layered/i.test(lower)) return "Clear responsibilities, easier testing, technology swapping";
   if (/modular/i.test(lower)) return "Reusability, isolated testing, team ownership boundaries";
-  if (/plugin/i.test(lower)) return "Extensibility, community contributions, core stability";
   return "Structured organization, maintainability, clarity";
 }
 

@@ -130,6 +130,11 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
   
   for (const docPlan of activeDocuments) {
     docIndex++;
+    const emptyReason = emptyDocumentReason(docPlan, { config, scanResult, graphqlResult });
+    if (emptyReason) {
+      info(`[${docIndex}/${totalDocs}] Skipping ${docPlan.key}: ${emptyReason}`);
+      continue;
+    }
     info(`[${docIndex}/${totalDocs}] Generating ${docPlan.key}...`);
     let content = null;
     
@@ -235,6 +240,22 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
     config,
     codeHealth: codeHealthResult,
   };
+}
+
+/**
+ * Documents that would only say "nothing found" are not written. A library has no GraphQL
+ * schema and no routes, so those two pages would be noise. A document the config lists
+ * explicitly in `documentation.sections` is always written.
+ */
+export function emptyDocumentReason(docPlan, { config, scanResult, graphqlResult }) {
+  if (config?.documentation?.sections?.includes(docPlan.key)) return null;
+  if (docPlan.key === "graphql_schema" && !graphqlResult?.detected) {
+    return "no GraphQL schema detected";
+  }
+  if (docPlan.key === "route_map" && !(scanResult?.pages?.length) && !(scanResult?.api?.length)) {
+    return "no pages or API routes detected";
+  }
+  return null;
 }
 
 async function generateDocument(docPlan, context) {

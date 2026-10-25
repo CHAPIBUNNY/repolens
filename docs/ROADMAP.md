@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.15.4  
+**Current Version:** 1.15.5  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.15.4)
+## What's Shipped (v0.1.0 → v1.15.5)
 
 Everything below is live, tested, and available on npm.
 
@@ -164,6 +164,13 @@ Everything below is live, tested, and available on npm.
 - ✅ `server.json` for the MCP Registry (`io.github.CHAPIBUNNY/repolens`) and `smithery.yaml`
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
+
+## v1.15.5 — Output accuracy (ExifReader)
+
+- ✅ A flat `src/` is one module. Libraries are told apart from CLIs by `package.json`, not by a `bin/` folder
+- ✅ Hubs, coupling advice, flows, and security severity ignore tests, examples, and build scripts. External packages split into runtime and development tooling
+- ✅ Folders under `lib/` and `src/` are no longer all "Shared Utilities". Pattern descriptions no longer copy the CLI text
+- ✅ Health score agrees with the orphan warning. Empty Route Map and GraphQL pages are skipped
 
 ## v1.15.4 — Output accuracy (music-metadata)
 

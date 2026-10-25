@@ -1,6 +1,6 @@
 # AI-Enhanced Documentation
 
-As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is in the current version (v1.15.4). The MCP server stays on the deterministic path unless a tool call sets `deterministic: false`. `repolens badge`, `repolens comment`, and the GitHub Action `comment` and `badge` modes also stay deterministic: they do not call a model.
+As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is in the current version (v1.15.5). The MCP server stays on the deterministic path unless a tool call sets `deterministic: false`. `repolens badge`, `repolens comment`, and the GitHub Action `comment` and `badge` modes also stay deterministic: they do not call a model.
 
 ## Overview
 
@@ -15,7 +15,7 @@ This approach prevents hallucination while providing rich, readable documentatio
 
 ## Document Structure
 
-RepoLens generates 17 documents by default:
+RepoLens generates up to 17 documents by default. `route_map` is skipped when no pages or API routes are found, and `graphql_schema` is skipped when no GraphQL schema is found (15 documents for a plain library), unless `documentation.sections` lists them:
 
 Filenames below are the numbered set written by `writeDocumentSet`. The Markdown publisher writes a second snake_case copy (`executive_summary.md`, and `architecture_diff.md` for the change-impact key).
 

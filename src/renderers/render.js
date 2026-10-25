@@ -1,4 +1,4 @@
-import { computeModuleLevelMetrics, describeModuleDepRole } from "../analyzers/context-builder.js";
+import { computeModuleLevelMetrics, describeModuleDepRole, isCliProject, isLibraryProject } from "../analyzers/context-builder.js";
 import { moduleEvidence, pathHasKeyword } from "../analyzers/domain-inference.js";
 
 export function renderSystemOverview(cfg, scan, depGraph = null) {
@@ -447,8 +447,8 @@ export function renderRouteMap(cfg, scan, aiContext = null) {
   if (!scan.pages?.length && !scan.api?.length) {
     // Determine project type for context-aware messaging
     const patterns = aiContext?.patterns || [];
-    const isCLI = patterns.some(p => p.toLowerCase().includes("cli"));
-    const isLibrary = patterns.some(p => p.toLowerCase().includes("library") || p.toLowerCase().includes("shared"));
+    const isCLI = isCliProject(aiContext);
+    const isLibrary = isLibraryProject(aiContext) || patterns.some(p => p.toLowerCase().includes("library") || p.toLowerCase().includes("shared"));
     const techStack = aiContext?.techStack || {};
     const hasWebFramework = (techStack.frameworks || []).some(f =>
       /next|react|vue|angular|express|fastify|hono|koa|django|flask|rails|spring/i.test(f)

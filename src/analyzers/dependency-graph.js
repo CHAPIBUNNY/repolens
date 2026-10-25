@@ -16,6 +16,7 @@ import {
   isGoStdlib,
   parseGoModule,
 } from "./import-parsers.js";
+import { isNonProductPath } from "../utils/path-roles.js";
 
 const JS_EXTENSIONS = new Set([".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"]);
 const PY_EXTENSIONS = new Set([".py", ".pyw"]);
@@ -70,6 +71,8 @@ function emptyResult() {
     edges: [],
     cycles: [],
     externalDeps: [],
+    externalRuntime: [],
+    externalDev: [],
     stats: null,
     summary: null,
   };
@@ -89,15 +92,19 @@ function goPackageImportPath(file, modulePath) {
   return rel || ".";
 }
 
+// Hubs describe the product. Test helpers, examples, and build scripts are neither hubs
+// nor reasons for a product file to count as one.
 function aggregateHubs(nodes, fileKeyToFile, modulePath, hubThreshold) {
   const groups = new Map();
   for (const node of nodes) {
+    if (isNonProductPath(node.file || node.key)) continue;
     const pkg = goPackageImportPath(node.file, modulePath);
     const key = pkg || node.key;
     if (!groups.has(key)) groups.set(key, new Set());
     const importers = groups.get(key);
     for (const importer of node.importedBy || []) {
       const importerFile = fileKeyToFile.get(importer) || importer;
+      if (isNonProductPath(importerFile)) continue;
       if (pkg && goPackageImportPath(importerFile, modulePath) === pkg) continue;
       importers.add(importer);
     }
@@ -271,13 +278,22 @@ export async function analyzeDependencyGraph(files, repoRoot) {
   // Stats
   const totalImports = result.edges.length;
   const orphans = result.nodes.filter(n => n.imports.length === 0 && n.importedBy.length === 0);
-  const hubThreshold = Math.max(5, Math.floor(result.nodes.length * 0.1));
+  const sourceNodeCount = result.nodes.filter((n) => !isNonProductPath(n.file || n.key)).length;
+  const hubThreshold = Math.max(5, Math.round(sourceNodeCount * 0.07));
   const hubs = aggregateHubs(result.nodes, fileKeyToFile, goModulePath, hubThreshold);
+
+  // Runtime vs development packages, from the nearest package.json.
+  const { runtime: externalRuntime, dev: externalDev } = await splitExternalDeps(result, repoRoot);
+  result.externalRuntime = externalRuntime;
+  result.externalDev = externalDev;
 
   result.stats = {
     totalFiles: codeFiles.length,
+    sourceFiles: codeFiles.filter((file) => !isNonProductPath(file)).length,
     totalEdges: totalImports,
     externalDeps: result.externalDeps.length,
+    externalRuntime: externalRuntime.length,
+    externalDev: externalDev.length,
     cycles: result.cycles.length,
     orphanFiles: orphans.length,
     hubs,
@@ -292,6 +308,48 @@ export async function analyzeDependencyGraph(files, repoRoot) {
   }
 
   return result;
+}
+
+/**
+ * Split external packages into runtime dependencies and development tooling.
+ * A package declared in `devDependencies` is development tooling. One declared in
+ * `dependencies`, `optionalDependencies`, or `peerDependencies` is runtime. An undeclared
+ * package is runtime when a product file (not a test, example, or build script) imports it.
+ * Without a root package.json (Python, Go) every package counts as runtime.
+ */
+async function splitExternalDeps(result, repoRoot) {
+  const raw = await readFileSafe(path.join(repoRoot, "package.json"));
+  let pkg = null;
+  try { pkg = raw ? JSON.parse(raw) : null; } catch { pkg = null; }
+  if (!pkg) return { runtime: [...result.externalDeps], dev: [] };
+
+  const declaredRuntime = new Set([
+    ...Object.keys(pkg.dependencies || {}),
+    ...Object.keys(pkg.optionalDependencies || {}),
+    ...Object.keys(pkg.peerDependencies || {}),
+  ]);
+  const declaredDev = new Set(Object.keys(pkg.devDependencies || {}));
+
+  const productImports = new Set();
+  for (const node of result.nodes) {
+    if (isNonProductPath(node.file || node.key) || isBuildScript(node.file || node.key)) continue;
+    for (const name of node.externalImports || []) productImports.add(name);
+  }
+
+  const runtime = [];
+  const dev = [];
+  for (const name of result.externalDeps) {
+    if (declaredRuntime.has(name)) runtime.push(name);
+    else if (declaredDev.has(name)) dev.push(name);
+    else if (productImports.has(name)) runtime.push(name);
+    else dev.push(name);
+  }
+  return { runtime, dev };
+}
+
+function isBuildScript(file) {
+  const base = String(file || "").replace(/\\/g, "/").split("/").pop() || "";
+  return /^build([-_.]|$)/i.test(base) || /\.config\.[cm]?[jt]s$/i.test(base);
 }
 
 /**

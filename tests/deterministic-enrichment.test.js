@@ -78,7 +78,7 @@ const baseContext = {
 const depGraph = {
   nodes: [
     { key: "src/utils/logger", file: "src/utils/logger.js", imports: [], importedBy: ["src/api/routes", "src/api/middleware", "src/core/config", "src/core/scan", "src/cli"] },
-    { key: "src/core/config", file: "src/core/config.js", imports: ["src/utils/logger"], importedBy: ["src/cli", "src/api/routes"] },
+    { key: "src/core/config", file: "src/core/config.js", imports: ["src/utils/logger"], importedBy: ["src/cli", "src/api/routes", "src/core/scan"] },
     { key: "src/api/routes", file: "src/api/routes.js", imports: ["src/utils/logger", "src/core/config"], importedBy: [] },
   ],
   edges: [

@@ -5,6 +5,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { info, warn } from "../utils/logger.js";
+import { isBuildOrExamplePath } from "../utils/path-roles.js";
 
 const JS_EXTENSIONS = [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx"];
 
@@ -205,6 +206,27 @@ const SKIP_PATTERNS = [
   /\.repolens\//,
 ];
 
+const HTML_ASSIGNMENT_IDS = new Set(["innerhtml-assignment", "outerhtml-assignment"]);
+
+/**
+ * Is the right-hand side of an innerHTML/outerHTML assignment a fixed string?
+ * `el.innerHTML = ''` clears an element and `el.innerHTML = '<b>ok</b>'` writes a constant.
+ * Neither can carry injected markup, so neither is an XSS finding. A template literal
+ * with `${...}` or any concatenation still is.
+ */
+export function isStaticHtmlAssignment(restOfSource) {
+  const rest = String(restOfSource || "");
+  const quoted = rest.match(/^\s*(['"])((?:(?!\1)[^\\\n]|\\.)*)\1\s*(?=[;,)}\n]|$)/);
+  if (quoted) return true;
+  const template = rest.match(/^\s*`([^`]*)`\s*(?=[;,)}\n]|$)/);
+  if (template && !template[1].includes("${")) return true;
+  return false;
+}
+
+// Build scripts and example pages run on a maintainer's machine or in a demo page. They are
+// listed, but never as high severity.
+const SEVERITY_CAPPED_IDS_EXEMPT = new Set(["hardcoded-password"]);
+
 function shouldSkipFile(filePath) {
   return SKIP_PATTERNS.some(pattern => pattern.test(filePath));
 }
@@ -255,7 +277,11 @@ export async function analyzeSecurityPatterns(files, repoRoot) {
       
       while ((match = regex.exec(stripped)) !== null) {
         // Get line number
+        if (HTML_ASSIGNMENT_IDS.has(pattern.id) && isStaticHtmlAssignment(stripped.slice(match.index + match[0].length))) continue;
+
         const lineNumber = stripped.slice(0, match.index).split("\n").length;
+        const capped = isBuildOrExamplePath(file) && !SEVERITY_CAPPED_IDS_EXEMPT.has(pattern.id);
+        const severity = capped ? "low" : pattern.severity;
         
         // Get the surrounding code snippet
         const lines = stripped.split("\n");
@@ -267,8 +293,8 @@ export async function analyzeSecurityPatterns(files, repoRoot) {
         result.findings.push({
           id: pattern.id,
           category: pattern.category,
-          name: pattern.name,
-          severity: pattern.severity,
+          name: capped ? `${pattern.name} (build/example code)` : pattern.name,
+          severity,
           file,
           line: lineNumber,
           snippet: snippet.length > 200 ? snippet.slice(0, 200) + "..." : snippet,
@@ -276,7 +302,7 @@ export async function analyzeSecurityPatterns(files, repoRoot) {
           cwe: pattern.cwe,
         });
 
-        result.bySeverity[pattern.severity]++;
+        result.bySeverity[severity]++;
         result.filesWithFindings.add(file);
         
         if (!result.byCategory[pattern.category]) {

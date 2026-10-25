@@ -26,13 +26,13 @@ from patterns    stack patterns      with insights       + Confluence pages
 - Identifies test frameworks (Vitest, Jest, Playwright)
 - Scores code health for JavaScript/TypeScript, Python, and Go (regex complexity, not an AST)
 - Builds an import graph for JavaScript/TypeScript, Python, and Go. Comments, strings, TypeScript type-only imports, Python `TYPE_CHECKING` blocks, and Node.js built-ins are skipped. Go `*_test.go` files are not graph nodes. Go hub rows are packages, not files
-- Infers module relationships and dependencies. Pattern names cite the path token or import that matched. Test files are not evidence. "API route pattern" requires an `api`, `routes`, `router`, `endpoint`, `controller`, or `handler` directory
+- Infers module relationships and dependencies. Pattern names cite the path token or import that matched. Test files are not evidence, and neither are the generic folder names `src` and `lib`. A package with `main`, `module`, or `exports` is a library, so it gets no CLI pattern. "API route pattern" requires an `api`, `routes`, `router`, `endpoint`, `controller`, or `handler` directory
 
 **Render Phase:**
-- Groups files into modules based on `module_roots`
+- Groups files into modules based on `module_roots`. A file directly under a root belongs to the root, so a flat `src/` is one module
 - Draws Unicode diagrams from import edges (`src/renderers/renderMap.js`). Mermaid is not generated
 - Creates technical profiles with actual stack insights
-- Renders Markdown documentation (17 documents by default)
+- Renders Markdown documentation (17 documents by default; Route Map and GraphQL Schema are skipped when nothing was found)
 
 **Publish Phase:**
 - Numbered files: `00-executive-summary.md` through `16-code-health.md` in `documentation.output_dir` (default `.repolens/`)
@@ -68,7 +68,7 @@ bin/repolens.js
         ├── src/renderers/       4 files
         ├── src/publishers/      7 files (notion, confluence, github-wiki,
         │                         markdown, obsidian, index, publish)
-        ├── src/utils/           19 files
+        ├── src/utils/           20 files
         ├── src/mcp/             server.js, tools.js, workspace.js
         ├── src/delivery/        1 file
         ├── src/integrations/    discord.js
@@ -108,13 +108,13 @@ repolens/
 │   │   ├── flow-inference.js      # Data flow detection
 │   │   ├── graphql-analyzer.js    # GraphQL schema detection
 │   │   ├── typescript-analyzer.js # TypeScript type graph analysis
-│   │   ├── dependency-graph.js    # Import graph with cycle detection (JS/TS, Python, Go; Go hubs per package)
+│   │   ├── dependency-graph.js    # Import graph with cycle detection (JS/TS, Python, Go; Go hubs per package; hubs ignore tests and examples; runtime vs dev packages)
 │   │   ├── import-parsers.js      # Comment-aware JS/TS, Python (skips TYPE_CHECKING), and Go import parsers
 │   │   ├── drift-detector.js      # Architecture drift detection
 │   │   ├── monorepo-detector.js   # npm, yarn, pnpm, and Lerna workspaces
 │   │   ├── codeowners.js          # CODEOWNERS ownership
 │   │   ├── jsdoc-analyzer.js      # JSDoc and TSDoc on the API surface
-│   │   ├── security-patterns.js   # Security hotspots
+│   │   ├── security-patterns.js   # Security hotspots (fixed-string innerHTML ignored; examples and build scripts are low severity)
 │   │   ├── complexity-analyzer.js # Complexity and code health (JS/TS, Python, Go)
 │   │   └── maturity.js            # Maturity from version, history, tests, CI, docs, and dependency health
 │   ├── ai/
@@ -164,6 +164,7 @@ repolens/
 │       ├── safe-path.js     # Output path containment
 │       ├── project-name.js  # Project name from package.json or the real directory (never `.`)
 │       ├── ai-notice.js     # Which sections the "unlock AI" notice offers
+│       ├── path-roles.js    # Test, tooling, and build/example path checks shared by analyzers
 │       ├── github-repo.js   # owner/name checks
 │       ├── interactive.js   # TTY prompts
 │       └── yaml.js          # Size-capped YAML parsing
