@@ -4,6 +4,41 @@
  * Primary flow inference: uses dep graph when available for real import-chain flows,
  * falls back to keyword heuristics for repos without dep graph data.
  */
+// Directories holding tooling, samples, and docs. An import chain from a file in
+// here describes a build script or an example, not how data moves through the product.
+const TOOLING_DIRECTORIES = new Set([
+  "doc", "docs", "doc-gen", "docgen", "scripts", "script", "tools", "tooling",
+  "example", "examples", "demo", "demos", "sample", "samples",
+  "benchmark", "benchmarks", "bench", "fixtures", "tasks",
+]);
+
+// File names too generic to name a flow ("gen Request Flow", "util Integration Flow").
+const GENERIC_FLOW_NAMES = new Set([
+  "gen", "generate", "util", "utils", "helper", "helpers", "misc", "common", "types", "constants",
+]);
+
+function isToolingPath(key) {
+  const parts = String(key || "").replace(/\\/g, "/").toLowerCase().split("/");
+  return parts.slice(0, -1).some((segment) => TOOLING_DIRECTORIES.has(segment));
+}
+
+/**
+ * Drop flows that are noise: no steps, nothing beyond the starting file, a name that is only
+ * a generic helper word, or a chain that starts in tooling, examples, or docs.
+ */
+export function filterNoiseFlows(flows) {
+  return (flows || []).filter((flow) => {
+    if (!flow) return false;
+    const steps = Array.isArray(flow.steps) ? flow.steps : [];
+    if (steps.length < 2) return false;
+    const origin = flow.modules?.[0];
+    if (origin && isToolingPath(origin)) return false;
+    const stem = String(flow.name || "").split(" ")[0].toLowerCase();
+    if (GENERIC_FLOW_NAMES.has(stem)) return false;
+    return true;
+  });
+}
+
 export function inferDataFlows(scanResult, config, depGraph = null) {
   const flows = [];
   
@@ -28,7 +63,7 @@ export function inferDataFlows(scanResult, config, depGraph = null) {
   const apiFlow = inferApiIntegrationFlow(scanResult);
   if (apiFlow && !existingNames.has(apiFlow.name.toLowerCase())) flows.push(apiFlow);
   
-  return flows;
+  return filterNoiseFlows(flows);
 }
 
 /**

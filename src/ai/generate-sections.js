@@ -12,7 +12,8 @@ import {
   AI_SCHEMAS,
   renderStructuredToMarkdown,
 } from "./prompts.js";
-import { identifyFlowDependencies } from "../analyzers/flow-inference.js";
+import { identifyFlowDependencies, filterNoiseFlows } from "../analyzers/flow-inference.js";
+import { scoreMaturity } from "../analyzers/maturity.js";
 import { info, warn } from "../utils/logger.js";
 
 // Strip conversational patterns that LLMs sometimes inject into documentation
@@ -152,6 +153,10 @@ export async function generateDeveloperOnboarding(context, enrichment = {}, conf
 
 // Fallback generators (deterministic, no AI)
 
+function withArticle(word) {
+  return `${/^[aeiou]/i.test(word) ? "an" : "a"} ${word}`;
+}
+
 function getFallbackExecutiveSummary(context, enrichment = {}) {
   const { depGraph, flows } = enrichment;
   const frameworkList = context.techStack.frameworks.join(", ") || "general-purpose";
@@ -160,12 +165,17 @@ function getFallbackExecutiveSummary(context, enrichment = {}) {
   const isCLI = (context.patterns || []).some(p => p.toLowerCase().includes("cli"));
   const projectName = context.project.name || "This system";
 
-  // Calculate maturity indicators
+  // Maturity comes from repo signals (version, history, tests, CI, docs, dependency health)
+  const maturity = context.maturity || scoreMaturity([
+    { key: "tests", met: testFrameworks.length > 0 },
+    { key: "build", met: context.techStack.buildTools.length > 0 },
+    { key: "deps", met: depGraph?.stats?.cycles === undefined ? null : depGraph.stats.cycles === 0 },
+  ]);
   const hasTests = testFrameworks.length > 0;
-  const hasBuildTools = context.techStack.buildTools.length > 0;
   const hasCleanDeps = depGraph?.stats?.cycles === 0;
-  const maturityScore = [hasTests, hasBuildTools, hasCleanDeps].filter(Boolean).length;
-  const maturityLabel = maturityScore >= 3 ? "Production-grade" : maturityScore >= 2 ? "Well-structured" : "Early-stage";
+  const maturityLabel = maturity.label;
+  const maturityScore = maturity.score;
+  const maturityMax = maturity.max;
 
   // Determine project type for better descriptions
   const projectType = isCLI ? "command-line tool" : 
@@ -179,10 +189,10 @@ function getFallbackExecutiveSummary(context, enrichment = {}) {
 
 | Aspect | Summary |
 |--------|---------|
-| **What** | ${projectName} is a ${maturityLabel.toLowerCase()} ${projectType} |
+| **What** | ${projectName} is ${withArticle(maturityLabel.toLowerCase())} ${projectType} |
 | **Built With** | ${frameworkList} + ${languageList} |
 | **Scale** | ${context.project.modulesDetected} modules across ${context.project.filesScanned} files |
-| **Maturity** | ${maturityLabel} (${maturityScore}/3 indicators) |
+| **Maturity** | ${maturityLabel} (${maturityScore}/${maturityMax} indicators) |
 
 ---
 
@@ -296,7 +306,7 @@ The system is organized around **${context.domains.length} functional domains**,
   }
 
   // Data flows summary
-  const summaryFlows = (flows || []).filter(f => !f.name?.toLowerCase().includes('test'));
+  const summaryFlows = filterNoiseFlows(flows).filter(f => !f.name?.toLowerCase().includes('test'));
   if (summaryFlows.length > 0) {
     output += `\n## Key Data Flows\n\n`;
     output += `The system processes information through **${summaryFlows.length} identified flow${summaryFlows.length === 1 ? "" : "s"}**:\n\n`;
@@ -705,6 +715,14 @@ function getFallbackArchitectureOverview(context, enrichment = {}) {
     output += `- Flexibility for rapid development\n\n`;
   }
 
+  // Findings are warnings about the code, not architectural patterns
+  const findings = context.findings || [];
+  if (findings.length > 0) {
+    output += `### Findings\n\n`;
+    for (const finding of findings) output += `- ${finding}\n`;
+    output += `\n`;
+  }
+
   // System layers with rich descriptions
   output += `## System Layers\n\n`;
   output += `The system is organized into **${context.domains.length} functional layer${context.domains.length === 1 ? '' : 's'}**, each encapsulating a distinct area of responsibility:\n\n`;
@@ -914,11 +932,11 @@ Data flows describe how information moves through **${projectName}** — from ex
 `;
 
   // Combine heuristic flows with dep-graph-derived flows, filtering out test file flows
-  const allFlows = [...(flows || [])].filter(f => !f.name?.toLowerCase().includes('test'));
+  const allFlows = filterNoiseFlows(flows).filter(f => !f.name?.toLowerCase().includes('test'));
 
   // Generate additional flows from dependency graph hub chains
   if (depGraph?.nodes && depGraph.nodes.length > 0 && allFlows.length < 3) {
-    const hubFlows = inferFlowsFromDepGraph(depGraph);
+    const hubFlows = filterNoiseFlows(inferFlowsFromDepGraph(depGraph));
     for (const hf of hubFlows) {
       if (!allFlows.some(f => f.name === hf.name)) {
         allFlows.push(hf);
@@ -1274,7 +1292,7 @@ ${context.repoRoots.map(root => {
   }
 
   // Data flows for understanding behavior
-  const onboardingFlows = (flows || []).filter(f => !f.name?.toLowerCase().includes('test'));
+  const onboardingFlows = filterNoiseFlows(flows).filter(f => !f.name?.toLowerCase().includes('test'));
   if (onboardingFlows.length > 0) {
     output += `---\n\n## How Data Flows\n\n`;
     output += `Understanding these flows helps you see how the system processes information end-to-end:\n\n`;
@@ -1459,27 +1477,53 @@ function describeRoot(root) {
   return "Project files";
 }
 
+// Folder names that only say "code lives here". They never describe a module on their own.
+const GENERIC_CONTAINER_SEGMENTS = new Set(["src", "lib", "libs", "source", "sources", "app", "packages", "pkg", "internal"]);
+
+const MODULE_DESCRIPTION_RULES = [
+  [/auth/, "Authentication and authorization logic"],
+  [/api|route|endpoint/, "API layer and route handlers"],
+  [/component|widget|^ui$/, "User interface components"],
+  [/hook/, "Custom hooks and shared state logic"],
+  [/util|helper/, "Utility and helper functions"],
+  [/^(common|shared)$/, "Code shared by the other modules"],
+  [/service/, "Service layer / business logic"],
+  [/model|schema|entity/, "Data models and schemas"],
+  [/config|setting/, "Configuration management"],
+  [/test|spec/, "Test infrastructure"],
+  [/style|css|theme/, "Styling and theming"],
+  [/page|view|screen/, "Application pages and views"],
+  [/store|state|redux/, "State management"],
+  [/middleware/, "Request/response middleware"],
+  [/database|^db$|migration/, "Database layer"],
+  [/render/, "Rendering and template logic"],
+  [/publish/, "Publishing and output delivery"],
+  [/scan/, "File and repository scanning"],
+  [/analyz/, "Code analysis and inference"],
+];
+
+function titleizeSegment(segment) {
+  const clean = String(segment).replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").trim();
+  return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : "Project";
+}
+
 function describeOnboardingModule(key) {
-  const lower = key.toLowerCase();
-  if (/auth/.test(lower)) return "Authentication and authorization logic";
-  if (/api|route|endpoint/.test(lower)) return "API layer and route handlers";
-  if (/component|widget|ui/.test(lower)) return "User interface components";
-  if (/hook/.test(lower)) return "Custom hooks and shared state logic";
-  if (/util|helper|lib/.test(lower)) return "Utility and helper functions";
-  if (/service/.test(lower)) return "Service layer / business logic";
-  if (/model|schema|entity/.test(lower)) return "Data models and schemas";
-  if (/config|setting/.test(lower)) return "Configuration management";
-  if (/test|spec/.test(lower)) return "Test infrastructure";
-  if (/style|css|theme/.test(lower)) return "Styling and theming";
-  if (/page|view|screen/.test(lower)) return "Application pages and views";
-  if (/store|state|redux/.test(lower)) return "State management";
-  if (/middleware/.test(lower)) return "Request/response middleware";
-  if (/database|db|migration/.test(lower)) return "Database layer";
-  if (/render/.test(lower)) return "Rendering and template logic";
-  if (/publish/.test(lower)) return "Publishing and output delivery";
-  if (/scan/.test(lower)) return "File and repository scanning";
-  if (/analyz/.test(lower)) return "Code analysis and inference";
-  return "Core application module";
+  const segments = String(key).replace(/\\/g, "/").toLowerCase().split("/").filter(Boolean);
+  const last = (segments[segments.length - 1] || "").replace(/\.[a-z0-9]+$/i, "");
+  const parents = segments.slice(0, -1).filter((segment) => !GENERIC_CONTAINER_SEGMENTS.has(segment));
+
+  // The module's own name decides first. A parent folder like `lib/` is only a container,
+  // so `lib/ogg` is not "utility functions" just because it lives under lib.
+  for (const [pattern, description] of MODULE_DESCRIPTION_RULES) {
+    if (pattern.test(last)) return description;
+  }
+  if (GENERIC_CONTAINER_SEGMENTS.has(last) && segments.length === 1) return "Application source code";
+  for (const segment of parents) {
+    for (const [pattern, description] of MODULE_DESCRIPTION_RULES) {
+      if (pattern.test(segment)) return description;
+    }
+  }
+  return `${titleizeSegment(last || key)} module`;
 }
 
 // Helper: infer business capability from domain name

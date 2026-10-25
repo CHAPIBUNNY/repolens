@@ -2,7 +2,13 @@
 
 This guide helps you upgrade RepoLens across breaking changes and major versions.
 
-**Current Version:** 1.15.3  
+**Current Version:** 1.15.4  
+
+## Upgrading to 1.15.4
+
+No config migration. `configVersion` stays `1`.
+
+Generated text changes. The project name is the `package.json` name when one exists. Maturity in the Executive Summary shows `N/M indicators`. Circular dependencies move from the pattern list to a **Findings** list. Self-imports leave the external package list. `zod` is now 4.x, which only matters if you import RepoLens internals.
 
 ## Upgrading to 1.15.3
 
@@ -247,7 +253,7 @@ RepoLens checks for updates automatically:
 ┌────────────────────────────────────────────────────────────┐
 │                   📦 Update Available                      │
 ├────────────────────────────────────────────────────────────┤
-│  Current: 0.5.0    → Latest: 1.15.3                       │
+│  Current: 0.5.0    → Latest: 1.15.4                       │
 │                                                            │
 │  Run one of these commands to update:                     │
 │                                                            │
@@ -284,7 +290,7 @@ npm install @chappibunny/repolens@latest
 
 ## Version History
 
-Versions after 1.2.0 are summarized in [CHANGELOG.md](../CHANGELOG.md) and [ROADMAP.md](ROADMAP.md). 1.13.0 adds the Obsidian vault publisher. 1.14.0 adds the MCP server, the GitHub Action, and the docs badge. 1.14.1 corrects the MCP Registry name to `io.github.CHAPIBUNNY/repolens`. 1.15.0 changes CLI defaults (language-aware `init --quick`, empty-scan exit 2) and does not change `configVersion`. 1.15.1 adds Python and Go code health and makes `watch` exit 2 when the globs match nothing. 1.15.2 adds Python and Go import graphs, `repolens badge`, `repolens comment`, and the gallery explained pages. 1.15.3 skips Python `TYPE_CHECKING` imports, Node.js built-ins, and test-only pattern evidence. Nothing in 1.3.0–1.15.3 requires a config migration. `branding` is optional.
+Versions after 1.2.0 are summarized in [CHANGELOG.md](../CHANGELOG.md) and [ROADMAP.md](ROADMAP.md). 1.13.0 adds the Obsidian vault publisher. 1.14.0 adds the MCP server, the GitHub Action, and the docs badge. 1.14.1 corrects the MCP Registry name to `io.github.CHAPIBUNNY/repolens`. 1.15.0 changes CLI defaults (language-aware `init --quick`, empty-scan exit 2) and does not change `configVersion`. 1.15.1 adds Python and Go code health and makes `watch` exit 2 when the globs match nothing. 1.15.2 adds Python and Go import graphs, `repolens badge`, `repolens comment`, and the gallery explained pages. 1.15.3 skips Python `TYPE_CHECKING` imports, Node.js built-ins, and test-only pattern evidence. 1.15.4 fixes project naming, maturity, domain and pattern labels, cycle reporting, self-imports, the AI notice, and noise data flows. Nothing in 1.3.0–1.15.4 requires a config migration. `branding` is optional.
 
 The unreleased architecture comment (`repolens comment`, action `command: comment`) and code-health badge (`repolens badge`, action `command: badge`) do not change `configVersion` or `.repolens.yml`. Existing workflows keep working. Opt in by adding the workflows in the README. Fork pull requests do not gain a new required secret.
 

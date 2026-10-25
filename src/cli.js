@@ -24,6 +24,8 @@ import { runWatch } from "./watch.js";
 import { info, error, warn, fmt } from "./utils/logger.js";
 import { formatError } from "./utils/errors.js";
 import { checkForUpdates } from "./utils/update-check.js";
+import { detectProjectName } from "./utils/project-name.js";
+import { aiUpgradeSections } from "./utils/ai-notice.js";
 import { generateDocumentSet } from "./docs/generate-doc-set.js";
 import { writeDocumentSet } from "./docs/write-doc-set.js";
 import { loadPlugins } from "./plugins/loader.js";
@@ -139,21 +141,23 @@ async function promptForAI(cfg) {
 /**
  * Show the post-generation AI notice for users without GITHUB_TOKEN
  */
-function showPostGenerationAINotice() {
-  info(`\n${fmt.cyan("┌──────────────────────────────────────────────────────────────────┐")}`);
-  info(`${fmt.cyan("│")} ${fmt.boldYellow("✨ Unlock AI-Enhanced Documentation")}                             ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("├──────────────────────────────────────────────────────────────────┤")}`);
-  info(`${fmt.cyan("│")} Your docs are missing these AI-powered sections:                ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Executive Summary — plain language overview for leadership   ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Business Domains — what the system does for stakeholders    ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Architecture Overview — deeper narrative for architects     ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Data Flows — how information moves through your system      ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")}   ${fmt.yellow("•")} Developer Onboarding — getting started guide for new hires  ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")}                                                                  ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")} ${fmt.boldGreen("🆓 Enable for FREE with GitHub Models:")}                          ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")}   Run: ${fmt.brightCyan("repolens init")} → the wizard will guide you through setup  ${fmt.cyan("│")}`);
-  info(`${fmt.cyan("│")}   Or quick preview: ${fmt.green("export GITHUB_TOKEN=<your-token> && repolens demo")}  ${fmt.cyan("│")}`);  
-  info(`${fmt.cyan("└──────────────────────────────────────────────────────────────────┘")}`);
+function showPostGenerationAINotice(documents) {
+  const sections = aiUpgradeSections(documents);
+  if (sections.length === 0) return;
+  const bar = "─".repeat(66);
+  const row = (text) => `${fmt.cyan("│")}${text.padEnd(66)}${fmt.cyan("│")}`;
+  info(`\n${fmt.cyan(`┌${bar}┐`)}`);
+  info(`${fmt.cyan("│")} ${fmt.boldYellow("✨ Unlock AI-Enhanced Documentation")}${" ".repeat(66 - 36)}${fmt.cyan("│")}`);
+  info(fmt.cyan(`├${bar}┤`));
+  info(row(" These sections used rule-based text. AI can rewrite them as:"));
+  for (const section of sections) {
+    info(row(`   • ${section.title} — ${section.ai}`));
+  }
+  info(row(""));
+  info(`${fmt.cyan("│")} ${fmt.boldGreen("🆓 Enable for FREE with GitHub Models:")}${" ".repeat(66 - 39)}${fmt.cyan("│")}`);
+  info(row("   Run: repolens init → the wizard will guide you through setup"));
+  info(row("   Or preview: export GITHUB_TOKEN=<your-token> && repolens demo"));
+  info(fmt.cyan(`└${bar}┘`));
 }
 
 function printPerformanceSummary() {
@@ -597,7 +601,7 @@ async function main() {
         : "No .repolens.yml found — using multi-language scan patterns");
       cfg = {
         configVersion: 1,
-        project: { name: path.basename(targetDir) },
+        project: { name: detectProjectName(targetDir) },
         publishers: ["markdown"],
         scan: {
           include: detected.include,
@@ -655,7 +659,7 @@ async function main() {
         info("   To keep AI enabled permanently, run: repolens init");
       } else if (aiResult.noToken) {
         // No GITHUB_TOKEN - show instructions
-        showPostGenerationAINotice();
+        showPostGenerationAINotice(docSet.documents);
       }
       
       printPerformanceSummary();

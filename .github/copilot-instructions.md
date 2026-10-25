@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.15.3  
+**Version:** 1.15.4  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -71,6 +71,7 @@ src/
     codeowners.js         # CODEOWNERS file parser + ownership mapping
     security-patterns.js  # Security anti-pattern detection (eval, XSS, SQL injection, CWE classification)
     complexity-analyzer.js # Cyclomatic complexity + unified code health scoring
+    maturity.js           # Maturity from version, history, tests, CI, docs, and dependency health
   ai/
     provider.js           # Multi-provider AI text generation (OpenAI, Anthropic, Google, GitHub Models)
     prompts.js            # Strict prompt templates + JSON schemas + structured renderers
@@ -110,6 +111,8 @@ src/
     telemetry.js          # Opt-in error tracking + performance timers
     doc-cache.js          # Hash-based document cache for skip-unchanged publishing
     safe-path.js          # Output and page-name containment
+    project-name.js       # Project name from package.json or the resolved directory
+    ai-notice.js          # Sections the post-run "unlock AI" notice offers
     github-repo.js        # owner/name validation
     interactive.js        # TTY prompts
     yaml.js               # Size-capped YAML parsing
@@ -144,6 +147,7 @@ tests/                    # Vitest test suite
   github-action.test.js   # Action input checks and PR comment opt-out
   registry.test.js        # server.json, smithery.yaml, README badges
   security-patterns.test.js # Security pattern analyzer tests (30 tests: detection, severity, categories, renderer)
+  output-accuracy.test.js # Output accuracy: project name, maturity, entry-file domains, core/kernel, folder descriptions, cycles as findings, self-imports, AI notice, noise flows
   code-health.test.js     # Code health tests (47 tests: JS/TS, Python, Go, health scores, renderer)
   e2e/
     migration.test.js     # End-to-end migration tests
@@ -213,7 +217,7 @@ scripts/                  # Helper scripts
 ### Business Domain Inference
 - **Purpose**: Map code structure to business functions
 - **Default Domains** (15 generic): Authentication & Identity, Analytics & Reporting, Content Management, Search & Discovery, Notifications, Payments & Billing, API Layer, UI Components, React Hooks, State Management, Shared Utilities, Data Layer, Configuration, Testing, Background Jobs
-- **Pattern Matching**: Folder/file names to domain keywords (e.g., "auth" → Authentication & Identity)
+- **Pattern Matching**: Folder/file names to domain keywords (e.g., "auth" → Authentication & Identity). Entry and barrel file names (`index`, `main`, `mod`, `__init__`) are ignored, so `lib/index.ts` is not "Search & Discovery". User-defined `domains` hints still see the full path
 - **Customizable**: Define domains in `.repolens.yml` with match patterns and descriptions
 - **Output**: Groups modules by domain in business-friendly documentation
 
@@ -221,6 +225,7 @@ scripts/                  # Helper scripts
 - **Purpose**: Understand how information moves through the system
 - **Heuristics**: Pattern-based detection (market data, auth, content, API integration flows)
 - **Detects**: Flow steps, involved modules, dependencies, criticality
+- **Noise filter**: `filterNoiseFlows` drops flows with fewer than 2 steps, chains that start in `doc-gen`, `scripts`, `examples`, `docs`, `fixtures` and similar tooling directories, and generic names such as `gen` and `util`
 - **Output**: Natural language flow descriptions in Data Flows document
 
 ### Structured Context Building

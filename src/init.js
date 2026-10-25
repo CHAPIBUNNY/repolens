@@ -3,6 +3,7 @@ import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { spawn } from "node:child_process";
 import { info, warn } from "./utils/logger.js";
+import { detectProjectName } from "./utils/project-name.js";
 import { isNonInteractiveEnvironment } from "./utils/interactive.js";
 import { detectRepoLanguages } from "./core/languages.js";
 import { repolensCommand } from "./utils/invocation.js";
@@ -814,9 +815,6 @@ function buildRepoLensConfig(projectName, detected, options = {}) {
   return lines.join("\n");
 }
 
-function detectProjectName(repoRoot) {
-  return path.basename(repoRoot) || "my-project";
-}
 
 async function promptNotionCredentials() {
   if (isNonInteractiveEnvironment()) {
@@ -914,7 +912,7 @@ async function runInteractiveWizard(repoRoot) {
     info("Press Enter to accept defaults shown in parentheses.\n");
 
     // 1. Project name
-    const defaultName = path.basename(repoRoot) || "my-project";
+    const defaultName = detectProjectName(repoRoot);
     const projectName = (await ask(`📦 Project name (${defaultName}): `)).trim() || defaultName;
 
     // 2. Publishers

@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const DEFAULT_PACKAGE_VERSION = "1.15.3";
+export const DEFAULT_PACKAGE_VERSION = "1.15.4";
 const ALLOWED_COMMANDS = new Set(["publish", "demo", "doctor", "comment", "badge"]);
 const LOCAL_COMMANDS = new Set(["comment", "badge"]);
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));

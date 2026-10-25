@@ -312,7 +312,7 @@ REPOLENS_AI_TIMEOUT_MS=120000  # 2 minutes
 
 **Fix:**
 
-- Use `CHAPIBUNNY/repolens@v1.15.3` (or a later tag) with `command: comment`. Tag `v1.15.1` does not contain that mode
+- Use `CHAPIBUNNY/repolens@v1.15.4` (or a later tag) with `command: comment`. Tag `v1.15.1` does not contain that mode
 - Set `fetch-depth: 0`
 - Set `permissions: contents: read` and `pull-requests: write`
 - For a fork, open the job summary. RepoLens writes the diff there and exits 0

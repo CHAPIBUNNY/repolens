@@ -2,7 +2,26 @@
 
 All notable changes to RepoLens will be documented in this file.
 
-## Unreleased
+## 1.15.4
+
+Fixes nine output problems found by running 1.15.3 on Borewit/music-metadata (a v12 TypeScript library).
+
+### Output accuracy
+
+- The project name is the `package.json` name, or the real directory name. `demo --target .`, `init`, and the MCP default config no longer name the project `.`
+- Maturity uses release version, release history (tags, or a major version of 5 or more), commit history over a year, tests, CI, documentation, and circular dependencies. A signal that cannot be measured, such as commit age in a shallow clone, is left out of the total (`Production-grade (5/6 indicators)`). The old score counted only tests, build tools, and cycles, so a 10-year-old v12 library read as "Early-stage (1/3)". The summary also says "an early-stage", not "a early-stage"
+- Entry and barrel file names (`index`, `main`, `mod`, `__init__`) are not domain evidence. `lib/index.ts` is no longer "Search & Discovery". A `domains` hint in `.repolens.yml` still sees the full path
+- "Core/kernel architecture" needs a directory named `core` or `kernel`. A file called `core.ts` does not make it
+- Module descriptions use the module's own name. `lib/ogg` is no longer "Utility and helper functions" because it sits under `lib/`. Unknown folders read "<Name> module", and `common` and `shared` read "Code shared by the other modules"
+- Circular dependencies are listed as a **Finding** in the Architecture Overview (`context.findings`), not as an architectural pattern
+- A package importing its own name (for example `example/*.js` importing `music-metadata`) is not an external dependency. The nearest `package.json` decides, so a nested package still reports the root package as external
+- The "unlock AI" notice lists the sections that were written with rule-based text and says AI can rewrite them. It no longer says written documents, such as Developer Onboarding, are missing
+- Data flows with fewer than 2 steps, chains that start in `doc-gen`, `scripts`, `examples`, `docs`, or `fixtures`, and generic names (`gen`, `util`, `helper`) are dropped
+
+### Dependencies
+
+- `zod` 3.25.76 → 4.6.7 (GHSA-mrhx-c7xc-m3w5) and `npm audit fix` for `body-parser` (GHSA-27r3-jxmh-p828) and `fast-uri`, so the release audit passes again. The MCP server tests pass on zod 4
+- `tests/audit-runtime.test.js` no longer requires the `braces` advisory to be printed. The registry stopped reporting it, and the waiver stays in `scripts/audit-waivers.json`
 
 ### Docs
 

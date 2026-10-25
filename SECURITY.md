@@ -19,7 +19,7 @@ RepoLens follows semantic versioning. Security updates are provided for:
 | 1.x     | :white_check_mark: |
 | < 1.0   | :x:                |
 
-**Note**: The supported line is the current 1.x release (1.15.3). Security fixes ship on that line. 0.x releases are not supported. The MCP server refuses paths outside the workspace and does not call the network in deterministic mode. The GitHub Action passes inputs as environment variables and checks them before building the `npx` argument list. `repolens doctor`, `demo`, and `publish` refuse a scan that matches 0 files (exit 2) so an empty or wrong-language config does not look like a successful run. `watch` exits 2 when `module_roots` are missing or `scan.include` matches no files. `--target` must be an existing directory. `publish --strict` refuses to continue when a configured publisher is missing credentials.
+**Note**: The supported line is the current 1.x release (1.15.4). Security fixes ship on that line. 0.x releases are not supported. The MCP server refuses paths outside the workspace and does not call the network in deterministic mode. The GitHub Action passes inputs as environment variables and checks them before building the `npx` argument list. `repolens doctor`, `demo`, and `publish` refuse a scan that matches 0 files (exit 2) so an empty or wrong-language config does not look like a successful run. `watch` exits 2 when `module_roots` are missing or `scan.include` matches no files. `--target` must be an existing directory. `publish --strict` refuses to continue when a configured publisher is missing credentials.
 
 ## Reporting a Vulnerability
 

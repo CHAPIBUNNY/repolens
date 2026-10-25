@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "../core/config.js";
+import { detectProjectName } from "../utils/project-name.js";
 import { scanRepo } from "../core/scan.js";
 import { getGitDiff, isSafeGitRef } from "../core/diff.js";
 import { analyzeDependencyGraph } from "../analyzers/dependency-graph.js";
@@ -41,7 +42,7 @@ function projectRootFromArgs(args) {
 function defaultConfig(root) {
   return {
     configVersion: 1,
-    project: { name: path.basename(root) || "repository" },
+    project: { name: detectProjectName(root, "repository") },
     publishers: ["markdown"],
     scan: {
       include: ["**/*.{js,ts,jsx,tsx,mjs,cjs,py,go,rs,java,rb,php,cs,swift,kt}"],
