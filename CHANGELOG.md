@@ -2,6 +2,35 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.15.5
+
+Fixes twelve output problems found by running 1.15.4 on mattiasw/ExifReader (a plain-JavaScript library with a flat `src/` and a build-helper `bin/`), and the two leftovers from 1.15.4.
+
+### Output accuracy
+
+- A file directly under a module root belongs to that root. A flat `src/` is one module (`src`), not 65 one-file modules. Sub-directories are still their own modules. Go packages follow the same rule, so `middleware/` is one module and not `middleware/compress.go`
+- Module fan-in and fan-out count distinct other modules, not file-to-file edges, so "Orchestrator (coordinates 212 modules)" becomes the real number
+- A package with `main`, `module`, `exports`, or `types` is a **library**, not a command-line tool. A package with only a `bin` is a CLI. A package with both is a library unless its description does not say library, parser, SDK, toolkit, or framework and says CLI or command-line. Libraries get no "CLI tool architecture" pattern, no "Interface: CLI" row, and no "command-line interface" text. The route map note says library. Flows start at the package entry (`Library Flow`), not at `bin/` helpers or `webpack.config`
+- Patterns are described by their name, not by the file names cited as evidence. "Acyclic dependency graph" no longer gets the CLI description. Every pattern has its own explanation and benefit line. The headline names the pattern, not its evidence
+- `build-pages.js` is not a route module. Page, route, and view only count as directory names for files
+- `.d.ts` files, type tests, and a `typescript` devDependency do not make a JavaScript library "TypeScript"
+- `filter`, `parse`, and `constant` no longer pick the Search & Discovery, Analysis & Detection, and Configuration domains
+- Hubs, coupling advice, and the dependency graph ignore tests, examples, docs, and build scripts, and are measured against source files. Hub threshold is 7% of source files (minimum 5)
+- External packages are split into runtime and development and test tooling (`12 (1 runtime, 11 dev/test tooling)`), from the root `package.json`
+- Security: `innerHTML = ''` and other fixed-string assignments are not reported. Findings in examples, docs, scripts, tools, benchmarks, and `build*.js` files are low severity and labeled "(build/example code)". Hardcoded credentials keep their severity
+- Orphan files over 5% of code files are a warning and cost 5 health points (10 over 10%, 20 over 20%). Below 5% they read "within normal range". The old +5 bonus for a cycle-free graph is gone, so 100/100 no longer sits next to an orphan warning
+- Route Map and GraphQL Schema are not written when no routes or GraphQL schema were found. Naming them in `documentation.sections` keeps them
+- Tests, examples, and build helpers are no longer flows. Build configs such as `webpack.config` are not flow entry points
+
+### 1.15.4 leftovers
+
+- `lib/ogg` is typed and grouped by `ogg`, not by sitting under `lib/`. Folders with no keyword of their own join a **Core Source** domain and a "Source Modules" layer instead of "Shared Utilities" and "Shared Libraries". `lib/common` still reads as shared utilities
+- Hub flows skip barrels (`lib/index`), leaf helpers such as error classes, tests, and examples, so there is no "lib Integration Flow"
+
+### Docs
+
+- README, AI.md, MIGRATION.md, KNOWN_ISSUES.md, ROADMAP.md, ARCHITECTURE.md, CONFIGURATION.md, and `.github/copilot-instructions.md` describe the new behavior
+
 ## 1.15.4
 
 Fixes nine output problems found by running 1.15.3 on Borewit/music-metadata (a v12 TypeScript library).

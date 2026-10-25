@@ -5,6 +5,7 @@ import { info, warn } from "../utils/logger.js";
 import { trackScan } from "../utils/telemetry.js";
 import { detectMonorepo } from "../analyzers/monorepo-detector.js";
 import { isInsideRoot } from "../utils/safe-path.js";
+import { isTestPath } from "../utils/path-roles.js";
 
 const norm = (p) => p.replace(/\\/g, "/");
 
@@ -101,6 +102,9 @@ function moduleKeyForFile(file, moduleRoots) {
     if (normalized === root) return root;
     if (normalized.startsWith(`${root}/`)) {
       const remainder = normalized.slice(root.length + 1);
+      // A file directly under the root belongs to the root itself. Only a sub-directory
+      // is its own module, so a flat `src/` is one module and not one module per file.
+      if (!remainder.includes("/")) return root;
       const nextSegment = remainder.split("/")[0];
       return nextSegment ? `${root}/${nextSegment}` : root;
     }
@@ -147,6 +151,26 @@ function routePathFromFile(file) {
   }
 
   return file;
+}
+
+/**
+ * Source files a package.json names as its public entry: `main`, `module`, `types`, and every
+ * string under `exports`. Paths are repo-relative with no leading `./`.
+ */
+function packageEntryFiles(pkg) {
+  const found = new Set();
+  const add = (value) => {
+    if (typeof value !== "string" || !/\.(c|m)?[jt]sx?$/.test(value) || value.endsWith(".d.ts")) return;
+    found.add(value.replace(/^\.\//, ""));
+  };
+  const walk = (value) => {
+    if (typeof value === "string") add(value);
+    else if (value && typeof value === "object") Object.values(value).forEach(walk);
+  };
+  add(pkg.main);
+  add(pkg.module);
+  walk(pkg.exports);
+  return [...found];
 }
 
 /**
@@ -204,9 +228,12 @@ function detectLanguagesFromFiles(files) {
 
   for (const file of files) {
     const ext = path.extname(file).toLowerCase();
-    if (extensionMap[ext]) {
-      languages.add(extensionMap[ext]);
-    }
+    if (!extensionMap[ext]) continue;
+    // Type declarations (`index.d.ts`) and type tests describe a JavaScript library's
+    // types. They do not make the library a TypeScript project.
+    if (ext === ".ts" && /\.d\.ts$/i.test(file)) continue;
+    if (extensionMap[ext] === "TypeScript" && isTestPath(file)) continue;
+    languages.add(extensionMap[ext]);
   }
 
   return languages;
@@ -268,7 +295,9 @@ async function extractRepoMetadata(repoRoot, files = []) {
     if (allDeps["parcel"]) metadata.buildTools.push("Parcel");
 
     // Detect TypeScript from dependencies (supplements file detection)
-    if (allDeps["typescript"]) metadata.languages.add("TypeScript");
+    // A `typescript` devDependency alone does not make the source TypeScript: plain JavaScript
+    // libraries use it to check their `.d.ts` files. Trust it only when no files were scanned.
+    if (allDeps["typescript"] && files.length === 0) metadata.languages.add("TypeScript");
 
     // Detect Node.js runtime indicators
     const hasNodeEngines = pkg.engines && pkg.engines.node;
@@ -278,6 +307,23 @@ async function extractRepoMetadata(repoRoot, files = []) {
       || allDeps["inquirer"] || allDeps["ora"] || allDeps["execa"];
     if (hasNodeEngines || hasBin || hasNodeDeps || pkg.type === "module") {
       metadata.languages.add("Node.js");
+    }
+
+    // A package with a library entry point (main, module, exports, types) is a library even
+    // when it also ships a `bin/` helper. Only a package with a bin and no library entry is a CLI.
+    // When it has both, the description decides: "Library that parses..." is a library,
+    // while a package that calls itself a CLI keeps that label.
+    const hasLibraryEntry = Boolean(pkg.main || pkg.module || pkg.exports || pkg.types || pkg.typings || pkg.browser);
+    const isShippedApp = Boolean(allDeps["electron"] || allDeps["next"]);
+    metadata.packageEntryFiles = packageEntryFiles(pkg);
+    if (hasLibraryEntry && !isShippedApp) {
+      const description = String(pkg.description || "");
+      const keywords = Array.isArray(pkg.keywords) ? pkg.keywords.join(" ") : "";
+      const saysLibrary = /\b(library|sdk|parser|toolkit|framework)\b/i.test(description);
+      const saysCli = /\bcli\b|command[- ]line/i.test(`${description} ${keywords}`);
+      metadata.projectKind = hasBin && !saysLibrary && saysCli ? "cli" : "library";
+    } else if (hasBin && !hasLibraryEntry) {
+      metadata.projectKind = "cli";
     }
   } catch {
     // No package.json or invalid JSON

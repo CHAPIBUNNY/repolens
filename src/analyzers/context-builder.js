@@ -1,6 +1,7 @@
 // Build structured AI context from deterministic scan results
 
-import { groupModulesByDomain, pathHasKeyword } from "./domain-inference.js";
+import { groupModulesByDomain, pathHasKeyword, stripContainerSegments, hasContainerSegment } from "./domain-inference.js";
+import { isTestPath } from "../utils/path-roles.js";
 
 /**
  * Compute per-module dependency metrics from the dep graph.
@@ -28,54 +29,90 @@ export function computeModuleDepMetrics(depGraph) {
 }
 
 /**
- * Build a module-level dep metrics map (aggregating file-level metrics).
+ * Find the module a file belongs to: the module with the longest key that is a path
+ * prefix of the file. Files at the repository root belong to `root`.
+ */
+function buildModuleLookup(modules) {
+  const keys = modules.map((m) => m.key).sort((x, y) => y.length - x.length);
+  const cache = new Map();
+  return (file) => {
+    const norm = String(file || "").replace(/\\/g, "/");
+    if (cache.has(norm)) return cache.get(norm);
+    let found = null;
+    for (const key of keys) {
+      if (key === "root") continue;
+      if (norm === key || norm.startsWith(`${key}/`)) { found = key; break; }
+    }
+    if (!found && !norm.includes("/") && keys.includes("root")) found = "root";
+    cache.set(norm, found);
+    return found;
+  };
+}
+
+/**
+ * Build a module-level dep metrics map from file-level edges.
  * moduleKey → { fanIn, fanOut, isHub, isOrphan, isLeaf, isOrchestrator }
+ * fanIn and fanOut count distinct other modules, not file-to-file edges, so a folder
+ * of 77 test files that imports one helper 77 times still has a fan-out of 1.
  */
 export function computeModuleLevelMetrics(depGraph, modules) {
-  const fileMetrics = computeModuleDepMetrics(depGraph);
-  if (fileMetrics.size === 0 || !modules) return new Map();
+  if (!depGraph?.nodes || depGraph.nodes.length === 0 || !modules) return new Map();
 
-  const moduleLevelMap = new Map();
+  const moduleOf = buildModuleLookup(modules);
+  const fileToModule = new Map();
+  for (const node of depGraph.nodes) {
+    fileToModule.set(node.key, moduleOf(node.file || node.key));
+  }
 
-  for (const mod of modules) {
-    const moduleKey = mod.key;
-    const lowerKey = moduleKey.toLowerCase();
-
-    // Find all file-level nodes that belong to this module
-    let totalFanIn = 0;
-    let totalFanOut = 0;
-    let fileCount = 0;
-
-    for (const [nodeKey, m] of fileMetrics) {
-      if (nodeKey === lowerKey || nodeKey.startsWith(lowerKey + "/") || nodeKey === moduleKey || nodeKey.startsWith(moduleKey + "/")) {
-        // Count only external edges (crossing module boundary)
-        if (depGraph?.nodes) {
-          const node = depGraph.nodes.find(n => n.key === nodeKey);
-          if (node) {
-            const externalIn = node.importedBy.filter(imp => !imp.startsWith(moduleKey + "/") && imp !== moduleKey).length;
-            const externalOut = node.imports.filter(imp => !imp.startsWith(moduleKey + "/") && imp !== moduleKey).length;
-            totalFanIn += externalIn;
-            totalFanOut += externalOut;
-            fileCount++;
-          }
-        }
-      }
-    }
-
-    if (fileCount > 0) {
-      const hubThreshold = Math.max(5, Math.floor(modules.length * 0.15));
-      moduleLevelMap.set(moduleKey, {
-        fanIn: totalFanIn,
-        fanOut: totalFanOut,
-        isHub: totalFanIn >= hubThreshold,
-        isOrphan: totalFanIn === 0 && totalFanOut === 0,
-        isLeaf: totalFanOut === 0 && totalFanIn > 0,
-        isOrchestrator: totalFanOut >= 5 && totalFanIn < totalFanOut,
-      });
+  const importedFrom = new Map(); // module -> Set of modules it imports
+  const importersOf = new Map();  // module -> Set of modules importing it
+  const fileCounts = new Map();
+  for (const node of depGraph.nodes) {
+    const from = fileToModule.get(node.key);
+    if (!from) continue;
+    fileCounts.set(from, (fileCounts.get(from) || 0) + 1);
+    for (const target of node.imports) {
+      const to = fileToModule.get(target);
+      if (!to || to === from) continue;
+      if (!importedFrom.has(from)) importedFrom.set(from, new Set());
+      if (!importersOf.has(to)) importersOf.set(to, new Set());
+      importedFrom.get(from).add(to);
+      importersOf.get(to).add(from);
     }
   }
 
+  const moduleLevelMap = new Map();
+  const hubThreshold = Math.max(3, Math.floor(modules.length * 0.15));
+  for (const mod of modules) {
+    if (!fileCounts.has(mod.key)) continue;
+    const fanIn = importersOf.get(mod.key)?.size || 0;
+    const fanOut = importedFrom.get(mod.key)?.size || 0;
+    moduleLevelMap.set(mod.key, {
+      fanIn,
+      fanOut,
+      isHub: fanIn >= hubThreshold,
+      isOrphan: fanIn === 0 && fanOut === 0,
+      isLeaf: fanOut === 0 && fanIn > 0,
+      isOrchestrator: fanOut >= 5 && fanIn < fanOut,
+    });
+  }
+
   return moduleLevelMap;
+}
+
+/**
+ * Is this project a command-line tool? Package metadata decides when it is known
+ * (a library with a build helper in `bin/` is a library). Otherwise a CLI pattern does.
+ */
+export function isCliProject(context) {
+  const kind = context?.project?.kind;
+  if (kind === "cli") return true;
+  if (kind === "library") return false;
+  return (context?.patterns || []).some((p) => String(p).toLowerCase().startsWith("cli tool"));
+}
+
+export function isLibraryProject(context) {
+  return context?.project?.kind === "library";
 }
 
 export function buildAIContext(scanResult, config, depGraph = null) {
@@ -129,12 +166,13 @@ export function buildAIContext(scanResult, config, depGraph = null) {
   };
   
   // Identify key architectural patterns (verified against dep graph when available)
-  const patterns = inferArchitecturalPatterns(modules, depGraph);
+  const patterns = inferArchitecturalPatterns(modules, depGraph, metadata?.projectKind);
   
   // Build compact context object
   return {
     project: {
       name: config.project.name,
+      kind: metadata?.projectKind || "unknown",
       filesScanned: filesCount,
       modulesDetected: modules.length,
       pagesDetected: pages?.length || 0,
@@ -177,7 +215,15 @@ export function buildAIContext(scanResult, config, depGraph = null) {
 }
 
 function inferModuleType(modulePath) {
-  const has = (keyword) => pathHasKeyword(modulePath, keyword);
+  // `src` and `lib` only say where code lives. `lib/ogg` is typed by `ogg`, and a bare
+  // `lib` is the project's source, not a "shared library" layer.
+  const typedPath = stripContainerSegments(modulePath);
+  const fromContainer = hasContainerSegment(modulePath);
+  const has = (keyword) => pathHasKeyword(typedPath, keyword);
+  // Page, route, and view describe a folder of pages. A build script called
+  // `build-pages.js` is not one.
+  const isFile = /\.[a-z0-9]+$/i.test(String(modulePath).split("/").pop() || "");
+  const hasDirectory = (keyword) => pathHasKeyword(directoryPath(typedPath), keyword);
 
   if (has("test") || has("spec")) return "test";
   if (has("api") || has("endpoint")) return "api";
@@ -185,7 +231,7 @@ function inferModuleType(modulePath) {
   if (has("lib") || has("util") || has("helper") || has("common") || has("shared")) return "library";
   if (has("hook")) return "hooks";
   if (has("store") || has("state") || has("redux") || has("zustand")) return "state";
-  if (has("page") || has("route") || has("view")) return "route";
+  if (isFile ? (hasDirectory("page") || hasDirectory("route") || hasDirectory("view")) : (has("page") || has("route") || has("view"))) return "route";
   if (has("config") || has("setting") || has("env")) return "config";
   if (has("core") || has("kernel") || has("foundation")) return "core";
   if (has("render") || has("template") || has("format")) return "renderer";
@@ -203,19 +249,10 @@ function inferModuleType(modulePath) {
   if (has("service")) return "service";
   if (has("app")) return "app";
 
-  return "other";
+  return fromContainer ? "source" : "other";
 }
 
-function isTestEvidence(modulePath) {
-  const norm = String(modulePath || "").replace(/\\/g, "/");
-  if (/(^|\/)__(tests|mocks)__(\/|$)/.test(norm)) return true;
-  if (/(^|\/)(test|tests|spec|specs|fixtures|testdata)(\/|$)/.test(norm)) return true;
-  const base = norm.split("/").pop() || "";
-  if (/^(test_|spec_)/.test(base)) return true;
-  if (/(_test|_spec)\.[a-z0-9]+$/i.test(base)) return true;
-  if (/\.(test|spec)\.[a-z0-9]+$/i.test(base)) return true;
-  return false;
-}
+const isTestEvidence = isTestPath;
 
 const API_DIRECTORY_SEGMENTS = new Set([
   "api", "apis", "route", "routes", "router", "routers",
@@ -235,14 +272,15 @@ function directoryPath(modulePath) {
   return parts.join("/");
 }
 
-function inferArchitecturalPatterns(modules, depGraph = null) {
+function inferArchitecturalPatterns(modules, depGraph = null, projectKind = null) {
   const patterns = [];
   const production = modules.filter((module) => !isTestEvidence(module.key));
   const tests = modules.filter((module) => isTestEvidence(module.key));
   const keys = production.map(m => m.key.toLowerCase());
 
+  // `lib` and `src` only say where code lives, so they never count as evidence for a pattern.
   const has = (keyword) => keys.some((key) => (
-    keyword.includes("/") ? key.includes(keyword) : pathHasKeyword(key, keyword)
+    keyword.includes("/") ? key.includes(keyword) : pathHasKeyword(stripContainerSegments(key), keyword)
   ));
   const matchingKeys = (keywords, source = production) => {
     const found = [];
@@ -251,7 +289,7 @@ function inferArchitecturalPatterns(modules, depGraph = null) {
         const key = module.key;
         const matched = keyword.includes("/")
           ? key.toLowerCase().includes(keyword)
-          : pathHasKeyword(key, keyword);
+          : pathHasKeyword(stripContainerSegments(key), keyword);
         if (matched && !found.includes(key)) found.push(key);
       }
     }
@@ -342,7 +380,8 @@ function inferArchitecturalPatterns(modules, depGraph = null) {
   }
 
   if (has("analyz") || has("detect") || has("inspect")) cite("Analysis pipeline", ["analyz", "detect", "inspect"]);
-  if (has("cli") || has("command") || has("bin")) cite("CLI tool architecture", ["cli", "command", "bin"]);
+  // A library's `bin/` folder is build tooling. Only a CLI package gets this pattern.
+  if (projectKind !== "library" && (has("cli") || has("command") || has("bin"))) cite("CLI tool architecture", ["cli", "command", "bin"]);
 
   if (has("util") || has("helper") || has("lib")) {
     const verified = moduleMetrics.size > 0 && verifyHub("util") || verifyHub("helper") || verifyHub("lib");

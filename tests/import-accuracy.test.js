@@ -201,8 +201,8 @@ describe("Go import accuracy", () => {
   it("resolves module-relative imports and skips the standard library", async () => {
     await write("go.mod", "module github.com/spf13/cobra\n\ngo 1.22\n");
     await write("command.go", `package cobra\n\nimport (\n\t"fmt"\n\tflag "github.com/spf13/pflag"\n\t"github.com/spf13/cobra/doc"\n)\n`);
-    await write("doc/man_docs.go", `package doc\n\nimport "github.com/spf13/cobra"\n`);
-    await write("doc/man_docs_test.go", `package doc\n\nimport "github.com/spf13/cobra"\n`);
+    await write("doc/man_docs.go", `package sub\n\nimport "github.com/spf13/cobra"\n`);
+    await write("doc/man_docs_test.go", `package sub\n\nimport "github.com/spf13/cobra"\n`);
     const result = await analyzeDependencyGraph([
       "command.go",
       "doc/man_docs.go",
@@ -221,9 +221,9 @@ describe("Go import accuracy", () => {
     await write("command.go", "package app\n");
     await write("args.go", "package app\n");
     for (let i = 0; i < 6; i += 1) {
-      await write(`doc/page${i}.go`, `package doc\n\nimport "example.com/app"\n`);
+      await write(`sub/page${i}.go`, `package sub\n\nimport "example.com/app"\n`);
     }
-    const files = ["command.go", "args.go", ...Array.from({ length: 6 }, (_, i) => `doc/page${i}.go`)];
+    const files = ["command.go", "args.go", ...Array.from({ length: 6 }, (_, i) => `sub/page${i}.go`)];
     const result = await analyzeDependencyGraph(files, tempDir);
     expect(result.stats.hubs.map((hub) => hub.key)).toEqual(["example.com/app"]);
     expect(result.stats.hubs[0].importedBy).toBe(6);
@@ -243,7 +243,7 @@ describe("Go import accuracy", () => {
       scan: { include: ["**/*.go"], ignore: [] },
       project: { name: "chi" },
     });
-    expect(scan.modules.map((mod) => mod.key)).toEqual(["middleware/compress.go"]);
+    expect(scan.modules.map((mod) => mod.key)).toEqual(["middleware"]);
     expect(scan.modules.some((mod) => mod.key.includes("_test.go"))).toBe(false);
   });
 });

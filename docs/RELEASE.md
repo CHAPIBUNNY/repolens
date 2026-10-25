@@ -32,21 +32,21 @@ RepoLens uses semantic versioning:
 Listing the action is a GitHub UI step. A pull request cannot tick it, and this repository does not push the tag for you.
 
 1. Merge the release that contains the root `action.yml` (name, description, and `branding` are required).
-2. Publish `@chappibunny/repolens@1.15.4` to npm first. `action.yml` installs that exact version with `npx`. The publish step exits without publishing again when that version is already on npm.
+2. Publish `@chappibunny/repolens@1.15.5` to npm first. `action.yml` installs that exact version with `npx`. The publish step exits without publishing again when that version is already on npm.
 3. Open **Releases** → **Draft a new release** on https://github.com/CHAPIBUNNY/repolens/releases/new
-4. Choose or create the tag `v1.15.4` on the commit that contains `action.yml`.
+4. Choose or create the tag `v1.15.5` on the commit that contains `action.yml`.
 5. Tick **Publish this Action to the GitHub Marketplace**.
 6. Accept the GitHub Marketplace Developer Agreement if GitHub asks for it.
 7. Set the primary category. **Utilities** matches a documentation action. A secondary category is optional.
 8. Publish the release. The listing slug follows the action name, **RepoLens Architecture Docs**.
 
-The action is usable from `uses: CHAPIBUNNY/repolens@v1.15.4` as soon as the tag exists, including before the Marketplace review finishes.
+The action is usable from `uses: CHAPIBUNNY/repolens@v1.15.5` as soon as the tag exists, including before the Marketplace review finishes.
 
 ## MCP Registry
 
 The registry stores metadata. The npm package has to exist first, and its `mcpName` must equal `server.json` `name` (`io.github.CHAPIBUNNY/repolens`).
 
-1. Publish `@chappibunny/repolens@1.15.4` to npm (`npm publish --access public`). Confirm https://www.npmjs.com/package/@chappibunny/repolens shows `1.15.4` and that the published `package.json` contains `"mcpName": "io.github.CHAPIBUNNY/repolens"`.
+1. Publish `@chappibunny/repolens@1.15.5` to npm (`npm publish --access public`). Confirm https://www.npmjs.com/package/@chappibunny/repolens shows `1.15.5` and that the published `package.json` contains `"mcpName": "io.github.CHAPIBUNNY/repolens"`.
 2. Install the publisher CLI:
 
 ```bash
@@ -55,7 +55,7 @@ sudo mv mcp-publisher /usr/local/bin/
 mcp-publisher --help
 ```
 
-3. From a checkout that contains this repo's `server.json` (version `1.15.4`):
+3. From a checkout that contains this repo's `server.json` (version `1.15.5`):
 
 ```bash
 mcp-publisher login github
@@ -110,7 +110,7 @@ When dependencies change, regenerate the lockfile with npm 11 or newer (`npx npm
 
 ### Action modes that do not wait for npm
 
-`command: comment` and `command: badge` execute `scripts/pr-comment-run.js` and `scripts/badge-run.js` from the action checkout. `publish`, `demo`, and `doctor` still install `@chappibunny/repolens@<version>`. A pull request must not publish the package. `repolens badge` and `repolens comment` ship in the 1.15.4 npm package as well. Tag `v1.15.4` and let `release.yml` publish. Do not publish by hand from a development checkout.
+`command: comment` and `command: badge` execute `scripts/pr-comment-run.js` and `scripts/badge-run.js` from the action checkout. `publish`, `demo`, and `doctor` still install `@chappibunny/repolens@<version>`. A pull request must not publish the package. `repolens badge` and `repolens comment` ship in the 1.15.5 npm package as well. Tag `v1.15.5` and let `release.yml` publish. Do not publish by hand from a development checkout.
 
 ### npm Publishing
 

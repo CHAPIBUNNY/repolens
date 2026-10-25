@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.15.4  
+**Version:** 1.15.5  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -64,12 +64,12 @@ src/
     flow-inference.js     # Data flow detection via heuristics
     graphql-analyzer.js   # GraphQL schema detection
     typescript-analyzer.js # TypeScript type graph analysis
-    dependency-graph.js   # Import graph with cycle detection
+    dependency-graph.js   # Import graph with cycle detection; hubs ignore tests/examples; runtime vs dev packages
     drift-detector.js     # Architecture drift detection
     jsdoc-analyzer.js     # JSDoc/TSDoc extraction for the API surface
     monorepo-detector.js  # Monorepo workspace detection (npm/yarn/pnpm/Lerna)
     codeowners.js         # CODEOWNERS file parser + ownership mapping
-    security-patterns.js  # Security anti-pattern detection (eval, XSS, SQL injection, CWE classification)
+    security-patterns.js  # Security anti-pattern detection (eval, XSS, SQL injection, CWE classification); fixed-string innerHTML ignored, examples/build scripts low severity
     complexity-analyzer.js # Cyclomatic complexity + unified code health scoring
     maturity.js           # Maturity from version, history, tests, CI, docs, and dependency health
   ai/
@@ -113,6 +113,7 @@ src/
     safe-path.js          # Output and page-name containment
     project-name.js       # Project name from package.json or the resolved directory
     ai-notice.js          # Sections the post-run "unlock AI" notice offers
+    path-roles.js         # Test, tooling, and build/example path checks shared by analyzers
     github-repo.js        # owner/name validation
     interactive.js        # TTY prompts
     yaml.js               # Size-capped YAML parsing
@@ -147,6 +148,7 @@ tests/                    # Vitest test suite
   github-action.test.js   # Action input checks and PR comment opt-out
   registry.test.js        # server.json, smithery.yaml, README badges
   security-patterns.test.js # Security pattern analyzer tests (30 tests: detection, severity, categories, renderer)
+  library-accuracy.test.js # Output accuracy for a flat-src library (ExifReader): module grouping, library vs CLI, hubs, runtime/dev packages, security severity, health, empty pages, lib/* domains, hub flows
   output-accuracy.test.js # Output accuracy: project name, maturity, entry-file domains, core/kernel, folder descriptions, cycles as findings, self-imports, AI notice, noise flows
   code-health.test.js     # Code health tests (47 tests: JS/TS, Python, Go, health scores, renderer)
   e2e/
@@ -217,7 +219,7 @@ scripts/                  # Helper scripts
 ### Business Domain Inference
 - **Purpose**: Map code structure to business functions
 - **Default Domains** (15 generic): Authentication & Identity, Analytics & Reporting, Content Management, Search & Discovery, Notifications, Payments & Billing, API Layer, UI Components, React Hooks, State Management, Shared Utilities, Data Layer, Configuration, Testing, Background Jobs
-- **Pattern Matching**: Folder/file names to domain keywords (e.g., "auth" → Authentication & Identity). Entry and barrel file names (`index`, `main`, `mod`, `__init__`) are ignored, so `lib/index.ts` is not "Search & Discovery". User-defined `domains` hints still see the full path
+- **Pattern Matching**: Folder/file names to domain keywords (e.g., "auth" → Authentication & Identity). Entry and barrel file names (`index`, `main`, `mod`, `__init__`) are ignored, so `lib/index.ts` is not "Search & Discovery". Generic folders (`src`, `lib`, `packages`, `pkg`, `internal`) are not evidence: `lib/ogg` is judged by `ogg`, and folders with no keyword join "Core Source". User-defined `domains` hints still see the full path
 - **Customizable**: Define domains in `.repolens.yml` with match patterns and descriptions
 - **Output**: Groups modules by domain in business-friendly documentation
 
@@ -225,7 +227,7 @@ scripts/                  # Helper scripts
 - **Purpose**: Understand how information moves through the system
 - **Heuristics**: Pattern-based detection (market data, auth, content, API integration flows)
 - **Detects**: Flow steps, involved modules, dependencies, criticality
-- **Noise filter**: `filterNoiseFlows` drops flows with fewer than 2 steps, chains that start in `doc-gen`, `scripts`, `examples`, `docs`, `fixtures` and similar tooling directories, and generic names such as `gen` and `util`
+- **Noise filter**: `filterNoiseFlows` drops flows with fewer than 2 steps, chains that start in `doc-gen`, `scripts`, `examples`, `docs`, `fixtures` and similar tooling directories, and generic names such as `gen` and `util`. Library flows start at the package entry (`main`, `module`, `exports`); barrels, leaf helpers, tests, and `*.config` files are not flows
 - **Output**: Natural language flow descriptions in Data Flows document
 
 ### Structured Context Building

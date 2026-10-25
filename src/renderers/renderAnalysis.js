@@ -343,7 +343,11 @@ export function renderDependencyGraph(depResult) {
   lines.push(`|--------|-------|`);
   lines.push(`| Source files | ${s.totalFiles} |`);
   lines.push(`| Import edges | ${s.totalEdges} |`);
-  lines.push(`| External packages | ${s.externalDeps} |`);
+  if (Array.isArray(depResult.externalDev) && depResult.externalDev.length > 0) {
+    lines.push(`| External packages | ${s.externalDeps} (${depResult.externalRuntime.length} runtime, ${depResult.externalDev.length} dev/test tooling) |`);
+  } else {
+    lines.push(`| External packages | ${s.externalDeps} |`);
+  }
   lines.push(`| Circular dependencies | ${s.cycles} |`);
   lines.push(`| Orphan files (no imports or importers) | ${s.orphanFiles} |`);
   lines.push("");
@@ -352,7 +356,7 @@ export function renderDependencyGraph(depResult) {
   if (s.hubs.length > 0) {
     lines.push("## Hub Modules");
     lines.push("");
-    lines.push("These are the most-imported modules in the codebase. Changes to hub modules have the widest blast radius and should be reviewed carefully:");
+    lines.push("These are the most-imported product modules (tests, examples, and build scripts are not counted). Changes to hub modules have the widest blast radius and should be reviewed carefully:");
     lines.push("");
     lines.push("| Module | Imported By |");
     lines.push("|--------|-------------|");
@@ -384,14 +388,29 @@ export function renderDependencyGraph(depResult) {
     lines.push("");
     lines.push(`The codebase imports **${depResult.externalDeps.length}** external package${depResult.externalDeps.length === 1 ? "" : "s"}. These are third-party modules (not the language standard library):`);
     lines.push("");
-    // Render as a compact table for cleaner output
-    const sorted = [...depResult.externalDeps].sort();
-    lines.push("| Package |");
-    lines.push("|---------|");
-    for (const dep of sorted) {
-      lines.push(`| \`${dep}\` |`);
+    const split = Array.isArray(depResult.externalDev) && depResult.externalDev.length > 0;
+    if (split) {
+      const renderTable = (title, names) => {
+        if (names.length === 0) return;
+        lines.push(`### ${title}`);
+        lines.push("");
+        lines.push("| Package |");
+        lines.push("|---------|");
+        for (const dep of [...names].sort()) lines.push(`| \`${dep}\` |`);
+        lines.push("");
+      };
+      renderTable(`Runtime (${depResult.externalRuntime.length})`, depResult.externalRuntime);
+      renderTable(`Development and test tooling (${depResult.externalDev.length})`, depResult.externalDev);
+    } else {
+      // Render as a compact table for cleaner output
+      const sorted = [...depResult.externalDeps].sort();
+      lines.push("| Package |");
+      lines.push("|---------|");
+      for (const dep of sorted) {
+        lines.push(`| \`${dep}\` |`);
+      }
+      lines.push("");
     }
-    lines.push("");
   }
 
   lines.push("---");
