@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.15.3  
+**Current Version:** 1.15.4  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.15.3)
+## What's Shipped (v0.1.0 → v1.15.4)
 
 Everything below is live, tested, and available on npm.
 
@@ -164,6 +164,14 @@ Everything below is live, tested, and available on npm.
 - ✅ `server.json` for the MCP Registry (`io.github.CHAPIBUNNY/repolens`) and `smithery.yaml`
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
+
+## v1.15.4 — Output accuracy (music-metadata)
+
+- ✅ Project name from `package.json` or the real directory, never `.`
+- ✅ Maturity from version, history, tests, CI, docs, and dependency health
+- ✅ Entry and barrel files are not classified by name. `core.ts` is not a kernel. Folders under `lib/` are not all "utility"
+- ✅ Circular dependencies are findings, not patterns. Self-imports are not external packages
+- ✅ The AI notice does not call written documents missing. Noise data flows are dropped
 
 ## v1.15.3 — Import and pattern accuracy
 

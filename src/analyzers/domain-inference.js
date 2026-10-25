@@ -171,13 +171,33 @@ function domainEvidenceText(hint, modulePath, keyword, evidence) {
   return bits.join("; ");
 }
 
+// Entry and barrel file names say nothing about what a module does. `lib/index.ts`
+// is not "Search & Discovery" because it is called index.
+const ENTRY_FILE_STEMS = new Set(["index", "main", "mod", "__init__", "__main__"]);
+
+/** Drop a trailing entry/barrel file name (`lib/index.ts` → `lib`). Directories named `index` stay. */
+export function stripEntryFileName(modulePath) {
+  const parts = String(modulePath).replace(/\\/g, "/").split("/");
+  const last = parts[parts.length - 1] || "";
+  const dot = last.lastIndexOf(".");
+  if (dot > 0 && ENTRY_FILE_STEMS.has(last.slice(0, dot).toLowerCase())) {
+    parts.pop();
+    return parts.join("/");
+  }
+  return parts.join("/");
+}
+
 export function inferDomain(modulePath, customHints = [], evidence = {}) {
+  const customSet = new Set(customHints);
   const hints = [...customHints, ...DEFAULT_DOMAIN_HINTS];
+  const defaultPath = stripEntryFileName(modulePath);
 
   for (const hint of hints) {
+    // User-defined hints see the full path. Built-in guesses ignore entry file names.
+    const searchPath = customSet.has(hint) ? modulePath : defaultPath;
     for (const keyword of hint.match) {
       if (REACT_HOOK_KEYWORDS.has(keyword) && !evidence.react) continue;
-      if (pathHasKeyword(modulePath, keyword)) {
+      if (pathHasKeyword(searchPath, keyword)) {
         return {
           domain: hint.domain,
           description: domainEvidenceText(hint, modulePath, keyword, evidence),

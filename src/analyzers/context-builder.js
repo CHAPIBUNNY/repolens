@@ -159,6 +159,8 @@ export function buildAIContext(scanResult, config, depGraph = null) {
     techStack,
     
     patterns,
+
+    findings: inferFindings(depGraph),
     
     repoRoots: config.module_roots || [],
 
@@ -271,7 +273,6 @@ function inferArchitecturalPatterns(modules, depGraph = null) {
 
   // Compute module-level metrics for verification
   const moduleMetrics = depGraph ? computeModuleLevelMetrics(depGraph, modules) : new Map();
-  const hasCycles = depGraph?.cycles?.length > 0;
   
   // Verify pattern: a module matching `keyword` has high fan-in (truly central)
   const verifyHub = (keyword) => {
@@ -309,11 +310,18 @@ function inferArchitecturalPatterns(modules, depGraph = null) {
     patterns.push(`API route pattern — ${sample}${more}`);
   }
 
-  if (has("core") || has("kernel")) {
+  // A directory named core/ or kernel/ is evidence. A file called core.ts is not:
+  // it is as likely a cross-platform entry point as a kernel.
+  const coreDirs = production
+    .filter((module) => directoryPath(module.key).split("/").some((segment) => ["core", "kernel"].includes(segment.toLowerCase())))
+    .map((module) => module.key);
+  if (coreDirs.length > 0) {
     const note = moduleMetrics.size > 0 && verifyHub("core")
       ? "high fan-in"
       : "";
-    cite("Core/kernel architecture", ["core", "kernel"], note);
+    const sample = coreDirs.slice(0, 3).map((key) => `\`${key}\``).join(", ");
+    const more = coreDirs.length > 3 ? ` (+${coreDirs.length - 3} more)` : "";
+    patterns.push(`Core/kernel architecture — ${[`${sample}${more}`, note].filter(Boolean).join("; ")}`);
   }
 
   if (has("plugin") || has("extension")) {
@@ -354,12 +362,22 @@ function inferArchitecturalPatterns(modules, depGraph = null) {
     if (depGraph.stats.cycles === 0 && depGraph.stats.totalEdges > 10) {
       patterns.push("Acyclic dependency graph — clean layering");
     }
-    if (hasCycles) {
-      patterns.push(`⚠️ ${depGraph.stats.cycles} circular dependency cycle(s) detected`);
-    }
   }
 
   return patterns;
+}
+
+/**
+ * Warnings about the code that are not architectural patterns, for example
+ * circular dependencies. Docs list these as findings, never as a pattern.
+ */
+export function inferFindings(depGraph = null) {
+  const findings = [];
+  const cycles = depGraph?.stats?.cycles;
+  if (cycles > 0) {
+    findings.push(`⚠️ ${cycles} circular dependency cycle${cycles === 1 ? "" : "s"} detected`);
+  }
+  return findings;
 }
 
 /**

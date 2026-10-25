@@ -156,6 +156,40 @@ export async function analyzeDependencyGraph(files, repoRoot) {
 
   for (const file of codeFiles) register(file);
 
+  // A package importing its own name (examples, docs, tests written like user code)
+  // is not a dependency. Resolve the nearest package.json for each file.
+  const packageNameByDir = new Map();
+  async function ownPackageName(file) {
+    let dir = path.dirname(file);
+    const visited = [];
+    for (;;) {
+      if (packageNameByDir.has(dir)) {
+        const cached = packageNameByDir.get(dir);
+        for (const d of visited) packageNameByDir.set(d, cached);
+        return cached;
+      }
+      visited.push(dir);
+      const raw = await readFileSafe(path.join(repoRoot, dir, "package.json"));
+      if (raw) {
+        let name = null;
+        try {
+          const parsed = JSON.parse(raw);
+          if (typeof parsed?.name === "string") name = parsed.name;
+        } catch {
+          // invalid package.json: keep walking up
+        }
+        if (name) {
+          for (const d of visited) packageNameByDir.set(d, name);
+          return name;
+        }
+      }
+      if (dir === "." || dir === "" || dir === path.dirname(dir)) break;
+      dir = path.dirname(dir);
+    }
+    for (const d of visited) packageNameByDir.set(d, null);
+    return null;
+  }
+
   const pyIndex = indexPythonModules(pyFiles);
   const goModulePath = goFiles.length > 0 ? await loadGoModule(repoRoot) : null;
 
@@ -163,12 +197,15 @@ export async function analyzeDependencyGraph(files, repoRoot) {
     const content = await readFileSafe(path.join(repoRoot, file));
     if (!content) continue;
     const fromKey = normalizeFileKey(file);
+    const selfName = await ownPackageName(file);
     for (const imported of extractJsImports(content)) {
       if (imported.typeOnly) continue;
       if (isRelativeImport(imported.specifier)) {
         addEdge(fromKey, resolveImportPath(file, imported.specifier));
       } else {
-        addExternal(fromKey, externalPackageName(imported.specifier));
+        const name = externalPackageName(imported.specifier);
+        if (name && name === selfName) continue;
+        addExternal(fromKey, name);
       }
     }
   }

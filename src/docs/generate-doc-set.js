@@ -34,6 +34,7 @@ import {
 } from "../renderers/renderAnalysis.js";
 import { info, warn } from "../utils/logger.js";
 import path from "node:path";
+import { detectMaturity } from "../analyzers/maturity.js";
 import { applyBrandingFooter } from "./branding.js";
 
 export async function generateDocumentSet(scanResult, config, diffData = null, pluginManager = null) {
@@ -79,6 +80,12 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
   aiContext = buildAIContext(scanResult, config, depGraph);
   moduleContext = buildModuleContext(scanResult.modules, config, depGraph);
   flows = inferDataFlows(scanResult, config, depGraph);
+  try {
+    aiContext.maturity = detectMaturity(repoRoot, {
+      hasTests: (aiContext.techStack?.testFrameworks || []).length > 0 || scanResult.modules.some((m) => /(^|\/)(tests?|__tests__|spec)(\/|$)/i.test(m.key)),
+      cycles: depGraph?.stats?.cycles ?? null,
+    });
+  } catch (e) { warn(`Maturity detection failed: ${e.message}`); }
 
   // CODEOWNERS integration
   const codeowners = await parseCodeowners(repoRoot);

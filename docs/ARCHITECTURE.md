@@ -64,11 +64,11 @@ import { scanRepo } from "../core/scan.js";
 bin/repolens.js
   └── src/cli.js
         ├── src/core/            4 files (config, schema, diff, scan)
-        ├── src/analyzers/       12 files
+        ├── src/analyzers/       14 files
         ├── src/renderers/       4 files
         ├── src/publishers/      7 files (notion, confluence, github-wiki,
         │                         markdown, obsidian, index, publish)
-        ├── src/utils/           15 files
+        ├── src/utils/           19 files
         ├── src/mcp/             server.js, tools.js, workspace.js
         ├── src/delivery/        1 file
         ├── src/integrations/    discord.js
@@ -115,7 +115,8 @@ repolens/
 │   │   ├── codeowners.js          # CODEOWNERS ownership
 │   │   ├── jsdoc-analyzer.js      # JSDoc and TSDoc on the API surface
 │   │   ├── security-patterns.js   # Security hotspots
-│   │   └── complexity-analyzer.js # Complexity and code health (JS/TS, Python, Go)
+│   │   ├── complexity-analyzer.js # Complexity and code health (JS/TS, Python, Go)
+│   │   └── maturity.js            # Maturity from version, history, tests, CI, docs, and dependency health
 │   ├── ai/
 │   │   ├── provider.js          # Provider-agnostic AI generation
 │   │   ├── prompts.js           # Strict prompt templates
@@ -161,6 +162,8 @@ repolens/
 │       ├── update-check.js  # Version update notifications
 │       ├── doc-cache.js     # Hash cache for unchanged pages
 │       ├── safe-path.js     # Output path containment
+│       ├── project-name.js  # Project name from package.json or the real directory (never `.`)
+│       ├── ai-notice.js     # Which sections the "unlock AI" notice offers
 │       ├── github-repo.js   # owner/name checks
 │       ├── interactive.js   # TTY prompts
 │       └── yaml.js          # Size-capped YAML parsing

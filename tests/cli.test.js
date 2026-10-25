@@ -94,6 +94,29 @@ describe("cli", () => {
     }
   });
 
+  it("demo --target . names the project after the directory and does not call written docs missing", async () => {
+    const dir = await fsp.mkdtemp(path.join(os.tmpdir(), "repolens-demo-dot-"));
+    const project = path.join(dir, "named-project");
+    await fsp.mkdir(path.join(project, "src"), { recursive: true });
+    await fsp.writeFile(path.join(project, "src/app.js"), "export const n = 1;\n");
+    try {
+      const cliPath = path.resolve(__dirname, "../src/cli.js");
+      const result = await new Promise((resolve) => {
+        execFile("node", [cliPath, "demo", "--target", "."], {
+          cwd: project,
+          env: { ...process.env, NODE_ENV: "", CI: "true", GITHUB_TOKEN: "", REPOLENS_AI_API_KEY: "", REPOLENS_AI_ENABLED: "" },
+        }, (error, stdout) => resolve({ error, stdout: stdout || "" }));
+      });
+      expect(result.error).toBeNull();
+      const summary = await fsp.readFile(path.join(project, ".repolens", "00-executive-summary.md"), "utf8");
+      expect(summary).toContain("named-project");
+      expect(summary).not.toMatch(/\*\*\.\*\*/);
+      expect(result.stdout).not.toContain("missing these AI-powered sections");
+    } finally {
+      await fsp.rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("prints the version from the published binary without loading the CLI", async () => {
     const binPath = path.resolve(__dirname, "../bin/repolens.js");
     const result = await new Promise((resolve) => {

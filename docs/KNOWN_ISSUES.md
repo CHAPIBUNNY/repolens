@@ -3,7 +3,7 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** October 2026  
-**Version:** 1.15.3
+**Version:** 1.15.4
 
 ---
 
@@ -16,6 +16,10 @@ This document tracks known issues, limitations, and edge cases in RepoLens. We'r
 ## Watch hangs when nothing matches (fixed in 1.15.1)
 
 After `init --quick` in an empty directory, `module_roots` is `.` (the directory exists) and `scan.include` matches no source files. 1.15.0 `watch` still printed `Waiting for changes...` and waited. 1.15.1 exits 2 and tells you to add source files or fix the globs.
+
+## Output labels that misread a mature library (fixed in 1.15.4)
+
+Running 1.15.3 on Borewit/music-metadata (v12, 10 years old) gave nine wrong or unhelpful results: the project named `.` under `--target .`, "Early-stage (1/3 indicators)", `lib/index.ts` as "Search & Discovery", `lib/core.ts` as "Core/kernel architecture", every format folder as "Utility and helper functions", two cycles listed as an architectural pattern, the package's own name as an external dependency, Developer Onboarding listed as a missing AI section after it was written, and data flows with 0 steps. 1.15.4 fixes all nine. Maturity in a shallow clone leaves commit age out of the score. Domains are still inferred from path keywords, so every folder under `lib/` still lands in "Shared Utilities". Descriptions of unknown folders are only their name plus "module".
 
 ## TYPE_CHECKING imports and coarse patterns (fixed in 1.15.3)
 

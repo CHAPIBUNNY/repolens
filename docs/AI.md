@@ -1,6 +1,6 @@
 # AI-Enhanced Documentation
 
-As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is in the current version (v1.15.3). The MCP server stays on the deterministic path unless a tool call sets `deterministic: false`. `repolens badge`, `repolens comment`, and the GitHub Action `comment` and `badge` modes also stay deterministic: they do not call a model.
+As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is in the current version (v1.15.4). The MCP server stays on the deterministic path unless a tool call sets `deterministic: false`. `repolens badge`, `repolens comment`, and the GitHub Action `comment` and `badge` modes also stay deterministic: they do not call a model.
 
 ## Overview
 
@@ -42,7 +42,7 @@ Filenames below are the numbered set written by `writeDocumentSet`. The Markdown
 - **10-developer-onboarding.md** - Quick start for new engineers
 - **11-graphql-schema.md** - GraphQL types, queries, mutations, and resolvers
 - **12-type-graph.md** - TypeScript interfaces, classes, and type relationships
-- **13-dependency-graph.md** - Import analysis with circular dependency detection
+- **13-dependency-graph.md** - Import analysis with circular dependency detection. A package importing its own name (examples, docs) is not listed as an external dependency
 - **15-security-hotspots.md** - Static anti-pattern findings with CWE ids
 
 GraphQL, the type graph, the dependency graph, architecture drift, security hotspots, and code health are deterministic (`ai: false`). The other eleven documents call the model when AI is enabled.
@@ -292,6 +292,8 @@ The codebase is organized into 12 main domains:
 
 Note: AI-enhanced documentation is disabled.
 ```
+
+The deterministic Executive Summary scores maturity from the release version, tag and commit history, tests, CI, docs, and dependency health, and shows it as `Production-grade (5/6 indicators)`. A signal that cannot be measured (commit age in a shallow clone) is left out of the total. Circular dependencies appear as a finding in the Architecture Overview, not as an architectural pattern.
 
 ## Troubleshooting
 

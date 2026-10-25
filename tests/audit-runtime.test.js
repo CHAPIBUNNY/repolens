@@ -86,12 +86,12 @@ describe("runtime audit waivers", () => {
     expect(result.waivedFindings).toEqual([]);
   });
 
-  it("passes npm audit --omit=dev against this lockfile after the waiver", () => {
+  it("passes npm audit --omit=dev against this lockfile (with the braces waiver when the advisory is reported)", () => {
     const stdout = execFileSync("node", ["scripts/audit-runtime.js"], {
       cwd: root,
       encoding: "utf8",
     });
-    expect(stdout).toContain("GHSA-vfj7-8cjw-p6xm");
+    // The braces advisory is only printed while the registry still reports it.
     expect(stdout).toContain("No unwaived high or critical runtime vulnerabilities.");
   });
 });
