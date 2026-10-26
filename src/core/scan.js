@@ -5,7 +5,8 @@ import { info, warn } from "../utils/logger.js";
 import { trackScan } from "../utils/telemetry.js";
 import { detectMonorepo } from "../analyzers/monorepo-detector.js";
 import { isInsideRoot } from "../utils/safe-path.js";
-import { isTestPath } from "../utils/path-roles.js";
+import { isNonProductPath, isTestPath } from "../utils/path-roles.js";
+import { replaceBracketParams } from "../utils/route-params.js";
 
 const norm = (p) => p.replace(/\\/g, "/");
 
@@ -93,7 +94,13 @@ async function readFileSafe(file) {
   }
 }
 
-function moduleKeyForFile(file, moduleRoots) {
+function rootModuleLabel(repoRoot) {
+  const base = path.basename(path.resolve(repoRoot || ""));
+  if (!base || base === "." || base === "..") return "root";
+  return base;
+}
+
+function moduleKeyForFile(file, moduleRoots, rootLabel = "root") {
   const normalized = norm(file);
 
   const sortedRoots = [...moduleRoots].sort((a, b) => b.length - a.length);
@@ -111,7 +118,9 @@ function moduleKeyForFile(file, moduleRoots) {
   }
 
   const parts = normalized.split("/");
-  return parts.length > 1 ? parts[0] : "root";
+  // A file next to go.mod or package.json is one module, named for the directory.
+  // Calling it "root" hid that package on the system map.
+  return parts.length > 1 ? parts[0] : rootLabel;
 }
 
 function routePathFromFile(file) {
@@ -121,10 +130,9 @@ function routePathFromFile(file) {
     const appIndex = f.indexOf("/app/");
     const relative = f.slice(appIndex + 5);
 
-    const cleaned = relative
+    const cleaned = replaceBracketParams(relative
       .replace(/\/page\.(ts|tsx|js|jsx)$/, "")
-      .replace(/\/route\.(ts|tsx|js|jsx)$/, "")
-      .replace(/\[(.*?)\]/g, ":$1")
+      .replace(/\/route\.(ts|tsx|js|jsx)$/, ""))
       .replace(/\/$/, "");
 
     return cleaned ? `/${cleaned}` : "/";
@@ -141,10 +149,9 @@ function routePathFromFile(file) {
     const pagesIndex = f.indexOf("/pages/");
     const relative = f.slice(pagesIndex + 7);
 
-    const cleaned = relative
+    const cleaned = replaceBracketParams(relative
       .replace(/\.(ts|tsx|js|jsx)$/, "")
-      .replace(/\/index$/, "")
-      .replace(/\[(.*?)\]/g, ":$1")
+      .replace(/\/index$/, ""))
       .replace(/\/$/, "");
 
     return cleaned ? `/${cleaned}` : "/";
@@ -316,11 +323,13 @@ async function extractRepoMetadata(repoRoot, files = []) {
     const hasLibraryEntry = Boolean(pkg.main || pkg.module || pkg.exports || pkg.types || pkg.typings || pkg.browser);
     const isShippedApp = Boolean(allDeps["electron"] || allDeps["next"]);
     metadata.packageEntryFiles = packageEntryFiles(pkg);
-    if (hasLibraryEntry && !isShippedApp) {
-      const description = String(pkg.description || "");
-      const keywords = Array.isArray(pkg.keywords) ? pkg.keywords.join(" ") : "";
-      const saysLibrary = /\b(library|sdk|parser|toolkit|framework)\b/i.test(description);
-      const saysCli = /\bcli\b|command[- ]line/i.test(`${description} ${keywords}`);
+    const description = String(pkg.description || "");
+    const keywords = Array.isArray(pkg.keywords) ? pkg.keywords.join(" ") : "";
+    const saysLibrary = /\b(library|sdk|parser|toolkit|framework)\b/i.test(`${description} ${keywords}`);
+    const saysCli = /\bcli\b|command[- ]line/i.test(`${description} ${keywords}`);
+    // Express 5 publishes index.js with no `main` field. A description that says
+    // library or framework is enough; Node's default entry is that index.js.
+    if ((hasLibraryEntry || saysLibrary) && !isShippedApp) {
       metadata.projectKind = hasBin && !saysLibrary && saysCli ? "cli" : "library";
     } else if (hasBin && !hasLibraryEntry) {
       metadata.projectKind = "cli";
@@ -408,16 +417,37 @@ async function extractRepoMetadata(repoRoot, files = []) {
   return metadata;
 }
 
+function isCommentLine(line) {
+  const trimmed = String(line || "").trim();
+  return trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*");
+}
+
+function lineAt(content, index) {
+  const start = content.lastIndexOf("\n", Math.max(0, index - 1)) + 1;
+  const end = content.indexOf("\n", index);
+  return content.slice(start, end === -1 ? content.length : end);
+}
+
+/** Express route paths start with `/`. `app.get('query parser fn')` is a setting. */
+function isExpressPath(routePath) {
+  return typeof routePath === "string"
+    && routePath.length > 0
+    && routePath.length <= 200
+    && (routePath.startsWith("/") || routePath === "*");
+}
+
 function extractExpressRoutes(content) {
   const routes = [];
   const seenRoutes = new Set();
 
-  // Match app.METHOD(path) or router.METHOD(path)
+  // Match app.METHOD(path) or router.METHOD(path). Skip comments and setting lookups.
   const methodPattern = /(?:app|router)\.(get|post|put|patch|delete|all)\s*\(\s*['"`]([^'"`]+)['"`]/gi;
   let match;
 
   while ((match = methodPattern.exec(content)) !== null) {
+    if (isCommentLine(lineAt(content, match.index))) continue;
     const [, method, path] = match;
+    if (!isExpressPath(path)) continue;
     const routeKey = `${method.toUpperCase()}:${path}`;
     
     if (!seenRoutes.has(routeKey)) {
@@ -440,7 +470,9 @@ function extractExpressRoutes(content) {
   // Match app.route(path).METHOD()
   const routePattern = /(?:app|router)\.route\s*\(\s*['"`]([^'"`]+)['"`]\s*\)([.\s\w()]*)/gi;
   while ((match = routePattern.exec(content)) !== null) {
+    if (isCommentLine(lineAt(content, match.index))) continue;
     const [, path, chain] = match;
+    if (!isExpressPath(path)) continue;
     const methods = [];
     
     if (chain.includes(".get(")) methods.push("GET");
@@ -556,21 +588,28 @@ export async function scanRepo(cfg) {
   }
 
   const moduleCounts = new Map();
+  const flatKeys = new Set();
+  const rootLabel = rootModuleLabel(repoRoot);
 
   for (const file of files) {
     // Go test files belong to the package they exercise. Counting each
     // *_test.go as its own module (the filename under module_roots) splits
     // one package into a source module and a test module.
     if (/_test\.go$/.test(norm(file))) continue;
-    const key = moduleKeyForFile(file, cfg.module_roots || []);
+    const key = moduleKeyForFile(file, cfg.module_roots || [], rootLabel);
+    if (!norm(file).includes("/")) flatKeys.add(key);
     moduleCounts.set(key, (moduleCounts.get(key) || 0) + 1);
   }
 
   const modules = [...moduleCounts.entries()]
-    .map(([key, fileCount]) => ({ key, fileCount }))
+    .map(([key, fileCount]) => ({
+      key,
+      fileCount,
+      ...(flatKeys.has(key) ? { flat: true } : {}),
+    }))
     .sort((a, b) => b.fileCount - a.fileCount);
 
-  const apiFiles = files.filter(isNextRoute);
+  const apiFiles = files.filter((file) => isNextRoute(file) && !isNonProductPath(file));
   const api = [];
 
   // Extract Next.js API routes
@@ -593,8 +632,9 @@ export async function scanRepo(cfg) {
     });
   }
 
-  // Extract Express.js routes
+  // Extract Express.js routes. Tests and examples are not the product API.
   for (const file of files) {
+    if (isNonProductPath(file)) continue;
     if (file.endsWith(".ts") || file.endsWith(".js")) {
       const absoluteFile = path.join(repoRoot, file);
       const content = await readFileSafe(absoluteFile);
@@ -613,7 +653,7 @@ export async function scanRepo(cfg) {
     }
   }
 
-  const pageFiles = files.filter(isNextPage);
+  const pageFiles = files.filter((file) => isNextPage(file) && !isNonProductPath(file));
   const pages = pageFiles.map((file) => ({
     file,
     path: routePathFromFile(file),
@@ -622,6 +662,7 @@ export async function scanRepo(cfg) {
 
   // Extract React Router routes
   for (const file of files) {
+    if (isNonProductPath(file)) continue;
     if (file.endsWith(".tsx") || file.endsWith(".jsx")) {
       const absoluteFile = path.join(repoRoot, file);
       const content = await readFileSafe(absoluteFile);
@@ -635,6 +676,7 @@ export async function scanRepo(cfg) {
 
   // Extract Vue Router routes
   for (const file of files) {
+    if (isNonProductPath(file)) continue;
     if (file.endsWith(".ts") || file.endsWith(".js") || file.endsWith(".vue")) {
       const absoluteFile = path.join(repoRoot, file);
       const content = await readFileSafe(absoluteFile);

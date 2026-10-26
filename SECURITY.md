@@ -19,7 +19,7 @@ RepoLens follows semantic versioning. Security updates are provided for:
 | 1.x     | :white_check_mark: |
 | < 1.0   | :x:                |
 
-**Note**: The supported line is the current 1.x release (1.15.5). Security fixes ship on that line. 0.x releases are not supported. The MCP server refuses paths outside the workspace and does not call the network in deterministic mode. The GitHub Action passes inputs as environment variables and checks them before building the `npx` argument list. `repolens doctor`, `demo`, and `publish` refuse a scan that matches 0 files (exit 2) so an empty or wrong-language config does not look like a successful run. `watch` exits 2 when `module_roots` are missing or `scan.include` matches no files. `--target` must be an existing directory. `publish --strict` refuses to continue when a configured publisher is missing credentials.
+**Note**: The supported line is the current 1.x release (1.16.0). Security fixes ship on that line. 0.x releases are not supported. The MCP server refuses paths outside the workspace and does not call the network in deterministic mode. The GitHub Action passes inputs as environment variables and checks them before building the `npx` argument list. `repolens doctor`, `demo`, and `publish` refuse a scan that matches 0 files (exit 2) so an empty or wrong-language config does not look like a successful run. `watch` exits 2 when `module_roots` are missing or `scan.include` matches no files. `--target` must be an existing directory. `publish --strict` refuses to continue when a configured publisher is missing credentials.
 
 ## Reporting a Vulnerability
 
@@ -122,6 +122,8 @@ RepoLens implements defense-in-depth security:
 2. **Secrets Scanning**: Detects hardcoded credentials
 3. **Test Suite**: Vitest, including security fuzzing (`npm test`)
 
+**GitHub App webhook** (`repolens app`): the body is verified with `X-Hub-Signature-256` before it is parsed. The manifest permissions are checks write, pull requests write, contents read, and metadata read. The private key and webhook secret are environment variables, not files in this repository. Installation tokens are stripped from git error text. CI does not set those variables.
+
 **Workflow Hardening**:
 ```yaml
 # ✅ Good: Pinned to commit SHA
@@ -133,7 +135,7 @@ uses: actions/checkout@v4
 
 ### 5. Dependency Management
 
-**Current Status**: 0 vulnerabilities (519 dependencies)
+**Current Status**: `npm audit` reports 0 vulnerabilities (runtime audit is `npm audit --omit=dev`, enforced by `scripts/audit-runtime.js`)
 
 **Maintenance**:
 - Monthly security audits (`npm audit`)
@@ -160,6 +162,8 @@ uses: actions/checkout@v4
 | **API Abuse** | Medium | Rate limiting + retry logic | ✅ Active |
 | **Dependency Vulnerabilities** | Medium | npm audit + CI checks | ✅ Active |
 | **Circular DoS** | Low | Depth limits + try/catch guards | ✅ Active |
+| **Polynomial ReDoS** | Low | Route parameters and route-group labels are linear scans, not lazy `.*?` regexes | ✅ Active |
+| **Forged GitHub webhook** | High | `repolens app` rejects a body whose `X-Hub-Signature-256` does not match `REPOLENS_WEBHOOK_SECRET` | ✅ Active |
 | **Type Confusion** | Low | Type checking + validation | ✅ Active |
 
 ### Attack Scenarios (Prevented)

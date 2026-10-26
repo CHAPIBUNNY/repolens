@@ -8,6 +8,9 @@ const FLAGS_WITH_VALUE = new Set([
   "--url",
   "--link",
   "--label",
+  "--port",
+  "--host",
+  "--webhook-path",
 ]);
 const BOOLEAN_FLAGS = new Set([
   "--quick",
@@ -16,6 +19,7 @@ const BOOLEAN_FLAGS = new Set([
   "--force",
   "--strict",
   "--verbose",
+  "--manifest",
   "--help",
   "-h",
   "--version",

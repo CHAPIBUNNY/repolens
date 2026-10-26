@@ -17,6 +17,7 @@ RepoLens is the npm package `@chappibunny/repolens` (Node.js 18+). It is a CLI, 
 - [publish](https://github.com/CHAPIBUNNY/repolens/blob/main/docs/INSTALLATION.md): `npx @chappibunny/repolens publish` scans and publishes
 - [badge](https://github.com/CHAPIBUNNY/repolens/blob/main/README.md): `npx @chappibunny/repolens badge` prints shields.io code-health JSON, SVG, or markdown
 - [comment](https://github.com/CHAPIBUNNY/repolens/blob/main/README.md): `npx @chappibunny/repolens comment --base <ref> --head <ref>` prints an architecture diff
+- [app](https://github.com/CHAPIBUNNY/repolens/blob/main/docs/GITHUB_APP.md): `npx @chappibunny/repolens app` self-hosts the GitHub App webhook. `--manifest` prints the manifest. No credentials are required to print it
 - [doctor](https://github.com/CHAPIBUNNY/repolens/blob/main/docs/INSTALLATION.md): `npx @chappibunny/repolens doctor` validates setup
 - [mcp](https://github.com/CHAPIBUNNY/repolens/blob/main/docs/MCP.md): `npx -y @chappibunny/repolens mcp` starts the stdio server
 

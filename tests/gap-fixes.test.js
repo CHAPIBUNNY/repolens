@@ -99,6 +99,18 @@ describe("YAML loading", () => {
     expect(loadYaml("enabled: yes\n")).toEqual({ enabled: "yes" });
   });
 
+  it("returns undefined for an empty document and still applies merge keys", () => {
+    expect(loadYaml("")).toBeUndefined();
+    expect(loadYaml("defaults: &defaults\n  a: 1\nvalue:\n  <<: *defaults\n  b: 2\n")).toEqual({
+      defaults: { a: 1 },
+      value: { a: 1, b: 2 },
+    });
+  });
+
+  it("does not execute custom YAML tags", () => {
+    expect(() => loadYaml("exploit: !!js/function 'function () { return 1 }'\n")).toThrow();
+  });
+
   it("rejects alias bombs", () => {
     const lines = ["a: &a x"];
     for (let i = 0; i < 2001; i += 1) lines.push(`b${i}: *a`);
@@ -162,6 +174,39 @@ describe("scan edge cases", () => {
     });
     expect(result.filesCount).toBe(0);
     expect(result.modules).toEqual([]);
+  });
+
+  it("ignores Express setting lookups, comments, and routes in tests", async () => {
+    await fs.mkdir(path.join(root, "test"));
+    await fs.writeFile(path.join(root, "app.js"), [
+      "this.app.get('query parser fn');",
+      "app.get('/health', () => {});",
+      " * app.get('/user/:id', function () {});",
+      "",
+    ].join("\n"));
+    await fs.writeFile(path.join(root, "test/app.js"), "app.get('/foo', () => {});\n");
+    const result = await scanRepo({
+      __repoRoot: root,
+      scan: { include: ["**/*.js"], ignore: [] },
+      module_roots: ["."],
+    });
+    expect(result.api.map((route) => route.path)).toEqual(["/health"]);
+    expect(result.modules.some((mod) => mod.flat && mod.key === path.basename(root))).toBe(true);
+    expect(result.modules.some((mod) => mod.key === "root")).toBe(false);
+  });
+
+  it("names a flat Go package after the directory and keeps doc separate", async () => {
+    await fs.mkdir(path.join(root, "doc"));
+    await fs.writeFile(path.join(root, "command.go"), "package cobra\n");
+    await fs.writeFile(path.join(root, "doc/man.go"), "package doc\n");
+    const result = await scanRepo({
+      __repoRoot: root,
+      scan: { include: ["**/*.go"], ignore: [] },
+      module_roots: ["doc"],
+    });
+    const keys = result.modules.map((mod) => mod.key).sort();
+    expect(keys).toEqual([path.basename(root), "doc"].sort());
+    expect(result.modules.find((mod) => mod.flat).key).toBe(path.basename(root));
   });
 
   it("does not parse binary files as source", async () => {

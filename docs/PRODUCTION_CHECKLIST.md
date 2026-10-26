@@ -2,7 +2,7 @@
 
 Ensure RepoLens is properly configured and secured before deploying to production. This checklist helps teams validate their setup and avoid common pitfalls.
 
-**Version:** 1.15.5  
+**Version:** 1.16.0  
 **Last Updated:** October 2026
 
 ---
@@ -19,7 +19,7 @@ Ensure RepoLens is properly configured and secured before deploying to productio
 ### ✅ Package Installation
 
 - [ ] Install RepoLens: `npx @chappibunny/repolens@latest --version`
-- [ ] Run version check: Should display `1.15.5` or higher
+- [ ] Run version check: Should display `1.16.0` or higher
 - [ ] Check for updates: Tool notifies if newer version available
 
 ---
@@ -203,7 +203,7 @@ npx @chappibunny/repolens@latest migrate
 - [ ] Preview with `--dry-run` flag first
 - [ ] Review diff: `git diff .github/workflows/`
 - [ ] Package updated to `@chappibunny/repolens@latest`
-- [ ] Node.js setup step added (`actions/setup-node@v4`)
+- [ ] Node.js setup step added (pinned `actions/setup-node`, not a floating tag)
 - [ ] Environment variables added to publish step
 - [ ] Backup files created (`.github/workflows/*.backup`)
 
@@ -439,7 +439,7 @@ npx @chappibunny/repolens@latest doctor
 `demo` and `publish` exit 2 and do not write empty docs. `doctor` treats 0 matches as a blocking failure.
 
 - Check `scan.include` in `.repolens.yml`. A 1.14.x `init --quick` wrote JavaScript-only globs, which match nothing in a Python or Go repository
-- Re-run `npx @chappibunny/repolens@1.15.5 init --quick` so the globs follow the languages in the repo, or edit `scan.include` yourself
+- Re-run `npx @chappibunny/repolens@1.16.0 init --quick` so the globs follow the languages in the repo, or edit `scan.include` yourself
 - `doctor` prints the patterns that matched nothing
 
 ### Get Help
@@ -465,7 +465,7 @@ Before declaring "production ready":
 
 **Approved by:** _______________  
 **Date:** _______________  
-**RepoLens Version:** 1.15.5
+**RepoLens Version:** 1.16.0
 
 ---
 

@@ -75,9 +75,9 @@ Verify: `npx @chappibunny/repolens version` should print the latest version.
 npm error could not resolve … @rollup/rollup-linux-x64-gnu
 ```
 
-**Cause:** npm 10 can crash with `Cannot read properties of null (reading 'edgesOut')` when it re-resolves Vitest 4.1 optional peers, and a lockfile built with npm 10 can omit Rolldown's Linux packages.
+**Cause:** A lockfile that omits Rolldown's Linux packages, or a fresh `npm install` that crashes while re-resolving Vitest's optional peers (`edgesOut` on Vitest 4.1). Vitest 5 is current. CI still must not re-resolve from scratch.
 
-**Fix:** Keep `package-lock.json` and install with `npm ci`, which is what `.github/workflows/test.yml`, `repolens.yml`, and `release.yml` do. Regenerate the lockfile with npm 11 or newer (`npx npm@11 install`) before committing it. Do not delete the lockfile in CI.
+**Fix:** Keep `package-lock.json` and install with `npm ci`, which is what `.github/workflows/test.yml`, `repolens.yml`, and `release.yml` do. If a local refresh crashes, regenerate the lockfile with npm 11 or newer (`npx npm@11 install`) and commit it. Do not delete the lockfile in CI.
 
 See [RELEASE.md](RELEASE.md) and the CI note in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 
@@ -312,7 +312,7 @@ REPOLENS_AI_TIMEOUT_MS=120000  # 2 minutes
 
 **Fix:**
 
-- Use `CHAPIBUNNY/repolens@v1.15.5` (or a later tag) with `command: comment`. Tag `v1.15.1` does not contain that mode
+- Use `CHAPIBUNNY/repolens@v1.16.0` (or a later tag) with `command: comment`. Tag `v1.15.1` does not contain that mode
 - Set `fetch-depth: 0`
 - Set `permissions: contents: read` and `pull-requests: write`
 - For a fork, open the job summary. RepoLens writes the diff there and exits 0

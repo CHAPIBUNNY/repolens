@@ -34,6 +34,7 @@ RepoLens is the npm package \`@chappibunny/repolens\` (Node.js 18+). It is a CLI
 - [publish](${REPO_URL}/blob/main/docs/INSTALLATION.md): \`npx @chappibunny/repolens publish\` scans and publishes
 - [badge](${REPO_URL}/blob/main/README.md): \`npx @chappibunny/repolens badge\` prints shields.io code-health JSON, SVG, or markdown
 - [comment](${REPO_URL}/blob/main/README.md): \`npx @chappibunny/repolens comment --base <ref> --head <ref>\` prints an architecture diff
+- [app](${REPO_URL}/blob/main/docs/GITHUB_APP.md): \`npx @chappibunny/repolens app\` self-hosts the GitHub App webhook. \`--manifest\` prints the manifest. No credentials are required to print it
 - [doctor](${REPO_URL}/blob/main/docs/INSTALLATION.md): \`npx @chappibunny/repolens doctor\` validates setup
 - [mcp](${REPO_URL}/blob/main/docs/MCP.md): \`npx -y @chappibunny/repolens mcp\` starts the stdio server
 
@@ -95,6 +96,7 @@ Agent-oriented install steps, including the Cline MCP snippet, are in llms-insta
 - \`repolens watch\` regenerates docs on change and exits 2 when nothing matches.
 - \`repolens badge\` prints a shields.io endpoint JSON document for the code-health score (0–100). \`--format svg\` prints a square SVG. \`--format markdown --url https://host/repolens-badge.json\` prints a README snippet. \`--format all --out repolens-badge.json\` writes JSON and SVG. Exit 2 when no JavaScript, TypeScript, Python, or Go files were scored. The score is not reported as 100 when zero files match.
 - \`repolens comment --base <ref> --head <ref>\` compares those commits. It prints markdown locally. In GitHub Actions, with \`GITHUB_TOKEN\`, \`GITHUB_REPOSITORY\`, and a pull_request event, it creates or updates one comment.
+- \`repolens app\` self-hosts a GitHub App webhook. It verifies \`X-Hub-Signature-256\`, posts a Check Run named RepoLens, and updates the sticky architecture comment. \`repolens app --manifest\` prints the manifest and needs no secrets. Listening needs \`REPOLENS_APP_ID\`, \`REPOLENS_WEBHOOK_SECRET\`, and a private key. See docs/GITHUB_APP.md.
 - \`repolens mcp\` starts the stdio MCP server. \`repolens-mcp\` is the same entry.
 
 Exit codes: 0 success, 1 runtime error or unknown command, 2 validation failure (bad flags, missing config, empty scan, and the other cases in the README).

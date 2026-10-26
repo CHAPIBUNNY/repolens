@@ -1,9 +1,10 @@
 /**
  * Runtime checks for Node.js 18.
  *
- * Vitest 4 pulls in rolldown, which imports `styleText` from `node:util`.
+ * Vitest 5 pulls in rolldown, which imports `styleText` from `node:util`.
  * That export does not exist before Node.js 20.12, so `npm test` cannot
- * start on Node 18. The library itself still supports `engines.node >= 18`.
+ * start on Node 18. Vitest 5 declares engines `^22.12 || ^24 || >=26` and
+ * still runs the suite on Node 20. The library supports `engines.node >= 18`.
  * This file is what CI runs on the Node 18 job.
  */
 
@@ -19,6 +20,9 @@ import { resolveOutputDir } from "../src/utils/safe-path.js";
 import { getGitDiff, isSafeGitRef } from "../src/core/diff.js";
 import { applyBrandingFooter, brandingEnabled } from "../src/docs/branding.js";
 import { resolveInsideWorkspace } from "../src/mcp/workspace.js";
+import { replaceBracketParams } from "../src/utils/route-params.js";
+import { GITHUB_APP_MANIFEST } from "../src/github-app/manifest.js";
+import { signHubBody, verifyHubSignature256 } from "../src/github-app/signature.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin/repolens.js");
@@ -66,6 +70,33 @@ test("ignores an unsafe git diff ref", () => {
   assert.equal(isSafeGitRef("origin/main; id"), false);
   assert.deepEqual(getGitDiff("origin/main; id"), { added: [], removed: [], modified: [] });
   assert.deepEqual(getGitDiff("HEAD", root, "HEAD; id"), { added: [], removed: [], modified: [] });
+});
+
+test("route params stay linear and the GitHub App manifest is minimal", () => {
+  const started = Date.now();
+  const replaced = replaceBracketParams(`[${"[".repeat(50_000)}`);
+  assert.ok(Date.now() - started < 500);
+  assert.equal(replaced.includes("]"), false);
+  assert.equal(GITHUB_APP_MANIFEST.default_permissions.checks, "write");
+  assert.equal(GITHUB_APP_MANIFEST.default_permissions.metadata, "read");
+  const body = Buffer.from("{\"ok\":true}");
+  const signature = signHubBody(body, "secret");
+  assert.equal(verifyHubSignature256(body, signature, "secret"), true);
+  assert.equal(verifyHubSignature256(body, signature, "nope"), false);
+});
+
+test("app --manifest prints JSON and a bare app exits 2 without credentials", () => {
+  const manifest = runBin(["app", "--manifest"], {
+    env: { REPOLENS_APP_ID: "", REPOLENS_WEBHOOK_SECRET: "", REPOLENS_APP_PRIVATE_KEY: "" },
+  });
+  assert.equal(manifest.status, 0, manifest.stderr);
+  assert.match(manifest.stdout, /"checks": "write"/);
+
+  const missing = runBin(["app"], {
+    env: { REPOLENS_APP_ID: "", REPOLENS_WEBHOOK_SECRET: "", REPOLENS_APP_PRIVATE_KEY: "", REPOLENS_APP_PRIVATE_KEY_PATH: "" },
+  });
+  assert.equal(missing.status, 2, missing.stdout);
+  assert.match(missing.stderr, /REPOLENS_APP_ID/);
 });
 
 test("docs badge and workspace paths stay inside the repository", () => {

@@ -2,11 +2,40 @@
 
 All notable changes to RepoLens will be documented in this file.
 
-## Unreleased
+## 1.16.0
+
+### GitHub App
+
+- `repolens app` self-hosts a GitHub App webhook. It checks `X-Hub-Signature-256`, acknowledges `installation` and `installation_repositories`, and on `pull_request` `opened`, `synchronize`, `reopened`, and `ready_for_review` runs the existing architecture diff. It posts a Check Run named RepoLens (the same summary as the sticky comment) and updates that comment. A finished diff is a successful check. The check fails only when the analysis throws
+- Manifest: `app.yml` and `github-app-manifest.json`, also `repolens app --manifest`. Permissions are checks write, pull requests write, contents read, and metadata read. The hook URL in the repo is a placeholder (`https://example.com/api/github/webhooks`). This release does not register an app and CI does not need new secrets
+- The server answers 202 before the clone and scoring finish, because GitHub allows about 10 seconds for the HTTP response. Setup is in [docs/GITHUB_APP.md](docs/GITHUB_APP.md)
+
+### Security
+
+- Route parameters in `src/renderers/renderDiff.js` no longer use `/\[(.*?)\]/g`. That lazy pattern is polynomial on a long string of `[` with no `]` (CodeQL `js/polynomial-redos`, alert #6). The replacement is a linear scan, including the same pattern in `src/core/scan.js` and the route-group labels in `src/renderers/renderMap.js`. A regression test feeds 100,000 brackets and expects a fast result
+
+### Output accuracy
+
+Hands-on `repolens demo` on expressjs/express, pallets/flask, and spf13/cobra:
+
+- Express 5 has no `main` field. A description that says library, SDK, parser, toolkit, or framework is a library. Express reads as a library, not an API service
+- `app.get('query parser fn')` is a setting lookup, not a route. Comment lines are skipped. Routes in tests, examples, and docs are not the product API. The Express route map is skipped
+- A flat package at the repository root is named after the directory (`cobra`, not `root`). The system map connects that package to `doc/` (one relationship). Files with no directory belong to that flat module
+- External imports that appear only in tests or examples are development tooling even when there is no `package.json`. Flask no longer lists `site_app` and the other test fixtures as runtime packages. Cobra lists `pflag` and `mousetrap` as runtime, and `go-md2man` and `yaml` as doc tooling
+- Flask hubs are `globals.py`, `helpers.py`, `typing.py`, and `signals.py`. The three cycles (`__init__` → `app` → `cli`, and the templating / sansio chains) are real import cycles
+
+### Dependencies
+
+- `js-yaml` 4.3.2 → 5.5.0. Call the named `load` export. The YAML 1.2 Core schema still treats `true`/`false` as booleans and `yes`/`no` as strings. The merge key (`<<`) is enabled. `maxAliases` caps alias expansion. An empty file still returns `undefined`
+- `@sentry/node` 10.76.2 → 11.9.0 (`^11.8.0`). It is still optional. Its own engines exclude Node 18 (`>=20.19` or `>=22.12`). `npm ci` on Node 18 warns and continues, and a failed import still disables telemetry instead of crashing the CLI
+- Vitest 4.1.12 → 5.0.5. Its declared engines are `^22.12 || ^24 || >=26`. The runner starts on Node 20 and does not start on Node 18 (`util.styleText`). CI still runs `npm test` on Node 20 and 22, and `scripts/node18-runtime.js` on Node 18. `engines` stays `>=18`
+- `dotenv` 18.0.8 → 18.0.9 and `@modelcontextprotocol/sdk` 1.32.1 → 1.32.2
+- GitHub Actions: `actions/checkout` pin is the v6.0.3 release commit `df4cb1c`, `actions/setup-node` v7.1.0 (`949feb2`), `softprops/action-gh-release` v3.0.3 (`efb3536`). `npm audit` reports no vulnerabilities
 
 ### Docs
 
-- Roadmap and README now say plainly why RepoLens is not replaced by asking an LLM: a chat answer only covers what someone thought to ask, while RepoLens publishes the whole map on every PR. The grounded AI Q&A item is described as a layer on top of that map (docs/ROADMAP.md, README.md, docs/KNOWN_ISSUES.md, .github/copilot-instructions.md)
+- Roadmap item 1 (GitHub App) is shipped in 1.16.0. Java and C# language support is now What's Next item 1
+- The note that a chat answer only covers what someone thought to ask, and that grounded AI Q&A sits on top of the full map, stays in the roadmap, README, known issues, and copilot instructions
 
 ## 1.15.5
 

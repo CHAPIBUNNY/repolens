@@ -1,0 +1,22 @@
+{
+  "name": "RepoLens",
+  "description": "Posts an architecture diff as a check run and one sticky pull request comment.",
+  "url": "https://github.com/CHAPIBUNNY/repolens",
+  "hook_attributes": {
+    "url": "https://example.com/api/github/webhooks",
+    "active": true
+  },
+  "redirect_url": "https://github.com/CHAPIBUNNY/repolens",
+  "public": false,
+  "default_permissions": {
+    "checks": "write",
+    "pull_requests": "write",
+    "contents": "read",
+    "metadata": "read"
+  },
+  "default_events": [
+    "installation",
+    "installation_repositories",
+    "pull_request"
+  ]
+}

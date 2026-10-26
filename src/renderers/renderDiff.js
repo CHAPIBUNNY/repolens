@@ -1,3 +1,5 @@
+import { replaceBracketParams } from "../utils/route-params.js";
+
 function isRouteFile(file) {
   return (
     file.includes("/pages/api/") ||
@@ -15,10 +17,10 @@ function routePathFromFile(file) {
     const appIndex = file.indexOf("/app/");
     const relative = file.slice(appIndex + 5);
 
-    return "/" + relative
+    const cleaned = relative
       .replace(/\/page\.(ts|tsx|js|jsx)$/, "")
-      .replace(/\/route\.(ts|tsx|js|jsx)$/, "")
-      .replace(/\[(.*?)\]/g, ":$1");
+      .replace(/\/route\.(ts|tsx|js|jsx)$/, "");
+    return `/${replaceBracketParams(cleaned)}`;
   }
 
   if (file.includes("/pages/api/")) {

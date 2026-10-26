@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.15.5  
+**Current Version:** 1.16.0  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.15.5)
+## What's Shipped (v0.1.0 → v1.16.0)
 
 Everything below is live, tested, and available on npm.
 
@@ -165,6 +165,13 @@ Everything below is live, tested, and available on npm.
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
 
+## v1.16.0 — GitHub App
+
+- ✅ GitHub App manifest (`app.yml`, `github-app-manifest.json`) with checks write, pull requests write, contents read, and metadata read
+- ✅ `repolens app` verifies `X-Hub-Signature-256`, handles installation and pull request events, and posts a Check Run plus the sticky architecture comment. Setup is in [GITHUB_APP.md](GITHUB_APP.md). The app is not registered by this repository
+- ✅ Route-parameter rendering is linear (CodeQL `js/polynomial-redos`)
+- ✅ Express reads as a library. Test and example routes are not the product API. A flat Go package is named after its directory. Test-only imports are dev tooling on Python and Go
+
 ## v1.15.5 — Output accuracy (ExifReader)
 
 - ✅ A flat `src/` is one module. Libraries are told apart from CLIs by `package.json`, not by a `bin/` folder
@@ -235,15 +242,14 @@ The [gallery](https://chapibunny.github.io/repolens/) is a static flat Material 
 
 Planned in this order:
 
-1. [ ] GitHub App for automated setup and status checks
-2. [ ] Java and C# language support — analyzers for Java (Maven/Gradle modules, package/import graph, Spring conventions) and C# (`.sln`/`.csproj` projects, namespace/`using` graph), giving the same module map, dependency graph, cycles, hubs, patterns, and PR comment as JS/TS/Python/Go
-3. [ ] Grounded AI explanations and Q&A — builds on the existing optional AI layer (`REPOLENS_AI_ENABLED`): plain-English "why it matters + suggested fix" under the PR architecture-diff comment, `repolens ask "<question>"` CLI and an MCP `ask` tool answering from RepoLens's own graph with file citations, and VS Code hover explanations per module. Off by default, bring-your-own key, every claim backed by a real graph edge. This sits on top of the map RepoLens already pushes out unasked (every module, cycle and hub, regenerated on each PR), because a chat answer only covers what someone thought to ask. A new contributor does not know what to ask, so the full map is the baseline and Q&A is for follow-up
-4. [ ] Slack notifications
-5. [ ] Custom webhook support
-6. [ ] Cross-repository architecture analysis
-7. [ ] Security boundary validation
-8. [ ] Interactive HTML documentation output
-9. [ ] Architecture decision records (ADR) generation
+1. [ ] Java and C# language support — analyzers for Java (Maven/Gradle modules, package/import graph, Spring conventions) and C# (`.sln`/`.csproj` projects, namespace/`using` graph), giving the same module map, dependency graph, cycles, hubs, patterns, and PR comment as JS/TS/Python/Go
+2. [ ] Grounded AI explanations and Q&A — builds on the existing optional AI layer (`REPOLENS_AI_ENABLED`): plain-English "why it matters + suggested fix" under the PR architecture-diff comment, `repolens ask "<question>"` CLI and an MCP `ask` tool answering from RepoLens's own graph with file citations, and VS Code hover explanations per module. Off by default, bring-your-own key, every claim backed by a real graph edge. This sits on top of the map RepoLens already pushes out unasked (every module, cycle and hub, regenerated on each PR), because a chat answer only covers what someone thought to ask. A new contributor does not know what to ask, so the full map is the baseline and Q&A is for follow-up
+3. [ ] Slack notifications
+4. [ ] Custom webhook support
+5. [ ] Cross-repository architecture analysis
+6. [ ] Security boundary validation
+7. [ ] Interactive HTML documentation output
+8. [ ] Architecture decision records (ADR) generation
 
 ---
 

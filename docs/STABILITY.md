@@ -27,6 +27,7 @@ RepoLens follows semantic versioning (semver):
 | `mcp` | Stable | Start the stdio MCP server. `repolens-mcp` is the same entry |
 | `badge` | Stable | shields.io code-health JSON, SVG, or markdown. Ships in 1.15.2 |
 | `comment` | Stable | Architecture diff between two refs. Posts one sticky pull request comment when `GITHUB_TOKEN` is set |
+| `app` | Stable | Self-host the GitHub App webhook. `--manifest` prints the manifest JSON. Added in 1.16.0 |
 | `version` | Stable | Display version |
 | `help` | Stable | Show usage information |
 
@@ -41,6 +42,17 @@ RepoLens follows semantic versioning (semver):
 | `--dry-run` | — | Stable | Preview changes without applying (migrate) |
 | `--force` | — | Stable | Skip confirmation prompts (migrate) |
 | `--verbose` | — | Stable | Enable verbose logging |
+| `--base <ref>` | — | Stable | `comment`: base commit or ref |
+| `--head <ref>` | — | Stable | `comment`: head commit or ref |
+| `--format <kind>` | — | Stable | `badge`: json (default), svg, markdown, or all |
+| `--out <path>` | — | Stable | `badge`: write JSON or SVG to a file |
+| `--url <url>` | — | Stable | `badge`: public URL of the JSON file |
+| `--link <url>` | — | Stable | `badge`: page the badge links to |
+| `--label <text>` | — | Stable | `badge`: shields.io label |
+| `--port <n>` | — | Stable | `app`: listen port (default 8787) |
+| `--host <address>` | — | Stable | `app`: listen address (default 127.0.0.1) |
+| `--webhook-path <path>` | — | Stable | `app`: path GitHub posts to |
+| `--manifest` | — | Stable | `app`: print the GitHub App manifest JSON and exit |
 | `--version` | `-v` | Stable | Print version |
 | `--help` | `-h` | Stable | Show help |
 
@@ -52,7 +64,7 @@ RepoLens follows semantic versioning (semver):
 | `1` | Runtime error (scan failure, publish failure, etc.) |
 | `2` | Validation error (invalid config, missing files, etc.) |
 
-Unknown commands produce exit code `1`. Unknown flags, and missing values for `--config` or `--target`, produce exit code `2`. `repolens doctor` exits `2` when it finds a blocking setup problem, including a scan that matches 0 files. `demo` and `publish` exit `2` when 0 files are scanned and do not write empty docs. `watch` exits `2` when no `module_roots` directory exists and when `scan.include` matches no files. `publish --strict` exits `2` when publisher credentials are missing. A `--target` path that does not exist exits `2` with `Target directory not found: <path>` before any scan. `repolens` with no command prints help and exits `0`. `repolens <command> --help` prints that command's flags. `--dry-run` applies to `migrate` only. `publish` does not accept it.
+Unknown commands produce exit code `1`. Unknown flags, and missing values for `--config` or `--target`, produce exit code `2`. `repolens doctor` exits `2` when it finds a blocking setup problem, including a scan that matches 0 files. `demo` and `publish` exit `2` when 0 files are scanned and do not write empty docs. `watch` exits `2` when no `module_roots` directory exists and when `scan.include` matches no files. `publish --strict` exits `2` when publisher credentials are missing. `repolens app` exits `2` when `REPOLENS_APP_ID`, `REPOLENS_WEBHOOK_SECRET`, or the private key is missing. `--manifest` does not need them. A `--target` path that does not exist exits `2` with `Target directory not found: <path>` before any scan. `repolens` with no command prints help and exits `0`. `repolens <command> --help` prints that command's flags. `--dry-run` applies to `migrate` only. `publish` does not accept it.
 
 `--target` must already be a directory. RepoLens does not create it.
 

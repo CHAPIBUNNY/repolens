@@ -8,6 +8,7 @@ const EXIT_CODES = `Exit codes:
      badge scored 0 source files,
      comment is missing a base or head ref,
      publish --strict is missing publisher credentials,
+     app is missing its id, webhook secret, or private key,
      or feedback has no terminal`;
 
 const COMMAND_HELP = {
@@ -283,6 +284,42 @@ ${EXIT_CODES}
 Examples:
   repolens comment --base origin/main --head HEAD
 `,
+
+  app: `
+RepoLens app — self-host the GitHub App webhook
+
+Usage:
+  repolens app [--port <n>] [--host <address>] [--webhook-path <path>]
+  repolens app --manifest
+
+Options:
+  --port <n>            Listen port (default 8787, or REPOLENS_APP_PORT)
+  --host <address>      Listen address (default 127.0.0.1, or REPOLENS_APP_HOST)
+  --webhook-path <path> Path GitHub posts to (default /api/github/webhooks)
+  --manifest            Print the GitHub App manifest JSON and exit
+  --help, -h            Show this help
+
+Verifies X-Hub-Signature-256, acknowledges installation events, and on
+pull_request opened, synchronize, reopened, and ready_for_review runs the
+architecture diff. It posts a Check Run named RepoLens and updates the
+sticky pull request comment. The check is informational: a completed diff
+is success, and a failed analysis is a failed check.
+
+\`--manifest\` needs no credentials. Running the server needs
+REPOLENS_APP_ID, REPOLENS_WEBHOOK_SECRET, and either
+REPOLENS_APP_PRIVATE_KEY or REPOLENS_APP_PRIVATE_KEY_PATH.
+Replace hook_attributes.url in the manifest before you register the app.
+This command does not register an app on GitHub.
+
+GitHub allows about 10 seconds for the HTTP response. The server answers
+202 and posts the check after the analysis finishes.
+
+${EXIT_CODES}
+
+Examples:
+  repolens app --manifest
+  repolens app --port 8787
+`,
 };
 
 const GLOBAL_HELP = `
@@ -306,6 +343,7 @@ Commands:
   mcp         Start the stdio MCP server (also available as repolens-mcp)
   badge       Print a shields.io code-health badge (JSON, SVG, or markdown)
   comment     Print or post an architecture diff for a pull request
+  app         Self-host the GitHub App webhook (check run and PR comment)
   version     Print the current RepoLens version
   help        Show this help message
 
@@ -320,6 +358,10 @@ Options:
   --label <text>    badge: shields.io label (default: code health)
   --base <ref>      comment: base commit or ref
   --head <ref>      comment: head commit or ref
+  --port <n>        app: listen port (default 8787)
+  --host <address>  app: listen address (default 127.0.0.1)
+  --webhook-path    app: webhook path (default /api/github/webhooks)
+  --manifest        app: print the GitHub App manifest JSON and exit
   --quick           Scaffold without the wizard (also --non-interactive).
                     Markdown only; globs follow the detected language.
   --strict          publish: exit 2 when publisher credentials are missing
@@ -356,6 +398,8 @@ Examples:
   repolens badge
   repolens badge --format markdown --url https://example.github.io/repo/repolens-badge.json
   repolens comment --base origin/main --head HEAD
+  repolens app --manifest
+  repolens app --port 8787
   repolens --version
 `;
 
