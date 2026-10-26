@@ -237,7 +237,7 @@ Planned in this order:
 
 1. [ ] GitHub App for automated setup and status checks
 2. [ ] Java and C# language support — analyzers for Java (Maven/Gradle modules, package/import graph, Spring conventions) and C# (`.sln`/`.csproj` projects, namespace/`using` graph), giving the same module map, dependency graph, cycles, hubs, patterns, and PR comment as JS/TS/Python/Go
-3. [ ] Grounded AI explanations and Q&A — builds on the existing optional AI layer (`REPOLENS_AI_ENABLED`): plain-English "why it matters + suggested fix" under the PR architecture-diff comment, `repolens ask "<question>"` CLI and an MCP `ask` tool answering from RepoLens's own graph with file citations, and VS Code hover explanations per module. Off by default, bring-your-own key, every claim backed by a real graph edge
+3. [ ] Grounded AI explanations and Q&A — builds on the existing optional AI layer (`REPOLENS_AI_ENABLED`): plain-English "why it matters + suggested fix" under the PR architecture-diff comment, `repolens ask "<question>"` CLI and an MCP `ask` tool answering from RepoLens's own graph with file citations, and VS Code hover explanations per module. Off by default, bring-your-own key, every claim backed by a real graph edge. This sits on top of the map RepoLens already pushes out unasked (every module, cycle and hub, regenerated on each PR), because a chat answer only covers what someone thought to ask. A new contributor does not know what to ask, so the full map is the baseline and Q&A is for follow-up
 4. [ ] Slack notifications
 5. [ ] Custom webhook support
 6. [ ] Cross-repository architecture analysis

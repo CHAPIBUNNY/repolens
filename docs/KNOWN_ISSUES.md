@@ -320,7 +320,7 @@ A shallow checkout (`fetch-depth: 1`) does not contain the base commit. The comm
 
 ### Future
 - [ ] Java and C# language support
-- [ ] Grounded AI explanations and Q&A
+- [ ] Grounded AI explanations and Q&A (layered on the always-published map)
 - [ ] Cross-repository architecture analysis
 - [ ] Slack notifications
 - [ ] Custom webhook support

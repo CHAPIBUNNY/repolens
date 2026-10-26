@@ -119,6 +119,7 @@ Run `npx @chappibunny/repolens migrate` to automatically update your workflow fi
 | 🤖 **Autonomous** | Runs on every push via GitHub Actions — docs stay evergreen |
 | 👥 **Multi-Audience** | Technical docs + stakeholder-readable overviews from one scan |
 | 📤 **Multi-Publisher** | Notion, Confluence, GitHub Wiki, Obsidian, Markdown — together or one at a time |
+| 🗺️ **Shows what you didn't ask** | An LLM only answers the question it is given, and a newcomer doesn't know what to ask. RepoLens publishes the whole map (every module, cycle and hub) on every PR, the same way each time, with no tokens spent per question |
 | 🧠 **AI-Assisted** | Optional AI with zero-hallucination policy (structured context only) |
 | 🔍 **Smart Detection** | Frameworks, domains, data flows, dependencies, drift — all automatic |
 | 🔌 **Extensible** | Plugin system for custom renderers, publishers, and hooks |
@@ -449,7 +450,7 @@ v1.0+ features complete — CLI, config schema, and plugin interface are frozen.
 **Next:**
 - [ ] GitHub App for automated setup and status checks
 - [ ] Java and C# language support
-- [ ] Grounded AI explanations and Q&A (`repolens ask`, PR comment, MCP, VS Code hover)
+- [ ] Grounded AI explanations and Q&A (`repolens ask`, PR comment, MCP, VS Code hover), layered on the always-published map and not a replacement for it
 - [ ] Slack notifications
 - [ ] Custom webhook support
 - [ ] Cross-repository architecture analysis
