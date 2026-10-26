@@ -2,6 +2,12 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## Unreleased
+
+### Docs
+
+- Roadmap and README now say plainly why RepoLens is not replaced by asking an LLM: a chat answer only covers what someone thought to ask, while RepoLens publishes the whole map on every PR. The grounded AI Q&A item is described as a layer on top of that map (docs/ROADMAP.md, README.md, docs/KNOWN_ISSUES.md, .github/copilot-instructions.md)
+
 ## 1.15.5
 
 Fixes twelve output problems found by running 1.15.4 on mattiasw/ExifReader (a plain-JavaScript library with a flat `src/` and a build-helper `bin/`), and the two leftovers from 1.15.4.

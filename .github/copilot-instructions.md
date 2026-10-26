@@ -510,7 +510,7 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - Cross-repository architecture analysis
 - GitHub App, Slack notifications, custom webhooks
 - Java and C# language support
-- Grounded AI explanations and Q&A (`repolens ask`, MCP ask tool)
+- Grounded AI explanations and Q&A (`repolens ask`, MCP ask tool), layered on the always-published map. A chat answer only covers what was asked, so the full map stays the baseline
 - Interactive HTML output and ADR generation
 
 ### Shipped
