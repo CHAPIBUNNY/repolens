@@ -314,21 +314,21 @@ export async function analyzeDependencyGraph(files, repoRoot) {
  * Split external packages into runtime dependencies and development tooling.
  * A package declared in `devDependencies` is development tooling. One declared in
  * `dependencies`, `optionalDependencies`, or `peerDependencies` is runtime. An undeclared
- * package is runtime when a product file (not a test, example, or build script) imports it.
- * Without a root package.json (Python, Go) every package counts as runtime.
+ * package is runtime when a product file (not a test, example, or build script) imports it,
+ * and development tooling when only tests or examples import it. Python and Go have no
+ * package.json, so that import split is the whole decision.
  */
 async function splitExternalDeps(result, repoRoot) {
   const raw = await readFileSafe(path.join(repoRoot, "package.json"));
   let pkg = null;
   try { pkg = raw ? JSON.parse(raw) : null; } catch { pkg = null; }
-  if (!pkg) return { runtime: [...result.externalDeps], dev: [] };
 
-  const declaredRuntime = new Set([
+  const declaredRuntime = new Set(pkg ? [
     ...Object.keys(pkg.dependencies || {}),
     ...Object.keys(pkg.optionalDependencies || {}),
     ...Object.keys(pkg.peerDependencies || {}),
-  ]);
-  const declaredDev = new Set(Object.keys(pkg.devDependencies || {}));
+  ] : []);
+  const declaredDev = new Set(pkg ? Object.keys(pkg.devDependencies || {}) : []);
 
   const productImports = new Set();
   for (const node of result.nodes) {

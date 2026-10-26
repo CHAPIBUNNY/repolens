@@ -42,6 +42,28 @@ const minimalCfg = { project: { name: "TestProject" } };
 // render.js — renderSystemOverview
 // ============================================================
 
+describe("renderSystemMap flat packages", () => {
+  it("connects a doc package to files that sit next to go.mod", () => {
+    const md = renderSystemMap(
+      {
+        modules: [
+          { key: "cobra", fileCount: 14, flat: true },
+          { key: "doc", fileCount: 5 },
+        ],
+      },
+      { project: { name: "cobra" } },
+      {
+        edges: [{ from: "doc/man_docs", to: "command" }],
+        nodes: [],
+      },
+    );
+    expect(md).toContain("doc");
+    expect(md).toContain("cobra");
+    expect(md).toContain("1 relationships");
+    expect(md).not.toContain("0 relationships");
+  });
+});
+
 describe("renderSystemOverview", () => {
   it("includes project name and key metrics", () => {
     const md = renderSystemOverview(minimalCfg, minimalScan);
@@ -320,6 +342,37 @@ describe("buildArchitectureDiffData", () => {
     expect(data.addedRoutes).toEqual([]);
     expect(data.removedRoutes).toEqual([]);
     expect(data.impactedModules).toEqual([]);
+  });
+
+  it("turns bracket params into :params, including a catch-all", () => {
+    const data = buildArchitectureDiffData({
+      added: [
+        "src/app/blog/[slug]/page.tsx",
+        "src/app/shop/[...slug]/page.tsx",
+        "src/app/docs/[[...slug]]/page.tsx",
+      ],
+      removed: [],
+      modified: [],
+    });
+    expect(data.addedRoutes).toEqual([
+      "/blog/:slug",
+      "/shop/:...slug",
+      "/docs/:[...slug]",
+    ]);
+  });
+
+  it("replaces dynamic segments in linear time (CodeQL js/polynomial-redos)", () => {
+    const attack = `src/app/${"[".repeat(100_000)}/page.tsx`;
+    const started = Date.now();
+    const data = buildArchitectureDiffData({
+      added: [attack],
+      removed: [],
+      modified: [],
+    });
+    expect(Date.now() - started).toBeLessThan(500);
+    expect(data.addedRoutes).toHaveLength(1);
+    expect(data.addedRoutes[0].startsWith("/")).toBe(true);
+    expect(data.addedRoutes[0]).not.toContain("]");
   });
 });
 

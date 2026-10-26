@@ -1,13 +1,12 @@
+import { replaceLeadingAppGroup, replaceSlashGroups } from "../utils/route-params.js";
+
 function sanitizeNodeId(value) {
   return value.replace(/[^a-zA-Z0-9_]/g, "_");
 }
 
 function normalizeLabel(value) {
-  return value
-    .replace(/^src\//, "")
-    .replace(/^app\/\((.*?)\)/, "app/$1")
-    .replace(/\/\((.*?)\)/g, "/$1")
-    .replace(/\/+/g, "/");
+  const withoutSrc = value.replace(/^src\//, "");
+  return replaceSlashGroups(replaceLeadingAppGroup(withoutSrc)).replace(/\/+/g, "/");
 }
 
 function buildModuleGraph(modules, depGraph) {
@@ -96,9 +95,11 @@ function buildModuleGraph(modules, depGraph) {
  */
 function findModuleForFile(fileKey, modules) {
   const normalized = fileKey.replace(/\\/g, "/");
+  const flat = modules.find((mod) => mod.flat) || modules.find((mod) => mod.key === "root");
   let bestMatch = null;
   for (const mod of modules) {
     const modKey = mod.key;
+    if (flat && modKey === flat.key) continue;
     // Direct match (with or without extension)
     if (normalized === modKey || normalized === modKey.replace(/\.[^/.]+$/, "")) {
       return modKey;
@@ -110,6 +111,7 @@ function findModuleForFile(fileKey, modules) {
       }
     }
   }
+  if (!bestMatch && flat && !normalized.includes("/")) return flat.key;
   return bestMatch;
 }
 

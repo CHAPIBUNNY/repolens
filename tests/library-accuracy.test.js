@@ -123,6 +123,16 @@ describe("2-3. package metadata decides library or CLI", () => {
     expect(scan.metadata.projectKind).toBe("cli");
   });
 
+  it("calls a framework with no main field a library", async () => {
+    await write("package.json", JSON.stringify({
+      name: "express",
+      description: "Fast, unopinionated, minimalist web framework",
+    }));
+    await write("index.js", "export {};\n");
+    const scan = await scanRepo(libraryConfig());
+    expect(scan.metadata.projectKind).toBe("library");
+  });
+
   it("keeps a package that calls itself a CLI a CLI", async () => {
     await write("package.json", JSON.stringify({ name: "tool", description: "A command-line tool", main: "src/index.js", bin: { tool: "bin/tool.js" }, keywords: ["cli"] }));
     await write("src/index.js", "export {};\n");
@@ -275,11 +285,19 @@ describe("9. runtime and development packages are separate", () => {
     expect(graph.externalDev).toEqual(["chai"]);
   });
 
-  it("counts everything as runtime without a package.json", async () => {
+  it("counts a product import as runtime without a package.json", async () => {
     await write("a.py", "import requests\n");
     const graph = await analyzeDependencyGraph(["a.py"], tempDir);
     expect(graph.externalRuntime).toEqual(["requests"]);
     expect(graph.externalDev).toEqual([]);
+  });
+
+  it("puts Python imports that exist only in tests under dev tooling", async () => {
+    await write("src/app.py", "import flask\n");
+    await write("tests/test_app.py", "import site_app\nimport flask\n");
+    const graph = await analyzeDependencyGraph(["src/app.py", "tests/test_app.py"], tempDir);
+    expect(graph.externalRuntime).toEqual(["flask"]);
+    expect(graph.externalDev).toEqual(["site_app"]);
   });
 });
 

@@ -87,6 +87,22 @@ REPOLENS_AI_API_KEY=...
 | `REPOLENS_BADGE_URL` | No | Public http(s) URL of that JSON. shields.io fetches it. Embedded in the markdown snippet |
 | `REPOLENS_BADGE_LINK` | No | Page the badge links to. The gallery score pages link back to themselves |
 
+## GitHub App (`repolens app`)
+
+The webhook is self-hosted. None of these are CI secrets. See [GITHUB_APP.md](GITHUB_APP.md).
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `REPOLENS_APP_ID` | Yes, to listen | GitHub App ID |
+| `REPOLENS_WEBHOOK_SECRET` | Yes, to listen | Verifies `X-Hub-Signature-256` |
+| `REPOLENS_APP_PRIVATE_KEY` | One of the key vars | PEM text. A literal `\n` becomes a newline |
+| `REPOLENS_APP_PRIVATE_KEY_PATH` | One of the key vars | Path to the PEM file. Used when set |
+| `REPOLENS_APP_PORT` | No | Listen port (default `8787`) |
+| `REPOLENS_APP_HOST` | No | Listen address (default `127.0.0.1`) |
+| `REPOLENS_APP_WEBHOOK_PATH` | No | Path GitHub posts to (default `/api/github/webhooks`) |
+
+`repolens app --manifest` prints the manifest and does not read these.
+
 ## Telemetry
 
 | Variable | Required | Description |

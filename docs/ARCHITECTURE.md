@@ -68,9 +68,10 @@ bin/repolens.js
         ├── src/renderers/       4 files
         ├── src/publishers/      7 files (notion, confluence, github-wiki,
         │                         markdown, obsidian, index, publish)
-        ├── src/utils/           20 files
+        ├── src/utils/           21 files (includes route-params.js)
         ├── src/mcp/             server.js, tools.js, workspace.js
-        ├── src/delivery/        1 file
+        ├── src/delivery/        comment.js, architecture-comment.js, comment-constants.js
+        ├── src/github-app/      manifest, signature, auth, checkout, handler, server, run
         ├── src/integrations/    discord.js
         └── src/plugins/         loader.js, manager.js
 ```
@@ -80,6 +81,8 @@ bin/repolens.js
 ```
 repolens/
 ├── action.yml               # Composite action. publish/demo/doctor use npm; comment and badge use this repo
+├── app.yml                  # GitHub App manifest (YAML). Same fields as github-app-manifest.json
+├── github-app-manifest.json # GitHub App manifest (JSON) for the registration form
 ├── llms.txt                 # Short description for assistants (also generated on the gallery)
 ├── llms-full.txt            # Longer install, CLI, MCP, action, and badge description
 ├── server.json              # MCP Registry metadata
@@ -146,6 +149,14 @@ repolens/
 │   │   ├── comment.js       # Short PR comment used by publish
 │   │   ├── architecture-comment.js  # Sticky architecture diff (files, modules, deps, health)
 │   │   └── comment-constants.js     # Comment marker and footer links
+│   ├── github-app/          # `repolens app`: manifest, signature check, installation token, webhook
+│   │   ├── manifest.js
+│   │   ├── signature.js
+│   │   ├── auth.js
+│   │   ├── checkout.js
+│   │   ├── handler.js
+│   │   ├── server.js
+│   │   └── run.js
 │   ├── plugins/
 │   │   ├── loader.js        # Plugin resolution and dynamic import
 │   │   └── manager.js       # Plugin registry and lifecycle orchestration
@@ -167,7 +178,8 @@ repolens/
 │       ├── path-roles.js    # Test, tooling, and build/example path checks shared by analyzers
 │       ├── github-repo.js   # owner/name checks
 │       ├── interactive.js   # TTY prompts
-│       └── yaml.js          # Size-capped YAML parsing
+│       ├── yaml.js          # Size-capped YAML parsing (js-yaml 5, Core schema, merge key, maxAliases)
+│       └── route-params.js  # Linear `[param]` and route-group replacements
 ├── tests/                   # Vitest test suite
 ├── gallery/                 # Static showcase generator, flat Material pages (not published to npm)
 ├── docs/                    # Handbook (ROADMAP, STABILITY, RELEASE, …)

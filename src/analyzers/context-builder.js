@@ -30,20 +30,28 @@ export function computeModuleDepMetrics(depGraph) {
 
 /**
  * Find the module a file belongs to: the module with the longest key that is a path
- * prefix of the file. Files at the repository root belong to `root`.
+ * prefix of the file. Files at the repository root belong to the flat module
+ * (the directory name, or the legacy key `root`).
  */
+function flatModuleKey(modules) {
+  const marked = modules.find((mod) => mod.flat);
+  if (marked) return marked.key;
+  return modules.some((mod) => mod.key === "root") ? "root" : null;
+}
+
 function buildModuleLookup(modules) {
   const keys = modules.map((m) => m.key).sort((x, y) => y.length - x.length);
+  const flatKey = flatModuleKey(modules);
   const cache = new Map();
   return (file) => {
     const norm = String(file || "").replace(/\\/g, "/");
     if (cache.has(norm)) return cache.get(norm);
     let found = null;
     for (const key of keys) {
-      if (key === "root") continue;
+      if (key === flatKey) continue;
       if (norm === key || norm.startsWith(`${key}/`)) { found = key; break; }
     }
-    if (!found && !norm.includes("/") && keys.includes("root")) found = "root";
+    if (!found && !norm.includes("/") && flatKey) found = flatKey;
     cache.set(norm, found);
     return found;
   };

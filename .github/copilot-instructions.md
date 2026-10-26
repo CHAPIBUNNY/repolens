@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.15.5  
+**Version:** 1.16.0  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -353,7 +353,7 @@ scripts/                  # Helper scripts
 ### Tests (`.github/workflows/test.yml`)
 - **Trigger**: Pull requests, and pushes to every branch. `repolens.yml` also runs the suite on `main` before publish
 - **Install**: `npm ci`
-- **Node**: 18, 20, and 22. Node 18 runs `scripts/node18-runtime.js` because Vitest 4 needs Node 20.12 (`util.styleText`)
+- **Node**: 18, 20, and 22. Node 18 runs `scripts/node18-runtime.js` because Vitest 5's rolldown import of `util.styleText` does not start on Node 18. The full suite runs on Node 20 and 22. `engines` stays `>=18`
 
 ### Gallery (`.github/workflows/gallery.yml`)
 - **Trigger**: Weekly schedule (Monday 06:17 UTC) and `workflow_dispatch`. Not pull requests. The jobs run only on `main`, so a branch dispatch does not replace the live site
@@ -476,6 +476,7 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 
 ### GitHub Wiki (optional)
 - `GITHUB_TOKEN` - Personal access token or Actions token (requires repo scope)
+- `REPOLENS_APP_ID`, `REPOLENS_WEBHOOK_SECRET`, `REPOLENS_APP_PRIVATE_KEY` or `REPOLENS_APP_PRIVATE_KEY_PATH` - only for `repolens app`. Not CI secrets. See docs/GITHUB_APP.md
 
 ### AI Enhancement (optional)
 - `REPOLENS_AI_ENABLED` - Enable AI-powered sections (true/false)
@@ -508,12 +509,13 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - Test coverage integration (coverage % per module)
 - Breaking change detection (export signature comparison)
 - Cross-repository architecture analysis
-- GitHub App, Slack notifications, custom webhooks
+- Slack notifications, custom webhooks
 - Java and C# language support
 - Grounded AI explanations and Q&A (`repolens ask`, MCP ask tool), layered on the always-published map. A chat answer only covers what was asked, so the full map stays the baseline
 - Interactive HTML output and ADR generation
 
 ### Shipped
+- ~~GitHub App webhook (`repolens app`)~~ ✅ Shipped in v1.16.0. Registration is still an owner step
 - ~~MCP registry name `io.github.CHAPIBUNNY/repolens`~~ ✅ Shipped in v1.14.1
 - ~~MCP server, GitHub Action, docs badge~~ ✅ Shipped in v1.14.0
 - ~~Obsidian vault publisher~~ ✅ Shipped in v1.13.0

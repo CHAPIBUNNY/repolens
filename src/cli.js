@@ -311,6 +311,17 @@ async function main() {
     process.exit(code);
   }
 
+  if (command === "app") {
+    const { runGitHubApp } = await import("./github-app/run.js");
+    const code = await runGitHubApp({
+      manifest: Boolean(parsed.flags["--manifest"]),
+      port: parsed.flags["--port"],
+      host: parsed.flags["--host"],
+      webhookPath: parsed.flags["--webhook-path"],
+    });
+    process.exit(code);
+  }
+
   if (command === "mcp") {
     process.env.REPOLENS_LOG_STDERR = "1";
     const { startMcpServer } = await import("./mcp/server.js");

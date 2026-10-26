@@ -3,7 +3,17 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** October 2026  
-**Version:** 1.15.5
+**Version:** 1.16.0
+
+## Express looked like an API service, and Cobra's package was named `root` (fixed in 1.16.0)
+
+`repolens demo` on expressjs/express (5.3.0, no `main` field) called it a production-grade API service with 141 endpoints. Most of those were `app.get` setting lookups (`query parser fn`), JSDoc samples, and routes in `test/` and `examples/`. 1.16.0 treats a description that says framework or library as a library, ignores setting lookups and comment lines, and does not count tests, examples, or docs as the product API. The route map is skipped.
+
+On spf13/cobra the flat package was a module named `root` and the system map showed no relationship to `doc/`. 1.16.0 names that package after the directory (`cobra`) and draws the `doc` → `cobra` edge. Imports that exist only in tests or examples are development tooling on Python and Go, so Flask's `site_app` fixture is not a runtime dependency. Flask's three import cycles and the hubs `globals.py`, `helpers.py`, `typing.py`, and `signals.py` are unchanged: they match the source.
+
+## GitHub App is not registered for you (1.16.0)
+
+`repolens app` and the manifest are in the repo. Creating the app on GitHub, setting the webhook URL, and storing the private key are still owner steps. See [GITHUB_APP.md](GITHUB_APP.md). CI does not use those secrets.
 
 ---
 
@@ -288,12 +298,12 @@ scan:
 
 ---
 
-## � CI/CD
+## CI/CD
 
-### npm install and Vitest 4.1
-**Issue:** npm 10 can crash with `Cannot read properties of null (reading 'edgesOut')` when it re-resolves Vitest 4.1's optional peer dependencies from scratch.
+### npm install and the lockfile
+**Issue:** npm 10 can crash with `Cannot read properties of null (reading 'edgesOut')` when it re-resolves an old Vitest 4.1 tree from scratch. Vitest 5 is the current dev dependency. Deleting `package-lock.json` and running `npm install` in CI is still the wrong install.
 
-**Fix:** CI uses `npm ci` with the committed lockfile. To refresh the lockfile, use npm 11 or newer (`npx npm@11 install`). That records every Rolldown platform package so Linux runners can install `@rolldown/binding-linux-x64-gnu`.
+**Fix:** CI uses `npm ci` with the committed lockfile. Refresh the lockfile locally and commit it. npm 11 (`npx npm@11 install`) is the safe refresh if npm 10's resolver crashes. The lockfile has to include Rolldown's Linux packages so `npm test` can start on the runner.
 
 ---
 
