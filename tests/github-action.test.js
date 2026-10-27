@@ -39,6 +39,7 @@ describe("github action inputs", () => {
     expect(inputs.version).toBe(DEFAULT_PACKAGE_VERSION);
     expect(inputs.version).toBe(pkg.version);
     expect(inputs.args).toEqual([
+      "--force",
       "--yes",
       `@chappibunny/repolens@${pkg.version}`,
       "publish",
@@ -58,7 +59,7 @@ describe("github action inputs", () => {
     });
     const inputs = resolveActionInputs();
     expect(inputs.command).toBe("doctor");
-    expect(inputs.args[2]).toBe("doctor");
+    expect(inputs.args[3]).toBe("doctor");
     expect(inputs.prComment).toBe("true");
 
     setInputs({ REPOLENS_COMMAND: "publish; id" });

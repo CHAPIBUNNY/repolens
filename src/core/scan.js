@@ -6,6 +6,7 @@ import { trackScan } from "../utils/telemetry.js";
 import { detectMonorepo } from "../analyzers/monorepo-detector.js";
 import { isInsideRoot } from "../utils/safe-path.js";
 import { isNonProductPath, isTestPath } from "../utils/path-roles.js";
+import { resolveScanIgnore } from "./scan-defaults.js";
 import { replaceBracketParams } from "../utils/route-params.js";
 
 const norm = (p) => p.replace(/\\/g, "/");
@@ -559,7 +560,7 @@ export async function listMatchedFiles(cfg) {
   const rootResolved = path.resolve(repoRoot);
   const files = await fg(cfg.scan.include, {
     cwd: rootResolved,
-    ignore: cfg.scan?.ignore || [],
+    ignore: resolveScanIgnore(cfg.scan),
     onlyFiles: true,
     followSymbolicLinks: false,
     absolute: false

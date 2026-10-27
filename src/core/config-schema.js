@@ -107,6 +107,10 @@ export function validateConfig(config) {
     if (!config.scan.ignore || !Array.isArray(config.scan.ignore)) {
       errors.push("scan.ignore is required and must be an array");
     }
+
+    if (config.scan.include_dev_artifacts !== undefined && typeof config.scan.include_dev_artifacts !== "boolean") {
+      errors.push("scan.include_dev_artifacts must be a boolean");
+    }
   }
 
   // Validate module_roots (optional but must be array if present)

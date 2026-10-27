@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.16.0  
+**Current Version:** 1.16.1  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.16.0)
+## What's Shipped (v0.1.0 → v1.16.1)
 
 Everything below is live, tested, and available on npm.
 
@@ -164,6 +164,12 @@ Everything below is live, tested, and available on npm.
 - ✅ `server.json` for the MCP Registry (`io.github.CHAPIBUNNY/repolens`) and `smithery.yaml`
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
+
+## v1.16.1 — Scan noise and cycle priority
+
+- ✅ Snapshots, samples, fixtures, examples, e2e fixtures, and `generated/` stay out of file counts, orphans, and the type graph unless `scan.include_dev_artifacts: true`
+- ✅ Cycle priority: high refactor for three or more folders; low for a call-heavy two-folder pair ("mutual recursion, probably intentional; verify") and for type-only cycles
+- ✅ The GitHub Action passes `npx --force` so a repo `devEngines` pin does not abort the action on npm versions that enforce `devEngines` (newer npm). Node 20's bundled npm does not enforce that field. Manual `npx` still needs `--force` on those npm versions when the host Node does not meet that pin. `--ignore-engines` does not
 
 ## v1.16.0 — GitHub App
 

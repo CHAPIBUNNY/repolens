@@ -34,7 +34,7 @@ Or add this to `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` (global):
   "mcpServers": {
     "repolens": {
       "command": "npx",
-      "args": ["-y", "@chappibunny/repolens", "mcp"]
+      "args": ["--force", "-y", "@chappibunny/repolens", "mcp"]
     }
   }
 }
@@ -52,7 +52,7 @@ Or add this to `.vscode/mcp.json`:
     "repolens": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@chappibunny/repolens", "mcp"]
+      "args": ["--force", "-y", "@chappibunny/repolens", "mcp"]
     }
   }
 }
@@ -71,7 +71,7 @@ Add this to the Claude Desktop config file:
   "mcpServers": {
     "repolens": {
       "command": "npx",
-      "args": ["-y", "@chappibunny/repolens", "mcp"]
+      "args": ["--force", "-y", "@chappibunny/repolens", "mcp"]
     }
   }
 }
@@ -82,25 +82,25 @@ Restart Claude Desktop after saving.
 ## Claude Code
 
 ```bash
-claude mcp add repolens -- npx -y @chappibunny/repolens mcp
+claude mcp add repolens -- npx --force -y @chappibunny/repolens mcp
 ```
 
 ## Run it yourself
 
 ```bash
-npx -y @chappibunny/repolens mcp
+npx --force -y @chappibunny/repolens mcp
 ```
 
 The `repolens-mcp` bin is the same server:
 
 ```bash
-npx --package=@chappibunny/repolens repolens-mcp
+npx --force --yes --package=@chappibunny/repolens repolens-mcp
 ```
 
 Point the server at a repository other than the current directory:
 
 ```bash
-REPOLENS_WORKSPACE=/path/to/repo npx @chappibunny/repolens mcp
+REPOLENS_WORKSPACE=/path/to/repo npx --force --yes @chappibunny/repolens mcp
 ```
 
 ## Registry

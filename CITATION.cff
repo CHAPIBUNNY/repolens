@@ -4,7 +4,7 @@ title: "RepoLens"
 abstract: "CLI, MCP server and GitHub Action that generate living architecture documentation from a repository and publish it to Notion, Confluence, GitHub Wiki, Obsidian or Markdown."
 authors:
   - alias: CHAPIBUNNY
-version: 1.16.0
+version: 1.16.1
 date-released: 2026-10-26
 license: MIT
 repository-code: "https://github.com/CHAPIBUNNY/repolens"

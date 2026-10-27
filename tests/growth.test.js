@@ -283,7 +283,8 @@ describe("github action comment and badge modes", () => {
     const steps = actionSteps(publish);
     expect(steps[0].kind).toBe("npx");
     expect(steps[0].env.REPOLENS_PR_COMMENT).toBe("false");
-    expect(steps[0].args[2]).toBe("publish");
+    expect(steps[0].args[0]).toBe("--force");
+    expect(steps[0].args[3]).toBe("publish");
     expect(steps[1].script).toBe("pr-comment-run.js");
 
     process.env.REPOLENS_COMMAND = "badge";

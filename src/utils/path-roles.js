@@ -3,7 +3,8 @@
 // so tests and examples never drive hub lists, coupling advice, or severity.
 
 const TEST_DIRECTORIES = new Set([
-  "test", "tests", "spec", "specs", "__tests__", "__mocks__", "fixtures", "testdata", "e2e", "cypress",
+  "test", "tests", "spec", "specs", "__tests__", "__mocks__", "fixtures", "fixture", "__fixtures__",
+  "testdata", "e2e", "e2e-fixture", "e2e-fixtures", "cypress", "__snapshots__",
 ]);
 
 // Directories holding tooling, samples, and docs. Code in here describes a build script
@@ -31,10 +32,37 @@ export function isTestPath(filePath) {
   const parts = segments(filePath);
   if (directorySegments(filePath).some((segment) => TEST_DIRECTORIES.has(segment))) return true;
   const base = parts[parts.length - 1] || "";
+  if (base.endsWith(".snap") || base.includes(".snap.")) return true;
   if (/^(test_|spec_)/.test(base)) return true;
   if (/(_test|_spec)\.[a-z0-9]+$/.test(base)) return true;
   if (/\.(test|spec)\.[a-z0-9]+$/.test(base)) return true;
   return false;
+}
+
+/**
+ * Snapshot, sample, fixture, example, and generated trees.
+ * These are dev tooling, like tests: they describe the suite or a demo, not the product.
+ * Scan ignores them unless `scan.include_dev_artifacts` is true.
+ */
+export const DEV_ARTIFACT_DIRECTORIES = new Set([
+  "__snapshots__",
+  "sample", "samples",
+  "example", "examples",
+  "fixture", "fixtures", "__fixtures__",
+  "e2e-fixture", "e2e-fixtures",
+  "generated",
+]);
+
+export function isSnapshotPath(filePath) {
+  const parts = segments(filePath);
+  if (parts.some((segment) => segment === "__snapshots__")) return true;
+  const base = parts[parts.length - 1] || "";
+  return base.endsWith(".snap") || base.includes(".snap.");
+}
+
+export function isDevArtifactPath(filePath) {
+  if (isSnapshotPath(filePath)) return true;
+  return directorySegments(filePath).some((segment) => DEV_ARTIFACT_DIRECTORIES.has(segment));
 }
 
 /** True when a directory above the file is a tooling, example, or docs directory. */
