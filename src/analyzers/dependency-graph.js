@@ -1,6 +1,8 @@
 // Dependency graph analysis with cycle detection.
 // JavaScript, TypeScript, Python, and Go imports become edges.
-// Comments and strings are ignored. Type-only TypeScript imports are not edges.
+// Comments and strings are ignored. Type-only TypeScript imports are not runtime edges.
+// Cycle priority is in cycle-priority.js: mutual recursion and type-only cycles are
+// not "Priority: High refactor". Large multi-module cycles stay high.
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -17,6 +19,11 @@ import {
   parseGoModule,
 } from "./import-parsers.js";
 import { isNonProductPath } from "../utils/path-roles.js";
+import {
+  classifyRuntimeCycles,
+  priorityCounts,
+  typeOnlyReport,
+} from "./cycle-priority.js";
 
 const JS_EXTENSIONS = new Set([".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"]);
 const PY_EXTENSIONS = new Set([".py", ".pyw"]);
@@ -70,12 +77,31 @@ function emptyResult() {
     nodes: [],
     edges: [],
     cycles: [],
+    cycleReports: [],
+    typeOnlyReports: [],
     externalDeps: [],
     externalRuntime: [],
     externalDev: [],
     stats: null,
     summary: null,
   };
+}
+
+/** How many times imported bindings are called. `foo(`, `foo.bar(`, `ns?.method(`. */
+export function countBindingCalls(source, names) {
+  if (!names || names.length === 0) return 0;
+  const stripped = String(source)
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:\\])\/\/.*$/gm, "$1");
+  let total = 0;
+  for (const name of names) {
+    if (!/^[A-Za-z_$][\w$]*$/.test(name)) continue;
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const direct = stripped.match(new RegExp(`\\b${escaped}\\s*(?:\\?\\.\\s*)?\\(`, "g"));
+    const member = stripped.match(new RegExp(`\\b${escaped}\\s*(?:\\?\\.|\\.)\\s*[A-Za-z_$][\\w$]*\\s*\\(`, "g"));
+    total += (direct ? direct.length : 0) + (member ? member.length : 0);
+  }
+  return total;
 }
 
 async function loadGoModule(repoRoot) {
@@ -200,21 +226,66 @@ export async function analyzeDependencyGraph(files, repoRoot) {
   const pyIndex = indexPythonModules(pyFiles);
   const goModulePath = goFiles.length > 0 ? await loadGoModule(repoRoot) : null;
 
+  // Runtime edges carry call counts. Type-only edges stay off the runtime graph
+  // and are classified on their own so they are never "Priority: High refactor".
+  const edgeRecords = new Map();
+
+  function rememberEdge(fromKey, toKey, fromFile, typeOnly, calls) {
+    if (!toKey || toKey === fromKey || !allFileKeys.has(toKey)) return;
+    const id = `${fromKey}->${toKey}`;
+    let record = edgeRecords.get(id);
+    if (!record) {
+      record = {
+        from: fromKey,
+        to: toKey,
+        fromFile,
+        toFile: fileKeyToFile.get(toKey) || toKey,
+        typeOnly: true,
+        calls: 0,
+      };
+      edgeRecords.set(id, record);
+    }
+    if (!typeOnly) {
+      record.typeOnly = false;
+      record.calls += calls;
+    }
+  }
+
   for (const file of jsFiles) {
     const content = await readFileSafe(path.join(repoRoot, file));
     if (!content) continue;
     const fromKey = normalizeFileKey(file);
     const selfName = await ownPackageName(file);
+    const grouped = new Map();
     for (const imported of extractJsImports(content)) {
-      if (imported.typeOnly) continue;
-      if (isRelativeImport(imported.specifier)) {
-        addEdge(fromKey, resolveImportPath(file, imported.specifier));
-      } else {
+      if (!isRelativeImport(imported.specifier)) {
+        if (imported.typeOnly) continue;
         const name = externalPackageName(imported.specifier);
         if (name && name === selfName) continue;
         addExternal(fromKey, name);
+        continue;
+      }
+      const toKey = resolveImportPath(file, imported.specifier);
+      if (!toKey) continue;
+      const id = `${fromKey}->${toKey}`;
+      let slot = grouped.get(id);
+      if (!slot) {
+        slot = { toKey, typeOnly: true, names: new Set() };
+        grouped.set(id, slot);
+      }
+      if (!imported.typeOnly) {
+        slot.typeOnly = false;
+        for (const binding of imported.names || []) slot.names.add(binding);
       }
     }
+    for (const slot of grouped.values()) {
+      const calls = slot.typeOnly ? 0 : countBindingCalls(content, [...slot.names]);
+      rememberEdge(fromKey, slot.toKey, file, slot.typeOnly, calls);
+    }
+  }
+
+  for (const record of edgeRecords.values()) {
+    if (!record.typeOnly) addEdge(record.from, record.to);
   }
 
   for (const file of pyFiles) {
@@ -275,6 +346,21 @@ export async function analyzeDependencyGraph(files, repoRoot) {
   // Detect cycles using iterative DFS (Tarjan-lite / coloring)
   result.cycles = detectCycles(adjacency);
 
+  const fileForKey = (key) => fileKeyToFile.get(key) || key;
+  const runtimeEdgeList = [...edgeRecords.values()].filter((edge) => !edge.typeOnly);
+  result.cycleReports = classifyRuntimeCycles(result.cycles, runtimeEdgeList, fileForKey);
+
+  const typeOnlyAdj = new Map();
+  for (const edge of edgeRecords.values()) {
+    if (!edge.typeOnly) continue;
+    if (!typeOnlyAdj.has(edge.from)) typeOnlyAdj.set(edge.from, new Set());
+    if (!typeOnlyAdj.has(edge.to)) typeOnlyAdj.set(edge.to, new Set());
+    typeOnlyAdj.get(edge.from).add(edge.to);
+  }
+  result.typeOnlyReports = detectCycles(typeOnlyAdj).map((path) => typeOnlyReport(path));
+
+  const priorities = priorityCounts(result.cycleReports);
+
   // Stats
   const totalImports = result.edges.length;
   const orphans = result.nodes.filter(n => n.imports.length === 0 && n.importedBy.length === 0);
@@ -295,6 +381,9 @@ export async function analyzeDependencyGraph(files, repoRoot) {
     externalRuntime: externalRuntime.length,
     externalDev: externalDev.length,
     cycles: result.cycles.length,
+    highCycles: priorities.high,
+    mediumCycles: priorities.medium,
+    lowCycles: priorities.low,
     orphanFiles: orphans.length,
     hubs,
   };

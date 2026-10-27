@@ -16,6 +16,7 @@ import { identifyFlowDependencies, filterNoiseFlows } from "../analyzers/flow-in
 import { isCliProject, isLibraryProject } from "../analyzers/context-builder.js";
 import { scoreMaturity } from "../analyzers/maturity.js";
 import { isNonProductPath, isTestPath } from "../utils/path-roles.js";
+import { cycleConcern, cycleHealthPenalty, cycleInsight, cycleStatusCell } from "../analyzers/cycle-priority.js";
 import { info, warn } from "../utils/logger.js";
 
 // Strip conversational patterns that LLMs sometimes inject into documentation
@@ -288,7 +289,8 @@ The system is organized around **${context.domains.length} functional domains**,
     output += `|--------|-------|--------|\n`;
     output += `| Internal imports | ${stats.totalEdges} edges | ${stats.totalEdges > 0 ? "✅ Connected" : "⚠️ Isolated"} |\n`;
     output += `| External Packages | ${externalPackagesLabel(stats)} | ${stats.externalDeps < 50 ? "✅ Manageable" : stats.externalDeps < 100 ? "⚠️ Consider audit" : "🔴 High dependency count"} |\n`;
-    output += `| Circular Dependencies | ${stats.cycles === 0 ? "cycle-free" : stats.cycles} | ${stats.cycles === 0 ? "✅ None" : `🔴 ${stats.cycles} detected`} |\n`;
+    const cycleCell = cycleStatusCell(stats);
+    output += `| Circular Dependencies | ${stats.cycles === 0 ? "cycle-free" : stats.cycles} | ${stats.cycles === 0 ? "✅ None" : `${cycleCell.mark} ${stats.cycles} detected`} |\n`;
     output += `| Orphan Files | ${stats.orphanFiles} | ${orphanStatus(stats)} |\n`;
 
     // Key insights
@@ -296,7 +298,7 @@ The system is organized around **${context.domains.length} functional domains**,
     if (stats.cycles === 0) {
       output += `- ✅ **Clean module boundaries** — No circular dependencies detected, enabling safe refactoring and testing.\n`;
     } else {
-      output += `- 🔴 **Architectural concern** — ${stats.cycles} circular dependenc${stats.cycles === 1 ? "y" : "ies"} detected. These create tight coupling and make testing difficult.\n`;
+      output += `- ${cycleInsight(stats)}\n`;
     }
     if (stats.hubs && stats.hubs.length > 0) {
       const topHub = stats.hubs[0];
@@ -828,7 +830,8 @@ function getFallbackArchitectureOverview(context, enrichment = {}) {
     output += `|--------|-------|--------|----------------|\n`;
     output += `| Import Edges | ${stats.totalEdges} | ${stats.totalEdges > 0 ? "✅" : "⚠️"} | ${stats.totalEdges > 0 ? "Healthy module connectivity" : "Consider connecting modules"} |\n`;
     output += `| External Packages | ${externalPackagesLabel(stats)} | ${stats.externalDeps < 50 ? "✅" : stats.externalDeps < 100 ? "⚠️" : "🔴"} | ${stats.externalDeps >= 100 ? "Audit for unused dependencies" : stats.externalDeps >= 50 ? "Review dependency necessity" : "Lean dependency set"} |\n`;
-    output += `| Circular Deps | ${stats.cycles} | ${stats.cycles === 0 ? "✅" : "🔴"} | ${stats.cycles === 0 ? "Clean module boundaries" : "Refactor to break cycles"} |\n`;
+    const archCycle = cycleStatusCell(stats);
+    output += `| Circular Deps | ${stats.cycles} | ${stats.cycles === 0 ? "✅" : archCycle.mark} | ${stats.cycles === 0 ? "Clean module boundaries" : archCycle.advice} |\n`;
     output += `| Orphan Files | ${stats.orphanFiles} | ${orphanRatio(stats) > ORPHAN_WARN_RATIO ? "⚠️" : "✅"} | ${stats.orphanFiles === 0 ? "All code is connected" : orphanRatio(stats) > ORPHAN_WARN_RATIO ? "Review for dead code" : "A few unconnected files (examples, type tests, entry points) are normal"} |\n`;
 
     // Architectural strengths and concerns
@@ -856,9 +859,8 @@ function getFallbackArchitectureOverview(context, enrichment = {}) {
 
     // Concerns
     const concerns = [];
-    if (stats.cycles > 0) {
-      concerns.push(`**Circular dependencies detected** — ${stats.cycles} circular dependenc${stats.cycles === 1 ? 'y' : 'ies'} create tight coupling, complicate testing, and hinder refactoring. Priority: High.`);
-    }
+    const concern = cycleConcern(stats);
+    if (concern) concerns.push(concern);
     if (stats.orphanFiles > stats.totalFiles * 0.2) {
       concerns.push(`**High orphan file ratio** — ${stats.orphanFiles}/${stats.totalFiles} files (${Math.round(stats.orphanFiles / stats.totalFiles * 100)}%) are not imported. Consider removing dead code. Priority: Medium.`);
     }
@@ -1625,8 +1627,9 @@ function externalPackagesLabel(stats) {
 function calculateHealthScore(stats, context) {
   let score = 100;
   
-  // Circular dependencies are a major concern
-  if (stats.cycles > 0) score -= Math.min(30, stats.cycles * 10);
+  // High and medium cycles cost points. Mutual recursion and type-only cycles do not.
+  // A stats object without the priority split keeps the older per-cycle penalty.
+  score -= cycleHealthPenalty(stats);
   
   // Orphan files indicate potential dead code
   const ratio = orphanRatio(stats);

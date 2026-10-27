@@ -1,6 +1,6 @@
 # AI-Enhanced Documentation
 
-As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is in the current version (v1.16.0). The MCP server stays on the deterministic path unless a tool call sets `deterministic: false`. `repolens badge`, `repolens comment`, and the GitHub Action `comment` and `badge` modes also stay deterministic: they do not call a model.
+As of v0.4.0, RepoLens supports AI-powered documentation generation that creates clear, audience-specific documentation for both technical and non-technical readers. This feature is in the current version (v1.16.1). The MCP server stays on the deterministic path unless a tool call sets `deterministic: false`. `repolens badge`, `repolens comment`, and the GitHub Action `comment` and `badge` modes also stay deterministic: they do not call a model.
 
 ## Overview
 

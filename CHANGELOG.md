@@ -2,6 +2,32 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.16.1
+
+Fixes three problems found by running 1.16.0 on orval-labs/orval (a TypeScript monorepo whose test snapshots and samples dwarf the packages).
+
+### Scan defaults
+
+- Snapshot directories (`__snapshots__`, `*.snap`), sample / fixture / example / e2e-fixture directories, and `generated/` trees are dev tooling. They are left out of the file count, orphan detection, and the type graph unless `scan.include_dev_artifacts: true`. Other `scan.ignore` patterns still apply. Orval's second copy of the snapshot tree lives in `tests/generated`, so `**/generated/**` is part of that default (it was already in the `init` ignore list).
+- `repolens badge` skips the same directories. It does not read `.repolens.yml`.
+
+### Cycle priority
+
+- A cycle is no longer always "Priority: High refactor".
+- **Low — mutual recursion, probably intentional; verify** when the cycle stays inside two parent directories that import each other both ways (at least two runtime edges each way) and both directions call the imported bindings (at least two calls each way). Orval's core getters and resolvers are this shape.
+- **Low — type-only imports; verify** when every edge is `import type` or `export type`. Those cycles are not runtime edges and are not counted in `stats.cycles`.
+- **High refactor** is kept for a cycle that touches three or more parent directories.
+- A two-directory cycle with only one import each way is **Medium**.
+- The health score subtracts points for high and medium cycles. Low-priority cycles do not. Stats that do not carry the priority split keep the previous per-cycle penalty.
+- The heuristic is documented in `src/analyzers/cycle-priority.js`, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md).
+
+### npx and devEngines
+
+- `npx` (npm exec) checks `devEngines` on the package.json in the current directory before it starts the requested package. A repo that pins a Node or package-manager the host does not meet exits `EBADDEVENGINES`. RepoLens never gets to run, so this cannot be fixed inside the CLI.
+- `--ignore-engines` is not an npm flag. npm 11 warns that it is an unknown config and still errors.
+- `--force` turns that failure into a warning and runs the command. The GitHub Action passes `--force` on its `npx` step. A manual run is `npx --force --yes @chappibunny/repolens demo`. A global install, or `node node_modules/@chappibunny/repolens/bin/repolens.js`, never asks npm to read the scanned repo's `devEngines`.
+- See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+
 ## 1.16.0
 
 ### GitHub App

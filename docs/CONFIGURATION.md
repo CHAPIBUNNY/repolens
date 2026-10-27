@@ -139,7 +139,8 @@ features:
 | `discord.significantThreshold` | number | No | Change % threshold for notifications (default: `10`) |
 | `discord.branches` | array | No | Branch filter for notifications. Supports globs. (default: all) |
 | `scan.include` | array | Yes | Glob patterns for files to scan. Absolute patterns are rejected. |
-| `scan.ignore` | array | Yes | Glob patterns to exclude. The key is `ignore`. `scan.exclude` is not a config field. |
+| `scan.ignore` | array | Yes | Glob patterns to exclude. The key is `ignore`. `scan.exclude` is not a config field. Your patterns are always applied. |
+| `scan.include_dev_artifacts` | boolean | No | Default `false`. Snapshot directories (`__snapshots__`, `*.snap`), `sample`/`samples`, `example`/`examples`, `fixture`/`fixtures`/`__fixtures__`, `e2e-fixture`/`e2e-fixtures`, and `generated` are skipped (file count, orphans, type graph). Set `true` to scan them. Patterns you put in `scan.ignore` still apply. |
 | `module_roots` | array | No | Root directories for module detection. The schema allows omitting it. `repolens doctor` fails when it is missing or empty. |
 | `outputs.pages` | array | Yes | Required schema list. Each `key` must be one of the supported page keys below. This list does not choose which documents are generated. |
 | `documentation.output_dir` | string | No | Directory for the numbered document set (default: `.repolens`). Must stay inside the repository. |

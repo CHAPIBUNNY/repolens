@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const DEFAULT_PACKAGE_VERSION = "1.16.0";
+export const DEFAULT_PACKAGE_VERSION = "1.16.1";
 const ALLOWED_COMMANDS = new Set(["publish", "demo", "doctor", "comment", "badge"]);
 const LOCAL_COMMANDS = new Set(["comment", "badge"]);
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -88,7 +88,10 @@ export function resolveActionInputs(env = process.env) {
     badgeUrl,
     badgeLink,
     local,
-    args: local ? null : ["--yes", `@chappibunny/repolens@${version}`, command, "--config", config],
+    // --force is the only npm switch that turns a cwd package.json devEngines
+    // mismatch into a warning. Without it, npx exits EBADDEVENGINES before
+    // RepoLens starts. --ignore-engines is not a real flag and does not help.
+    args: local ? null : ["--force", "--yes", `@chappibunny/repolens@${version}`, command, "--config", config],
   };
 }
 

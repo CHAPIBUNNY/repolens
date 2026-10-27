@@ -10,6 +10,8 @@ const SOURCE_EXT = new Set([".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py",
 const SKIP_DIR = new Set([
   "node_modules", ".git", "dist", "build", "vendor", "target", "coverage",
   ".repolens", "__pycache__", ".cache",
+  "__snapshots__", "samples", "sample", "examples", "example",
+  "fixtures", "fixture", "__fixtures__", "e2e-fixtures", "e2e-fixture", "generated",
 ]);
 
 const COLOR_HEX = {
@@ -143,6 +145,7 @@ export async function listScoreFiles(root, { maxFiles = 2500 } = {}) {
         continue;
       }
       if (!entry.isFile()) continue;
+      if (entry.name.endsWith(".snap")) continue;
       if (!SOURCE_EXT.has(path.extname(entry.name))) continue;
       if (out.length >= maxFiles) {
         capped = true;

@@ -2,11 +2,40 @@
 
 Common issues and solutions when installing or using RepoLens.
 
-> **Quick fix for most problems:** Run `npx @chappibunny/repolens doctor` to diagnose your setup.
+> **Quick fix for most problems:** Run `npx --force --yes @chappibunny/repolens doctor` to diagnose your setup. `--force` is required when this repo's `package.json` sets `devEngines` the host Node does not meet. See below.
 
 ---
 
 ## Installation Issues
+
+### `EBADDEVENGINES` when running `npx` inside a repository
+
+```
+npm error code EBADDEVENGINES
+npm error EBADDEVENGINES The developer of this package has specified the following through devEngines
+npm error EBADDEVENGINES Invalid devEngines.runtime
+```
+
+**Cause:** npm 11 checks `devEngines` on the `package.json` in the current directory before `npx` starts the package you asked for. The scanned repo's `devEngines.runtime` (Node) or `devEngines.packageManager` is enforced even though you are not installing that repo. `onFail: "download"` is treated as an error. RepoLens has not started yet, so the CLI cannot ignore the field. The repo's `engines.node` is a separate check (`EBADENGINE`) and only hard-fails when `engine-strict` is set.
+
+**What does not work:** `npx --ignore-engines` is not an npm flag. npm warns `Unknown cli config "--ignore-engines"` and still exits `EBADDEVENGINES`.
+
+**Fix:** pass `--force`. npm then prints the mismatch as a warning and runs the command.
+
+```bash
+npx --force --yes @chappibunny/repolens demo
+```
+
+A global install does not go through that check:
+
+```bash
+npm install -g @chappibunny/repolens
+repolens demo
+```
+
+The GitHub Action's `npx` step already passes `--force`. `comment` and `badge` run from the action checkout and do not call `npx`.
+
+---
 
 ### `ENOTEMPTY: directory not empty` during `npm install`
 
@@ -312,7 +341,7 @@ REPOLENS_AI_TIMEOUT_MS=120000  # 2 minutes
 
 **Fix:**
 
-- Use `CHAPIBUNNY/repolens@v1.16.0` (or a later tag) with `command: comment`. Tag `v1.15.1` does not contain that mode
+- Use `CHAPIBUNNY/repolens@v1.16.1` (or a later tag) with `command: comment`. Tag `v1.15.1` does not contain that mode
 - Set `fetch-depth: 0`
 - Set `permissions: contents: read` and `pull-requests: write`
 - For a fork, open the job summary. RepoLens writes the diff there and exits 0

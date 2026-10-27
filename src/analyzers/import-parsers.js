@@ -147,6 +147,33 @@ function braceIsTypeOnly(inner) {
   return parts.every((part) => /^type\s+/.test(part) && !/^type\s+as\b/.test(part));
 }
 
+/** Local bindings in an import brace. `type Foo` is skipped. `foo as bar` yields `bar`. */
+function localNames(inner) {
+  const names = [];
+  for (const part of splitTopCommas(inner)) {
+    const trimmed = part.trim().replace(/\s+/g, " ");
+    if (!trimmed || /^type\s+/.test(trimmed)) continue;
+    const asMatch = trimmed.match(/^[A-Za-z_$][\w$]*\s+as\s+([A-Za-z_$][\w$]*)$/);
+    if (asMatch) {
+      names.push(asMatch[1]);
+      continue;
+    }
+    const id = trimmed.match(/^([A-Za-z_$][\w$]*)$/);
+    if (id) names.push(id[1]);
+  }
+  return names;
+}
+
+function readAlias(source, i) {
+  let j = skipWs(source, i);
+  const word = readWord(source, j);
+  if (word.word !== "as") return { name: null, next: i };
+  j = skipWs(source, word.next);
+  const name = readWord(source, j);
+  if (!name.word) return { name: null, next: j };
+  return { name: name.word, next: name.next };
+}
+
 function findMatchingBrace(source, openIndex) {
   let depth = 0;
   for (let i = openIndex; i < source.length; i += 1) {
@@ -179,16 +206,25 @@ function readFromClause(source, i) {
 }
 
 /**
- * @returns {{ specifier: string, typeOnly: boolean }[]}
+ * @returns {{ specifier: string, typeOnly: boolean, names: string[] }[]}
+ * `names` are the local bindings (`import { a as b }` → `b`) so callers can
+ * count `b(` as a use of this import. Type-only imports still list names.
  */
 export function extractJsImports(source) {
   const imports = [];
   const n = source.length;
   let i = 0;
 
-  function add(specifier, typeOnly) {
+  function add(specifier, typeOnly, names = []) {
     if (typeof specifier !== "string") return;
-    imports.push({ specifier, typeOnly: Boolean(typeOnly) });
+    const locals = [];
+    const seen = new Set();
+    for (const name of names) {
+      if (typeof name !== "string" || !name || seen.has(name)) continue;
+      seen.add(name);
+      locals.push(name);
+    }
+    imports.push({ specifier, typeOnly: Boolean(typeOnly), names: locals });
   }
 
   function parseRequire(at) {
@@ -228,7 +264,7 @@ export function extractJsImports(source) {
       const clause = readFromClause(source, close + 1);
       if (!clause) return close + 1;
       const onlyTypes = typeOnly || braceIsTypeOnly(inner);
-      add(clause.value, onlyTypes);
+      add(clause.value, onlyTypes, typeOnly ? [] : localNames(inner));
       return clause.next;
     }
 
@@ -240,8 +276,10 @@ export function extractJsImports(source) {
       }
       // default binding, namespace, or `name, { ... }`
       let sawValue = !typeOnly;
+      const names = [];
       if (source[j] !== "*") {
         const binding = readWord(source, j);
+        if (binding.word && !typeOnly) names.push(binding.word);
         j = skipWs(source, binding.next);
         if (source[j] === ",") {
           sawValue = !typeOnly;
@@ -249,8 +287,9 @@ export function extractJsImports(source) {
         }
       } else {
         j = skipWs(source, j + 1);
-        j = skipAsBinding(source, j);
-        j = skipWs(source, j);
+        const alias = readAlias(source, j);
+        if (alias.name && !typeOnly) names.push(alias.name);
+        j = skipWs(source, alias.next);
       }
       if (source[j] === "{") {
         const close = findMatchingBrace(source, j);
@@ -259,12 +298,13 @@ export function extractJsImports(source) {
         const clause = readFromClause(source, close + 1);
         if (!clause) return close + 1;
         const onlyTypes = typeOnly || (!sawValue && braceIsTypeOnly(inner));
-        add(clause.value, onlyTypes);
+        if (!onlyTypes) names.push(...localNames(inner));
+        add(clause.value, onlyTypes, names);
         return clause.next;
       }
       const clause = readFromClause(source, j);
       if (!clause) return at;
-      add(clause.value, typeOnly);
+      add(clause.value, typeOnly, typeOnly ? [] : names);
       return clause.next;
     }
 

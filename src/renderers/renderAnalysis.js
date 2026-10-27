@@ -366,19 +366,31 @@ export function renderDependencyGraph(depResult) {
     lines.push("");
   }
 
-  // Circular dependencies
+  // Circular dependencies. Priority comes from the cycle heuristic in cycle-priority.js.
   if (depResult.cycles.length > 0) {
+    const reports = Array.isArray(depResult.cycleReports) ? depResult.cycleReports : [];
     lines.push("## Circular Dependencies");
     lines.push("");
-    lines.push(`**${depResult.cycles.length}** circular dependency chain${depResult.cycles.length === 1 ? " was" : "s were"} detected. Circular imports can cause initialization errors, increase bundle sizes, and make modules harder to test in isolation. Consider refactoring shared logic into a separate module.`);
+    lines.push(`**${depResult.cycles.length}** circular dependency chain${depResult.cycles.length === 1 ? " was" : "s were"} detected. A large cycle across three or more folders is a high-priority refactor. A two-folder recursive-descent pair (many imports and calls both ways) is mutual recursion, probably intentional; verify. A cycle that exists only through type-only imports is not a runtime cycle.`);
     lines.push("");
-    for (let i = 0; i < Math.min(depResult.cycles.length, 20); i++) {
+    const limit = Math.min(depResult.cycles.length, 20);
+    for (let i = 0; i < limit; i++) {
       const cycle = depResult.cycles[i];
-      lines.push(`${i + 1}. \`${cycle.join("` → `")}\``);
+      const report = reports[i];
+      const pathText = Array.isArray(cycle) ? cycle.join("` → `") : String(cycle);
+      lines.push(`${i + 1}. \`${pathText}\``);
+      if (report?.priorityLine) lines.push(`   ${report.priorityLine}`);
     }
     if (depResult.cycles.length > 20) {
       lines.push(`\n*...and ${depResult.cycles.length - 20} more cycles*`);
     }
+    lines.push("");
+  }
+
+  if (Array.isArray(depResult.typeOnlyReports) && depResult.typeOnlyReports.length > 0) {
+    lines.push("## Type-only cycles");
+    lines.push("");
+    lines.push(`**${depResult.typeOnlyReports.length}** cycle${depResult.typeOnlyReports.length === 1 ? " exists" : "s exist"} only through \`import type\` / \`export type\`. They are not runtime dependencies. Priority: Low — type-only imports; verify.`);
     lines.push("");
   }
 

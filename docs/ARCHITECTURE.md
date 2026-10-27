@@ -112,6 +112,7 @@ repolens/
 │   │   ├── graphql-analyzer.js    # GraphQL schema detection
 │   │   ├── typescript-analyzer.js # TypeScript type graph analysis
 │   │   ├── dependency-graph.js    # Import graph with cycle detection (JS/TS, Python, Go; Go hubs per package; hubs ignore tests and examples; runtime vs dev packages)
+│   │   ├── cycle-priority.js      # High refactor only for 3+ folder cycles; mutual recursion and type-only cycles are low
 │   │   ├── import-parsers.js      # Comment-aware JS/TS, Python (skips TYPE_CHECKING), and Go import parsers
 │   │   ├── drift-detector.js      # Architecture drift detection
 │   │   ├── monorepo-detector.js   # npm, yarn, pnpm, and Lerna workspaces

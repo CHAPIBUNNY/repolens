@@ -3,7 +3,15 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** October 2026  
-**Version:** 1.16.0
+**Version:** 1.16.1
+
+## Orval's snapshots, samples, and cycles (fixed in 1.16.1)
+
+`repolens demo` on orval-labs/orval (15 packages under `packages/*`) counted about 17,779 source files. Most of them were `__snapshots__` trees, a second copy under `tests/generated`, and `samples/`. That produced roughly 2,132 files with no imports and a type graph full of snapshot types. 1.16.1 leaves snapshot directories (`__snapshots__`, `*.snap`), `sample` / `samples`, `example` / `examples`, `fixture` / `fixtures` / `__fixtures__`, `e2e-fixture` / `e2e-fixtures`, and `generated` out of the file count, orphan list, and type graph. `scan.include_dev_artifacts: true` scans them again. Anything else in `scan.ignore` still applies.
+
+Every cycle was "Priority: High refactor", including core getters that call resolvers that call getters. 1.16.1 keeps High for a cycle across three or more parent directories. A two-directory pair with many imports and calls in both directions is "Priority: Low — mutual recursion, probably intentional; verify". A cycle that exists only through `import type` / `export type` is the same low priority and is not a runtime edge. One import each way, with no real call traffic, is Medium.
+
+`npx @chappibunny/repolens` inside a repo whose `package.json` `devEngines` the host Node does not meet still fails before RepoLens starts. That check belongs to npm, not this CLI. Use `npx --force --yes @chappibunny/repolens`. `--ignore-engines` does not skip `devEngines`. Details are in [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ## Express looked like an API service, and Cobra's package was named `root` (fixed in 1.16.0)
 
