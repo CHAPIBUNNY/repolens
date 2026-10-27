@@ -89,8 +89,9 @@ export function resolveActionInputs(env = process.env) {
     badgeLink,
     local,
     // --force is the only npm switch that turns a cwd package.json devEngines
-    // mismatch into a warning. Without it, npx exits EBADDEVENGINES before
-    // RepoLens starts. --ignore-engines is not a real flag and does not help.
+    // mismatch into a warning. npm versions that enforce devEngines (newer npm)
+    // exit EBADDEVENGINES before RepoLens starts. Node 20's bundled npm does
+    // not enforce the field. --ignore-engines is not a real flag and does not help.
     args: local ? null : ["--force", "--yes", `@chappibunny/repolens@${version}`, command, "--config", config],
   };
 }

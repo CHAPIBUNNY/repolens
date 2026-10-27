@@ -243,7 +243,7 @@ If `npx` reports `Unknown command: mcp`, an `.npmrc` with `min-release-age` (or 
 
 ## GitHub Action
 
-`action.yml` is a composite action named **RepoLens Architecture Docs**. `publish`, `demo`, and `doctor` run the published npm package (`npx --force --yes @chappibunny/repolens@1.16.1`). `comment` and `badge` run from the action checkout. Inputs are `command` (`publish`, `demo`, `doctor`, `comment`, or `badge`), `config`, `node-version`, `pr-comment`, `version`, `badge-out`, `badge-url`, and `badge-link`. The action passes `--force` so a repository `devEngines` pin does not stop `npx`. From a shell, use the same flag: `npx --force --yes @chappibunny/repolens demo`. `--ignore-engines` does not skip `devEngines`.
+`action.yml` is a composite action named **RepoLens Architecture Docs**. `publish`, `demo`, and `doctor` run the published npm package (`npx --force --yes @chappibunny/repolens@1.16.1`). `comment` and `badge` run from the action checkout. Inputs are `command` (`publish`, `demo`, `doctor`, `comment`, or `badge`), `config`, `node-version`, `pr-comment`, `version`, `badge-out`, `badge-url`, and `badge-link`. The action passes `--force` so a repository `devEngines` pin does not stop `npx` on npm versions that enforce `devEngines` (newer npm). Node 20's bundled npm does not enforce that field. From a shell, use the same flag: `npx --force --yes @chappibunny/repolens demo`. `--ignore-engines` does not skip `devEngines`.
 
 Publishing docs (the npm package at tag `v1.16.1`):
 

@@ -2,7 +2,7 @@
 
 Common issues and solutions when installing or using RepoLens.
 
-> **Quick fix for most problems:** Run `npx --force --yes @chappibunny/repolens doctor` to diagnose your setup. `--force` is required when this repo's `package.json` sets `devEngines` the host Node does not meet. See below.
+> **Quick fix for most problems:** Run `npx --force --yes @chappibunny/repolens doctor` to diagnose your setup. `--force` is required on npm versions that enforce `devEngines` (newer npm) when this repo's `package.json` sets `devEngines` the host Node does not meet. Node 20's bundled npm does not enforce that field. See below.
 
 ---
 
@@ -16,9 +16,9 @@ npm error EBADDEVENGINES The developer of this package has specified the followi
 npm error EBADDEVENGINES Invalid devEngines.runtime
 ```
 
-**Cause:** npm 11 checks `devEngines` on the `package.json` in the current directory before `npx` starts the package you asked for. The scanned repo's `devEngines.runtime` (Node) or `devEngines.packageManager` is enforced even though you are not installing that repo. `onFail: "download"` is treated as an error. RepoLens has not started yet, so the CLI cannot ignore the field. The repo's `engines.node` is a separate check (`EBADENGINE`) and only hard-fails when `engine-strict` is set.
+**Cause:** npm versions that enforce `devEngines` (newer npm) check `devEngines` on the `package.json` in the current directory before `npx` starts the package you asked for. The scanned repo's `devEngines.runtime` (Node) or `devEngines.packageManager` is enforced even though you are not installing that repo. `onFail: "download"` is treated as an error. RepoLens has not started yet, so the CLI cannot ignore the field. Node 20's bundled npm does not enforce `devEngines`, so `npx` starts normally there. The repo's `engines.node` is a separate check (`EBADENGINE`) and only hard-fails when `engine-strict` is set.
 
-**What does not work:** `npx --ignore-engines` is not an npm flag. npm warns `Unknown cli config "--ignore-engines"` and still exits `EBADDEVENGINES`.
+**What does not work:** `npx --ignore-engines` is not an npm flag. On npm versions that enforce `devEngines`, npm warns `Unknown cli config "--ignore-engines"` and still exits `EBADDEVENGINES`.
 
 **Fix:** pass `--force`. npm then prints the mismatch as a warning and runs the command.
 

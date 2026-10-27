@@ -11,7 +11,7 @@ This document tracks known issues, limitations, and edge cases in RepoLens. We'r
 
 Every cycle was "Priority: High refactor", including core getters that call resolvers that call getters. 1.16.1 keeps High for a cycle across three or more parent directories. A two-directory pair with many imports and calls in both directions is "Priority: Low — mutual recursion, probably intentional; verify". A cycle that exists only through `import type` / `export type` is the same low priority and is not a runtime edge. One import each way, with no real call traffic, is Medium.
 
-`npx @chappibunny/repolens` inside a repo whose `package.json` `devEngines` the host Node does not meet still fails before RepoLens starts. That check belongs to npm, not this CLI. Use `npx --force --yes @chappibunny/repolens`. `--ignore-engines` does not skip `devEngines`. Details are in [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+`npx @chappibunny/repolens` inside a repo whose `package.json` `devEngines` the host Node does not meet fails before RepoLens starts on npm versions that enforce `devEngines` (newer npm). Node 20's bundled npm does not enforce that field. The check belongs to npm, not this CLI. Use `npx --force --yes @chappibunny/repolens`. `--ignore-engines` does not skip `devEngines`. Details are in [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ## Express looked like an API service, and Cobra's package was named `root` (fixed in 1.16.0)
 

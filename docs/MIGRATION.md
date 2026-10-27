@@ -10,7 +10,7 @@ No `configVersion` change. Existing `.repolens.yml` files keep working.
 
 Scans now skip snapshot, sample, fixture, example, e2e-fixture, and `generated` directories unless `scan.include_dev_artifacts: true`. File counts drop on repos that commit those trees. Cycle text can say "Priority: Low — mutual recursion, probably intentional; verify" or "Priority: Medium" instead of treating every cycle as "Priority: High refactor". A cycle across three or more folders is still "Priority: High refactor".
 
-The GitHub Action passes `--force` to `npx`. That only changes how npm treats the checked-out repo's `devEngines`. It does not change the scan.
+The GitHub Action passes `--force` to `npx`. That only changes how npm versions that enforce `devEngines` (newer npm) treat the checked-out repo's `devEngines`. Node 20's bundled npm does not enforce that field. It does not change the scan.
 
 ## Upgrading to 1.16.0
 

@@ -169,7 +169,7 @@ Everything below is live, tested, and available on npm.
 
 - ✅ Snapshots, samples, fixtures, examples, e2e fixtures, and `generated/` stay out of file counts, orphans, and the type graph unless `scan.include_dev_artifacts: true`
 - ✅ Cycle priority: high refactor for three or more folders; low for a call-heavy two-folder pair ("mutual recursion, probably intentional; verify") and for type-only cycles
-- ✅ The GitHub Action passes `npx --force` so a repo `devEngines` pin does not abort the action. Manual `npx` still needs `--force` when the host Node does not meet that pin. `--ignore-engines` does not
+- ✅ The GitHub Action passes `npx --force` so a repo `devEngines` pin does not abort the action on npm versions that enforce `devEngines` (newer npm). Node 20's bundled npm does not enforce that field. Manual `npx` still needs `--force` on those npm versions when the host Node does not meet that pin. `--ignore-engines` does not
 
 ## v1.16.0 — GitHub App
 

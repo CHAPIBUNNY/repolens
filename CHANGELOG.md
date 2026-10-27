@@ -23,8 +23,8 @@ Fixes three problems found by running 1.16.0 on orval-labs/orval (a TypeScript m
 
 ### npx and devEngines
 
-- `npx` (npm exec) checks `devEngines` on the package.json in the current directory before it starts the requested package. A repo that pins a Node or package-manager the host does not meet exits `EBADDEVENGINES`. RepoLens never gets to run, so this cannot be fixed inside the CLI.
-- `--ignore-engines` is not an npm flag. npm 11 warns that it is an unknown config and still errors.
+- npm versions that enforce `devEngines` (newer npm) check that field on the package.json in the current directory before `npx` starts the requested package. A repo that pins a Node or package-manager the host does not meet exits `EBADDEVENGINES`. Node 20's bundled npm does not enforce `devEngines`. RepoLens never gets to run when the check fails, so this cannot be fixed inside the CLI.
+- `--ignore-engines` is not an npm flag. On npm versions that enforce `devEngines`, npm warns that it is an unknown config and still errors.
 - `--force` turns that failure into a warning and runs the command. The GitHub Action passes `--force` on its `npx` step. A manual run is `npx --force --yes @chappibunny/repolens demo`. A global install, or `node node_modules/@chappibunny/repolens/bin/repolens.js`, never asks npm to read the scanned repo's `devEngines`.
 - See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 

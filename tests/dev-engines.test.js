@@ -51,8 +51,20 @@ function runNpx(cwd, args) {
   };
 }
 
+// npm versions that enforce devEngines (newer npm) exit EBADDEVENGINES before
+// npx starts. Node 20's bundled npm does not enforce the field, so the same
+// command exits 0. Probe once and skip the enforcement assertions when it does not.
+async function npmEnforcesDevEngines() {
+  const cwd = await engineRepo();
+  const bin = await localBin();
+  const plain = runNpx(cwd, ["--yes", "--package", bin, "tiny-ok"]);
+  return plain.status !== 0 && plain.stderr.includes("EBADDEVENGINES");
+}
+
+const devEnginesEnforced = await npmEnforcesDevEngines();
+
 describe("npx and the scanned repo's devEngines", () => {
-  it("fails before the command starts, and --ignore-engines does not bypass it", async () => {
+  it.skipIf(!devEnginesEnforced)("fails before the command starts, and --ignore-engines does not bypass it", async () => {
     const cwd = await engineRepo();
     const bin = await localBin();
     const plain = runNpx(cwd, ["--yes", "--package", bin, "tiny-ok"]);
@@ -71,7 +83,10 @@ describe("npx and the scanned repo's devEngines", () => {
     const forced = runNpx(cwd, ["--force", "--yes", "--package", bin, "tiny-ok"]);
     expect(forced.status).toBe(0);
     expect(forced.stdout).toContain("tiny-ok");
-    expect(forced.stderr).toContain("EBADDEVENGINES");
+    // The warning is only printed by npm versions that enforce devEngines.
+    if (devEnginesEnforced) {
+      expect(forced.stderr).toContain("EBADDEVENGINES");
+    }
   });
 
   it("does not apply the scanned repo's engines once the CLI process has started", async () => {
