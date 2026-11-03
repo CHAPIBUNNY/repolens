@@ -255,6 +255,7 @@ async function copyAssets() {
   const assets = path.join(DIST, "assets");
   await fs.mkdir(assets, { recursive: true });
   await fs.copyFile(path.join(GALLERY_DIR, "assets", "logo.png"), path.join(assets, "logo.png"));
+  await fs.copyFile(path.join(GALLERY_DIR, "assets", "favicon.ico"), path.join(assets, "favicon.ico"));
   await fs.copyFile(path.join(GALLERY_DIR, "site.css"), path.join(assets, "site.css"));
 }
 

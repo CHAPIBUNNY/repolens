@@ -275,12 +275,13 @@ function layout({ title, description, canonical, image, home, logo, css, depth, 
   <meta property="og:description" content="${escapeAttr(description)}">
   <meta property="og:url" content="${escapeAttr(canonical)}">
   <meta property="og:image" content="${escapeAttr(image)}">
-  <meta property="og:image:alt" content="RepoLens robot logo">
+  <meta property="og:image:alt" content="RepoLens aperture logo">
   <meta property="og:type" content="${depth === 0 ? "website" : "article"}">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="${escapeAttr(title)}">
   <meta name="twitter:description" content="${escapeAttr(description)}">
   <meta name="twitter:image" content="${escapeAttr(image)}">
+  <link rel="icon" href="${escapeAttr(logo.replace(/logo\.png$/, "favicon.ico"))}" sizes="16x16 32x32">
   <link rel="icon" href="${escapeAttr(logo)}" type="image/png">
   <link rel="apple-touch-icon" href="${escapeAttr(logo)}">
   <link rel="stylesheet" href="${escapeAttr(css)}">

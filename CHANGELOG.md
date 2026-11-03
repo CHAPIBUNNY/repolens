@@ -2,6 +2,14 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.16.2
+
+### Branding
+
+- New RepoLens icon: emerald rounded tile with a camera aperture and a white git-branch glyph, transparent background. Replaces `assets/logo-400.png`, `assets/Avatar.png` and the gallery `gallery/assets/logo.png` (512x512).
+- The gallery site adds `favicon.ico` (16 and 32 px) next to the PNG icon.
+- The VS Code extension (0.2.4) uses the same icon.
+
 ## 1.16.1
 
 Fixes three problems found by running 1.16.0 on orval-labs/orval (a TypeScript monorepo whose test snapshots and samples dwarf the packages).

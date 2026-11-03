@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.16.1  
+**Current Version:** 1.16.2  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.16.1)
+## What's Shipped (v0.1.0 → v1.16.2)
 
 Everything below is live, tested, and available on npm.
 
