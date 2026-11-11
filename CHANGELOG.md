@@ -2,7 +2,7 @@
 
 All notable changes to RepoLens will be documented in this file.
 
-## Unreleased
+## 1.16.3 (2026-11-11)
 
 Fixes found by the 2026-11-11 gap test of 1.16.2 on trpc/trpc, App-vNext/Polly, google/gson, charmbracelet/glow, and pallets/itsdangerous.
 
