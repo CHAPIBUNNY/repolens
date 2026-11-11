@@ -4,6 +4,8 @@
 //   - Dependency Graph
 //   - Architecture Drift
 
+import { coverageNotice } from "../analyzers/language-coverage.js";
+
 export function renderGraphQLSchema(graphqlResult) {
   if (!graphqlResult?.detected) {
     return [
@@ -316,6 +318,10 @@ export function renderTypeGraph(tsResult) {
 }
 
 export function renderDependencyGraph(depResult) {
+  const coverageLines = coverageNotice(depResult?.coverage, "import analysis");
+  if (!depResult?.nodes?.length && depResult?.coverage?.status === "unsupported") {
+    return ["# Dependency Graph", "", ...coverageLines].join("\n");
+  }
   if (!depResult?.nodes?.length) {
     return [
       "# Dependency Graph",
@@ -332,6 +338,7 @@ export function renderDependencyGraph(depResult) {
   lines.push("");
   lines.push(`> ${depResult.summary}`);
   lines.push("");
+  lines.push(...coverageLines);
   lines.push("This document maps every import relationship in the codebase, identifies the most-connected modules, and flags circular dependencies that may complicate refactoring or increase build times.");
   lines.push("");
 
@@ -526,6 +533,10 @@ export function renderArchitectureDrift(driftResult) {
 }
 
 export function renderCodeHealth(healthResult) {
+  const coverageLines = coverageNotice(healthResult?.coverage, "code health");
+  if (!healthResult?.modules?.length && healthResult?.coverage?.status === "unsupported") {
+    return ["# Code Health Report", "", ...coverageLines].join("\n");
+  }
   if (!healthResult?.modules?.length) {
     return [
       "# Code Health Report",
@@ -544,6 +555,7 @@ export function renderCodeHealth(healthResult) {
   lines.push("");
   lines.push(`> ${healthResult.summary}`);
   lines.push("");
+  lines.push(...coverageLines);
   lines.push("This report synthesizes complexity, coupling, documentation, and security signals into a single health score per module. Lower scores indicate higher risk and maintenance burden.");
   lines.push("");
 

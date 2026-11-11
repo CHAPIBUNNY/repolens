@@ -188,7 +188,9 @@ describe("renderApiSurface", () => {
   it("handles no API endpoints", () => {
     const scan = { ...minimalScan, api: [] };
     const md = renderApiSurface(minimalCfg, scan);
-    expect(md).toContain("No API routes were detected");
+    expect(md).toContain("No HTTP API routes were detected");
+    // A library or CLI without routes is not told its scan.include is wrong.
+    expect(md).not.toContain("scan.include");
   });
 
   it("handles no external APIs", () => {

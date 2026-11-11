@@ -29,7 +29,7 @@ RepoLens scans your repository, generates living architecture documentation, and
 
 ## 🎬 Demo
 
-> **Try it now** — no installation required. `npx @chappibunny/repolens demo` previews the repository you point it at. It detects common languages (Python, Go, Rust, Java, JavaScript/TypeScript, and others). If the scan matches no source files, demo exits 2 and does not write empty docs. Code health scores JavaScript/TypeScript, Python, and Go.
+> **Try it now** — no installation required. `npx @chappibunny/repolens demo` previews the repository you point it at. It detects common languages (Python, Go, Rust, Java, JavaScript/TypeScript, and others) and maps their modules and file structure. If the scan matches no source files, demo exits 2 and does not write empty docs. The dependency graph and code health cover JavaScript/TypeScript, Python, and Go only; a Java, Kotlin, or C# repository gets a "not supported yet" note on those pages, not a score.
 
 **[See it on real repos](https://chapibunny.github.io/repolens/)** — architecture pages RepoLens generated for Express, FastAPI, Django, Gin, mdBook, and other public projects. Deterministic mode, no API keys.
 

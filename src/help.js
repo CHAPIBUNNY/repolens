@@ -32,6 +32,8 @@ It detects Python, Go, Rust, Java/Kotlin, JavaScript/TypeScript, Ruby, PHP,
 C#, Swift, and C/C++ (and combinations) and sets scan.include plus
 module_roots from the files it finds. A repository with no recognized
 language gets multi-language globs, not JavaScript-only defaults.
+Detection is not full analysis: the dependency graph and code health read
+JavaScript/TypeScript, Python, and Go only.
 
 The target directory must already exist.
 
@@ -129,9 +131,12 @@ Options:
   --help, -h            Show this help
 
 With no config, demo detects the repository language and scans matching
-files (Python, Go, Rust, Java, JavaScript, and others). It does not publish
-to Notion or Confluence. A scan that matches 0 files exits 2 and does not
-write empty docs.
+files (Python, Go, Rust, Java, JavaScript, and others) for modules and file
+structure. The dependency graph and code health cover JavaScript/TypeScript,
+Python, and Go only; for other languages (for example Java, Kotlin, or C#)
+those pages say the language is not supported yet instead of showing a
+score. It does not publish to Notion or Confluence. A scan that matches
+0 files exits 2 and does not write empty docs.
 
 The target directory must already exist.
 

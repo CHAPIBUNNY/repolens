@@ -1,5 +1,6 @@
 // Generate documentation sections using AI
 
+import { coverageLine } from "../analyzers/language-coverage.js";
 import { generateText, isAIEnabled } from "./provider.js";
 import { 
   SYSTEM_PROMPT, 
@@ -311,6 +312,8 @@ The system is organized around **${context.domains.length} functional domains**,
     if (orphanRatio(stats) > ORPHAN_WARN_RATIO) {
       output += `- ⚠️ **Potential dead code** — ${stats.orphanFiles} files (${Math.round(stats.orphanFiles / stats.totalFiles * 100)}%) are not imported anywhere.\n`;
     }
+  } else if (depGraph?.coverage?.status === "unsupported") {
+    output += `Import-graph health is not available: ${coverageLine(depGraph.coverage, "import analysis")}\n`;
   }
 
   // Data flows summary
@@ -1780,8 +1783,13 @@ function getFrameworkArchitecturalImplication(frameworks) {
 }
 
 // Helper: architectural implication of languages
+// Languages arrive most-files-first, so the first one is the primary language. A C#
+// repository with one docs script is not "dynamic typing".
+const STATIC_PRIMARY = new Set(["c#", "java", "kotlin", "scala", "swift", "c", "c++"]);
+
 function getLanguageImplication(languages) {
   const langs = (languages || []).map(l => l.toLowerCase());
+  if (STATIC_PRIMARY.has(langs[0])) return "Static typing; compiled language";
   if (langs.includes("typescript")) return "Static typing enables tooling and refactoring confidence";
   if (langs.includes("javascript")) return "Dynamic typing, flexible but requires discipline";
   if (langs.includes("python")) return "Readable syntax, rich ecosystem";
@@ -1892,6 +1900,7 @@ function getFrameworkLearningTip(frameworks) {
 // Helper: language learning tip
 function getLanguageLearningTip(languages) {
   const langs = (languages || []).map(l => l.toLowerCase());
+  if (STATIC_PRIMARY.has(langs[0])) return "Strong typing — let the compiler and IDE guide navigation";
   if (langs.includes("typescript")) return "Strong typing — check types when debugging";
   if (langs.includes("javascript")) return "Dynamic typing — use console.log for runtime inspection";
   if (langs.includes("python")) return "Read docstrings and type hints";

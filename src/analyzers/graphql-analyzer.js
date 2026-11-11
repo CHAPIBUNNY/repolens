@@ -3,6 +3,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { info } from "../utils/logger.js";
+import { extractJsImports, externalPackageName } from "./import-parsers.js";
 
 const GRAPHQL_EXTENSIONS = [".graphql", ".gql"];
 
@@ -19,27 +20,53 @@ const TYPE_PATTERNS = {
   directive: /directive\s+@(\w+)/g,
 };
 
+// Word boundaries matter: `useQuery: {` (a React Query hook map) is not `Query: {`.
 const RESOLVER_PATTERNS = [
-  /(?:Query|Mutation|Subscription)\s*:\s*\{/,
-  /resolvers?\s*=\s*\{/,
-  /createResolversMap/,
+  /(?:^|[^\w$])(?:Query|Mutation|Subscription)\s*:\s*\{/m,
+  /\bresolvers?\s*=\s*\{/,
+  /\bcreateResolversMap\b/,
   /\bresolveType\b/,
-  /fieldResolver/,
+  /\bfieldResolver\b/,
 ];
 
-const SCHEMA_LIBRARY_PATTERNS = [
-  { name: "Apollo Server", pattern: /ApolloServer|@apollo\/server|apollo-server/ },
-  { name: "GraphQL Yoga", pattern: /graphql-yoga|createYoga/ },
-  { name: "Mercurius", pattern: /mercurius/ },
-  { name: "graphql-js", pattern: /graphql\b.*\bbuildSchema\b|\bGraphQLSchema\b|\bGraphQLObjectType\b/ },
-  { name: "type-graphql", pattern: /type-graphql|@Resolver|@Query|@Mutation/ },
-  { name: "Nexus", pattern: /nexus|makeSchema|objectType\(/ },
-  { name: "Pothos", pattern: /pothos|SchemaBuilder/ },
-  { name: "Hasura", pattern: /hasura/ },
-  { name: "Relay", pattern: /relay-runtime|RelayEnvironment/ },
-  { name: "urql", pattern: /urql|@urql/ },
-  { name: "Apollo Client", pattern: /ApolloClient|@apollo\/client|apollo-client|useQuery|useMutation/ },
+// Libraries count only when a file imports them. A comment that mentions Apollo or urql,
+// or a React Query `useQuery` hook, is not GraphQL.
+const SCHEMA_LIBRARY_PACKAGES = [
+  { name: "Apollo Server", match: (pkg) => pkg === "@apollo/server" || pkg === "@apollo/subgraph" || pkg === "apollo-server" || pkg.startsWith("apollo-server-") },
+  { name: "GraphQL Yoga", match: (pkg) => pkg === "graphql-yoga" || pkg.startsWith("@graphql-yoga/") },
+  { name: "Mercurius", match: (pkg) => pkg === "mercurius" },
+  { name: "graphql-js", match: (pkg) => pkg === "graphql" },
+  { name: "type-graphql", match: (pkg) => pkg === "type-graphql" },
+  { name: "Nexus", match: (pkg) => pkg === "nexus" || pkg === "@nexus/schema" },
+  { name: "Pothos", match: (pkg) => pkg.startsWith("@pothos/") },
+  { name: "Relay", match: (pkg) => pkg === "relay-runtime" || pkg === "react-relay" },
+  { name: "urql", match: (pkg) => pkg === "urql" || pkg.startsWith("@urql/") },
+  { name: "Apollo Client", match: (pkg) => pkg === "@apollo/client" || pkg === "apollo-client" || pkg === "react-apollo" || pkg === "apollo-boost" },
+  { name: "graphql-request", match: (pkg) => pkg === "graphql-request" },
+  { name: "graphql-tag", match: (pkg) => pkg === "graphql-tag" },
 ];
+
+export function graphqlLibrariesImported(source) {
+  const names = [];
+  let imports = [];
+  try { imports = extractJsImports(source); } catch { imports = []; }
+  for (const imported of imports) {
+    const pkg = externalPackageName(imported.specifier);
+    if (!pkg) continue;
+    for (const { name, match } of SCHEMA_LIBRARY_PACKAGES) {
+      if (match(pkg) && !names.includes(name)) names.push(name);
+    }
+  }
+  return names;
+}
+
+// Comments are removed before looking for SDL or resolver maps; strings stay because
+// inline SDL lives in template literals.
+function stripJsComments(source) {
+  return String(source)
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/(^|[^:\\"'`])\/\/.*$/gm, "$1");
+}
 
 function parseFieldsFromBlock(block) {
   const fields = [];
@@ -102,40 +129,52 @@ export async function analyzeGraphQL(files, repoRoot) {
   }
 
   // Scan code files for inline schemas, resolvers, and libraries
+  const resolverCandidates = [];
   for (const file of codeFiles) {
     const content = await readFileSafe(path.join(repoRoot, file));
     if (!content) continue;
 
-    // Detect GraphQL libraries
-    for (const { name, pattern } of SCHEMA_LIBRARY_PATTERNS) {
-      if (pattern.test(content) && !result.libraries.includes(name)) {
-        result.libraries.push(name);
-      }
+    // Detect GraphQL libraries from real imports
+    const fileLibraries = graphqlLibrariesImported(content);
+    for (const name of fileLibraries) {
+      if (!result.libraries.includes(name)) result.libraries.push(name);
     }
 
+    const code = stripJsComments(content);
+    const typesBefore = result.types.length + result.queries.length + result.mutations.length + result.subscriptions.length;
+
     // Detect inline SDL (template literals with gql tag or type definitions)
-    const inlineSdlPattern = /(?:gql|graphql)\s*`([^`]+)`/gs;
+    const inlineSdlPattern = /\b(?:gql|graphql)\s*`([^`]+)`/gs;
     let match;
-    while ((match = inlineSdlPattern.exec(content)) !== null) {
+    while ((match = inlineSdlPattern.exec(code)) !== null) {
       extractSchemaTypes(match[1], file, result);
     }
 
     // Also detect raw type definitions in string literals
-    if (/type\s+(?:Query|Mutation|Subscription)\s*\{/.test(content)) {
-      extractSchemaTypes(content, file, result);
+    if (/\btype\s+(?:Query|Mutation|Subscription)\s*\{/.test(code)) {
+      extractSchemaTypes(code, file, result);
     }
+    const hasSdl = result.types.length + result.queries.length + result.mutations.length + result.subscriptions.length > typesBefore;
 
-    // Detect resolver files
-    const isResolver = RESOLVER_PATTERNS.some(p => p.test(content));
-    if (isResolver && !result.resolverFiles.includes(file)) {
-      result.resolverFiles.push(file);
+    // Resolver candidates are confirmed after the whole scan: a resolver map needs
+    // GraphQL evidence in the file or somewhere in the repository.
+    if (RESOLVER_PATTERNS.some(p => p.test(code))) {
+      // `resolvers = { Query: { ... } }` together is a resolver map on its own.
+      const resolverMap = RESOLVER_PATTERNS[0].test(code) && RESOLVER_PATTERNS[1].test(code);
+      resolverCandidates.push({ file, local: fileLibraries.length > 0 || hasSdl || resolverMap });
     }
   }
 
-  result.detected = result.schemaFiles.length > 0 ||
-    result.types.length > 0 ||
-    result.resolverFiles.length > 0 ||
+  const repoHasGraphQL = result.schemaFiles.length > 0 ||
+    result.types.length > 0 || result.queries.length > 0 || result.mutations.length > 0 ||
     result.libraries.length > 0;
+  for (const candidate of resolverCandidates) {
+    if ((candidate.local || repoHasGraphQL) && !result.resolverFiles.includes(candidate.file)) {
+      result.resolverFiles.push(candidate.file);
+    }
+  }
+
+  result.detected = repoHasGraphQL || result.resolverFiles.length > 0;
 
   if (result.detected) {
     result.summary = buildSummary(result);

@@ -114,7 +114,7 @@ function inferFlowsFromEntryPoints(scanResult, depGraph) {
     // Classify each step in the chain
     const steps = chain.map((nodeKey, i) => {
       const node = depGraph.nodes.find(n => n.key === nodeKey);
-      const name = nodeKey.split("/").pop();
+      const name = stepName(nodeKey);
       const fanIn = node?.importedBy?.length || 0;
       const fanOut = node?.imports?.length || 0;
       
@@ -341,4 +341,13 @@ function inferExternalDependencies(flow) {
   }
   
   return external;
+}
+
+// A package entry is keyed by its folder (`packages/server/src` for src/index.ts), so
+// "src" or "lib" alone says nothing. Name it after the package folder instead.
+function stepName(nodeKey) {
+  const parts = String(nodeKey).split("/");
+  const last = parts.pop();
+  if (/^(src|lib|source)$/i.test(last) && parts.length > 0) return `${parts[parts.length - 1]}/${last}`;
+  return last;
 }

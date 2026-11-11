@@ -2,6 +2,29 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## Unreleased
+
+Fixes found by the 2026-11-11 gap test of 1.16.2 on trpc/trpc, App-vNext/Polly, google/gson, charmbracelet/glow, and pallets/itsdangerous.
+
+### Dependency graph
+
+- Workspace packages are internal. An import of `@scope/pkg` or `@scope/pkg/subpath` that names another package in the repository (any `package.json` above a scanned file) resolves to that package's source through `exports`, `main`, or `src/`, with `dist/`, `lib/`, and `build/` targets mapped back to `src/`. They are no longer listed as external runtime packages. On trpc/trpc: 913 → 1,533 edges, orphans 254 → 126, `@trpc/*` gone from external packages, a Hub Modules section appears, and `packages/server` reads "Shared infrastructure (imported by 7 modules)" instead of "Connector (1 in, 2 out)". The MCP `get_dependency_graph` tool uses the same graph.
+- Flow steps name a package entry `server/src` rather than a bare `src`.
+
+### Language coverage
+
+- The dependency graph and code health cover JavaScript/TypeScript, Python, and Go. When the scanned product code is mostly another language (C#, Java/Kotlin, and others), those pages now say the language is not supported yet instead of building a graph or a score from incidental files. App-vNext/Polly no longer reports "no circular dependencies" and "Average health 100/100" from one docs script, and `repolens badge` exits 2 there instead of printing 100.
+- google/gson's graph and health pages name Java/Kotlin as unsupported instead of telling the user to check `scan.include`.
+- A mixed repository gets a "Partial coverage" note naming the languages that were not analyzed.
+- `demo --help`, `init --help`, and the README say detection is not full analysis.
+- The language list is ordered by file count (Polly reads "C#, JavaScript"), and a statically typed primary language is no longer described as "Dynamic typing".
+
+### Output accuracy
+
+- GraphQL libraries are detected from imports, not from text. Comments that mention Apollo or urql and React Query `useQuery:` hook maps no longer produce a GraphQL page; trpc/trpc's `11-graphql-schema.md` is skipped.
+- A module whose files are mostly tests says so ("Mostly tests and fixtures (204 of 212 files)") instead of "Application module".
+- The API Surface page is skipped when there are no routes, external API integrations, or documented exports (unless `documentation.sections` lists it). When it is written with no routes, it no longer blames `scan.include`.
+
 ## 1.16.2
 
 ### Branding

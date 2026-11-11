@@ -186,6 +186,7 @@ function packageEntryFiles(pkg) {
  */
 function detectLanguagesFromFiles(files) {
   const languages = new Set();
+  const counts = new Map();
   
   // Extension to language mapping
   const extensionMap = {
@@ -241,9 +242,12 @@ function detectLanguagesFromFiles(files) {
     // types. They do not make the library a TypeScript project.
     if (ext === ".ts" && /\.d\.ts$/i.test(file)) continue;
     if (extensionMap[ext] === "TypeScript" && isTestPath(file)) continue;
-    languages.add(extensionMap[ext]);
+    const label = extensionMap[ext];
+    counts.set(label, (counts.get(label) || 0) + 1);
   }
 
+  // Most files first, so a C# repository with one docs script reads "C#, JavaScript".
+  for (const [label] of [...counts.entries()].sort((a, b) => b[1] - a[1])) languages.add(label);
   return languages;
 }
 
@@ -406,9 +410,8 @@ async function extractRepoMetadata(repoRoot, files = []) {
 
   // Merge languages detected from file extensions
   const fileLanguages = detectLanguagesFromFiles(files);
-  for (const lang of fileLanguages) {
-    metadata.languages.add(lang);
-  }
+  const manifestLanguages = [...metadata.languages];
+  metadata.languages = new Set([...fileLanguages, ...manifestLanguages]);
 
   // De-duplicate frameworks (in case detected from multiple sources)
   metadata.frameworks = [...new Set(metadata.frameworks)];
@@ -589,6 +592,7 @@ export async function scanRepo(cfg) {
   }
 
   const moduleCounts = new Map();
+  const moduleTestCounts = new Map();
   const flatKeys = new Set();
   const rootLabel = rootModuleLabel(repoRoot);
 
@@ -600,12 +604,14 @@ export async function scanRepo(cfg) {
     const key = moduleKeyForFile(file, cfg.module_roots || [], rootLabel);
     if (!norm(file).includes("/")) flatKeys.add(key);
     moduleCounts.set(key, (moduleCounts.get(key) || 0) + 1);
+    if (isTestPath(file)) moduleTestCounts.set(key, (moduleTestCounts.get(key) || 0) + 1);
   }
 
   const modules = [...moduleCounts.entries()]
     .map(([key, fileCount]) => ({
       key,
       fileCount,
+      ...(moduleTestCounts.get(key) ? { testFileCount: moduleTestCounts.get(key) } : {}),
       ...(flatKeys.has(key) ? { flat: true } : {}),
     }))
     .sort((a, b) => b.fileCount - a.fileCount);

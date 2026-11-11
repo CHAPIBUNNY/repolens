@@ -151,6 +151,18 @@ function describeModule(key, depRole = null, evidence = {}) {
   return base;
 }
 
+// A module whose files are mostly tests and fixtures is not "Application module".
+// The file count stays the same; the role says how much of it is test code.
+export function describeModuleWithTests(module, desc) {
+  const total = Number(module?.fileCount) || 0;
+  const tests = Number(module?.testFileCount) || 0;
+  if (!total || tests * 2 < total) return desc;
+  if (/^Test suites and fixtures/.test(desc)) return desc;
+  const role = desc.replace(/^Application module( · )?/, "");
+  const base = `Mostly tests and fixtures (${tests} of ${total} files)`;
+  return role ? `${base} · ${role}` : base;
+}
+
 export function renderModuleCatalog(cfg, scan, ownershipMap = {}, depGraph = null) {
   const hasOwnership = Object.keys(ownershipMap).length > 0;
   const moduleMetrics = computeModuleLevelMetrics(depGraph, scan.modules);
@@ -192,7 +204,7 @@ export function renderModuleCatalog(cfg, scan, ownershipMap = {}, depGraph = nul
 
   for (const module of scan.modules.slice(0, 100)) {
     const depRole = describeModuleDepRole(module.key, moduleMetrics);
-    const desc = describeModule(module.key, depRole, moduleEvidence(module.key, depGraph));
+    const desc = describeModuleWithTests(module, describeModule(module.key, depRole, moduleEvidence(module.key, depGraph)));
     const owners = ownershipMap[module.key];
     if (hasOwnership) {
       lines.push(`| \`${module.key}\` | ${module.fileCount} | ${desc} | ${owners ? owners.join(", ") : "—"} |`);
@@ -236,7 +248,7 @@ export function renderApiSurface(cfg, scan, jsdocResult = null) {
 
   if (!scan.api.length) {
     lines.push(
-      `No API routes were detected in this scan. If your project uses a routing framework (Express, Fastify, NestJS, etc.), ensure the relevant directories are included in your \`scan.include\` patterns.`,
+      `No HTTP API routes were detected. RepoLens reads Next.js API routes and Express-style \`app.get(...)\` / \`router.post(...)\` handlers in JavaScript and TypeScript; libraries and CLIs usually have none.`,
       ``
     );
   } else {

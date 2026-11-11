@@ -19,6 +19,7 @@ import {
   parseGoModule,
 } from "./import-parsers.js";
 import { isNonProductPath } from "../utils/path-roles.js";
+import { computeLanguageCoverage, coverageLine } from "./language-coverage.js";
 import {
   classifyRuntimeCycles,
   priorityCounts,
@@ -70,6 +71,73 @@ function normalizeFileKey(file) {
   key = key.replace(/\.(js|ts|jsx|tsx|mjs|cjs)$/, "");
   key = key.replace(/\/index$/, "");
   return key;
+}
+
+// Source-tree candidates for `pkg` or `pkg/subpath` inside a workspace package.
+// `exports`/`main` usually point at build output (dist/, lib/, build/), so those
+// paths are mapped back to src/ as well as tried as written.
+function workspaceCandidates(pkg, subpath) {
+  const base = pkg.dir ? `${pkg.dir}/` : "";
+  const out = [];
+  const push = (rel) => {
+    if (typeof rel !== "string" || !rel) return;
+    let clean = rel.replace(/^\.\//, "").replace(/\/+$/, "");
+    clean = clean.replace(/\.d\.[cm]?ts$/, "").replace(/\.(js|ts|jsx|tsx|mjs|cjs)$/, "");
+    if (!clean || clean === ".") {
+      out.push(pkg.dir || ".");
+      return;
+    }
+    out.push(`${base}${clean}`);
+    const mapped = clean.replace(/^(dist|lib|build|out|esm|cjs)(\/(esm|cjs|es|src))?\//, "src/");
+    if (mapped !== clean) out.push(`${base}${mapped}`);
+  };
+  const manifest = pkg.manifest || {};
+  const exportKey = subpath ? `./${subpath}` : ".";
+  const exportsField = manifest.exports;
+  let target = null;
+  if (typeof exportsField === "string" && !subpath) target = exportsField;
+  else if (exportsField && typeof exportsField === "object") {
+    const entry = exportKey in exportsField ? exportsField[exportKey] : (!subpath && !Object.keys(exportsField).some((k) => k.startsWith(".")) ? exportsField : undefined);
+    target = pickExportTarget(entry);
+  }
+  if (target) push(target);
+  if (subpath) {
+    push(`src/${subpath}`);
+    push(subpath);
+    push(`lib/${subpath}`);
+  } else {
+    for (const field of ["source", "module", "main"]) {
+      if (typeof manifest[field] === "string") push(manifest[field]);
+    }
+    push("src/index");
+    push("index");
+    push("lib/index");
+  }
+  return out;
+}
+
+function pickExportTarget(entry) {
+  if (typeof entry === "string") return entry;
+  if (Array.isArray(entry)) {
+    for (const item of entry) {
+      const found = pickExportTarget(item);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (entry && typeof entry === "object") {
+    for (const condition of ["source", "development", "import", "module", "default", "require", "node", "types"]) {
+      if (condition in entry) {
+        const found = pickExportTarget(entry[condition]);
+        if (found) return found;
+      }
+    }
+    for (const value of Object.values(entry)) {
+      const found = pickExportTarget(value);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 function emptyResult() {
@@ -153,6 +221,12 @@ function goFilesInDir(goFiles, dir) {
 
 export async function analyzeDependencyGraph(files, repoRoot) {
   const result = emptyResult();
+  const coverage = computeLanguageCoverage(files);
+  result.coverage = coverage;
+  if (coverage.status === "unsupported") {
+    info(`Dependency graph: not built — ${coverageLine(coverage, "import analysis")}`);
+    return result;
+  }
 
   const jsFiles = files.filter((file) => JS_EXTENSIONS.has(path.extname(file)));
   const pyFiles = files.filter((file) => PY_EXTENSIONS.has(path.extname(file)));
@@ -191,36 +265,66 @@ export async function analyzeDependencyGraph(files, repoRoot) {
 
   // A package importing its own name (examples, docs, tests written like user code)
   // is not a dependency. Resolve the nearest package.json for each file.
-  const packageNameByDir = new Map();
-  async function ownPackageName(file) {
-    let dir = path.dirname(file);
+  // The same walk indexes workspace packages: in a monorepo, `@scope/pkg` that names a
+  // package in this repository is an internal edge, not an external dependency.
+  const packageByDir = new Map();
+  const workspacePackages = new Map();
+  async function ownPackage(file) {
+    let dir = path.posix.dirname(String(file).replace(/\\/g, "/"));
     const visited = [];
     for (;;) {
-      if (packageNameByDir.has(dir)) {
-        const cached = packageNameByDir.get(dir);
-        for (const d of visited) packageNameByDir.set(d, cached);
+      if (packageByDir.has(dir)) {
+        const cached = packageByDir.get(dir);
+        for (const d of visited) packageByDir.set(d, cached);
         return cached;
       }
       visited.push(dir);
       const raw = await readFileSafe(path.join(repoRoot, dir, "package.json"));
       if (raw) {
-        let name = null;
+        let info = null;
         try {
           const parsed = JSON.parse(raw);
-          if (typeof parsed?.name === "string") name = parsed.name;
+          if (typeof parsed?.name === "string" && parsed.name) {
+            info = { name: parsed.name, dir: dir === "." ? "" : dir, manifest: parsed };
+          }
         } catch {
           // invalid package.json: keep walking up
         }
-        if (name) {
-          for (const d of visited) packageNameByDir.set(d, name);
-          return name;
+        if (info) {
+          for (const d of visited) packageByDir.set(d, info);
+          const existing = workspacePackages.get(info.name);
+          // Duplicate names (copied examples) keep the shallowest package.
+          if (!existing || info.dir.split("/").length < existing.dir.split("/").length) {
+            workspacePackages.set(info.name, info);
+          }
+          return info;
         }
       }
-      if (dir === "." || dir === "" || dir === path.dirname(dir)) break;
-      dir = path.dirname(dir);
+      if (dir === "." || dir === "" || dir === path.posix.dirname(dir)) break;
+      dir = path.posix.dirname(dir);
     }
-    for (const d of visited) packageNameByDir.set(d, null);
+    for (const d of visited) packageByDir.set(d, null);
     return null;
+  }
+  async function ownPackageName(file) {
+    const info = await ownPackage(file);
+    return info ? info.name : null;
+  }
+
+  // Index every package that contains a scanned file before reading imports.
+  for (const file of jsFiles) await ownPackage(file);
+
+  function resolveWorkspaceImport(specifier) {
+    const name = externalPackageName(specifier);
+    if (!name) return null;
+    const pkg = workspacePackages.get(name);
+    if (!pkg) return null;
+    const subpath = specifier.slice(name.length).replace(/^\/+/, "");
+    for (const candidate of workspaceCandidates(pkg, subpath)) {
+      const key = normalizeFileKey(candidate);
+      if (allFileKeys.has(key)) return { name, key };
+    }
+    return { name, key: null };
   }
 
   const pyIndex = indexPythonModules(pyFiles);
@@ -258,14 +362,24 @@ export async function analyzeDependencyGraph(files, repoRoot) {
     const selfName = await ownPackageName(file);
     const grouped = new Map();
     for (const imported of extractJsImports(content)) {
+      let toKey = null;
       if (!isRelativeImport(imported.specifier)) {
-        if (imported.typeOnly) continue;
         const name = externalPackageName(imported.specifier);
         if (name && name === selfName) continue;
-        addExternal(fromKey, name);
-        continue;
+        const workspace = resolveWorkspaceImport(imported.specifier);
+        if (workspace) {
+          // Another package in this repository is internal: an edge when it resolves
+          // to a scanned file, and never an external dependency either way.
+          if (!workspace.key) continue;
+          toKey = workspace.key;
+        } else {
+          if (imported.typeOnly) continue;
+          addExternal(fromKey, name);
+          continue;
+        }
+      } else {
+        toKey = resolveImportPath(file, imported.specifier);
       }
-      const toKey = resolveImportPath(file, imported.specifier);
       if (!toKey) continue;
       const id = `${fromKey}->${toKey}`;
       let slot = grouped.get(id);

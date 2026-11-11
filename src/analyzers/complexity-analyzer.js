@@ -3,6 +3,7 @@
 // (dep graph, JSDoc, security) into a per-module health score.
 
 import fs from "node:fs/promises";
+import { computeLanguageCoverage, coverageLine, filesForAnalysis, unanalyzedLanguageNames } from "./language-coverage.js";
 import path from "node:path";
 import { info } from "../utils/logger.js";
 
@@ -251,7 +252,8 @@ function functionsForLanguage(language, source) {
  * @returns {Promise<Object>} Complexity analysis results
  */
 export async function analyzeComplexity(files, repoRoot) {
-  const sourceFiles = files
+  const coverage = computeLanguageCoverage(files);
+  const sourceFiles = filesForAnalysis(files, coverage)
     .filter(f => languageForFile(f))
     .filter(f => !shouldSkip(f));
 
@@ -259,6 +261,7 @@ export async function analyzeComplexity(files, repoRoot) {
     files: [],
     functions: [],
     filesAnalyzed: sourceFiles.length,
+    coverage,
   };
 
   for (const file of sourceFiles) {
@@ -411,11 +414,20 @@ export function computeCodeHealth(complexityResult, depGraph, jsdocResult, secur
 
   const hotspots = modules.filter(m => m.score < 60).slice(0, 20);
 
-  const summary = totalFiles > 0
+  const coverage = complexityResult.coverage || null;
+  let summary = totalFiles > 0
     ? `${totalFiles} files analyzed · Average health: ${avgScore}/100 · ${gradeDistribution.A} A, ${gradeDistribution.B} B, ${gradeDistribution.C} C, ${gradeDistribution.D} D, ${gradeDistribution.F} F`
     : "No source files analyzed.";
+  if (totalFiles > 0 && coverage?.status === "partial") {
+    summary += ` · ${unanalyzedLanguageNames(coverage)} not scored`;
+  }
+  if (totalFiles === 0 && coverage?.status === "unsupported") {
+    summary = `Not scored: ${coverageLine(coverage, "code health")}`;
+  }
 
-  if (totalFiles === 0) {
+  if (totalFiles === 0 && coverage?.status === "unsupported") {
+    info(`Code health: not scored — ${coverageLine(coverage, "code health")}`);
+  } else if (totalFiles === 0) {
     info("Code health: no source files analyzed.");
   } else {
     info(`Code health: avg ${avgScore}/100 across ${totalFiles} files (${hotspots.length} hotspots)`);
@@ -424,6 +436,7 @@ export function computeCodeHealth(complexityResult, depGraph, jsdocResult, secur
   return {
     modules,
     summary,
+    coverage,
     stats: {
       totalFiles,
       avgScore,
