@@ -251,8 +251,8 @@ function functionsForLanguage(language, source) {
  * @param {string} repoRoot - Absolute path to repo root
  * @returns {Promise<Object>} Complexity analysis results
  */
-export async function analyzeComplexity(files, repoRoot) {
-  const coverage = computeLanguageCoverage(files);
+export async function analyzeComplexity(files, repoRoot, { coverageFiles = files } = {}) {
+  const coverage = computeLanguageCoverage(coverageFiles || files);
   const sourceFiles = filesForAnalysis(files, coverage)
     .filter(f => languageForFile(f))
     .filter(f => !shouldSkip(f));

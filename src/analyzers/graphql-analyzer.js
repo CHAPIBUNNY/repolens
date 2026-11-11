@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { info } from "../utils/logger.js";
 import { extractJsImports, externalPackageName } from "./import-parsers.js";
+import { stripJsComments } from "../utils/js-lexer.js";
 
 const GRAPHQL_EXTENSIONS = [".graphql", ".gql"];
 
@@ -44,6 +45,9 @@ const SCHEMA_LIBRARY_PACKAGES = [
   { name: "Apollo Client", match: (pkg) => pkg === "@apollo/client" || pkg === "apollo-client" || pkg === "react-apollo" || pkg === "apollo-boost" },
   { name: "graphql-request", match: (pkg) => pkg === "graphql-request" },
   { name: "graphql-tag", match: (pkg) => pkg === "graphql-tag" },
+  // Hasura has no server SDK; its client and tooling packages are the grounded signal.
+  // A bare "hasura" mention in text is no longer enough (see CHANGELOG).
+  { name: "Hasura", match: (pkg) => pkg.startsWith("@hasura/") || pkg.startsWith("hasura-") },
 ];
 
 export function graphqlLibrariesImported(source) {
@@ -60,12 +64,12 @@ export function graphqlLibrariesImported(source) {
   return names;
 }
 
-// Comments are removed before looking for SDL or resolver maps; strings stay because
-// inline SDL lives in template literals.
-function stripJsComments(source) {
-  return String(source)
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
-    .replace(/(^|[^:\\"'`])\/\/.*$/gm, "$1");
+async function hasHasuraProject(repoRoot) {
+  for (const rel of ["hasura/config.yaml", "config.yaml"]) {
+    const text = await readFileSafe(path.join(repoRoot, rel));
+    if (/^\s*metadata_directory\s*:/m.test(text)) return true;
+  }
+  return false;
 }
 
 function parseFieldsFromBlock(block) {
@@ -163,6 +167,11 @@ export async function analyzeGraphQL(files, repoRoot) {
       const resolverMap = RESOLVER_PATTERNS[0].test(code) && RESOLVER_PATTERNS[1].test(code);
       resolverCandidates.push({ file, local: fileLibraries.length > 0 || hasSdl || resolverMap });
     }
+  }
+
+  // Hasura projects are recognized by their CLI project file, not by the word "hasura".
+  if (!result.libraries.includes("Hasura") && await hasHasuraProject(repoRoot)) {
+    result.libraries.push("Hasura");
   }
 
   const repoHasGraphQL = result.schemaFiles.length > 0 ||

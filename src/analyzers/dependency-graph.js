@@ -20,6 +20,7 @@ import {
 } from "./import-parsers.js";
 import { isNonProductPath } from "../utils/path-roles.js";
 import { computeLanguageCoverage, coverageLine } from "./language-coverage.js";
+import { listWorkspacePackages } from "./workspace-packages.js";
 import {
   classifyRuntimeCycles,
   priorityCounts,
@@ -81,7 +82,11 @@ function workspaceCandidates(pkg, subpath) {
   const out = [];
   const push = (rel) => {
     if (typeof rel !== "string" || !rel) return;
-    let clean = rel.replace(/^\.\//, "").replace(/\/+$/, "");
+    let clean = rel.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "");
+    // exports/main targets must stay inside the package: no absolute paths, no `..`,
+    // no wildcards or URLs.
+    if (clean.startsWith("/") || /^[A-Za-z]:/.test(clean) || clean.includes("*") || clean.includes(":")) return;
+    if (clean.split("/").includes("..")) return;
     clean = clean.replace(/\.d\.[cm]?ts$/, "").replace(/\.(js|ts|jsx|tsx|mjs|cjs)$/, "");
     if (!clean || clean === ".") {
       out.push(pkg.dir || ".");
@@ -219,9 +224,9 @@ function goFilesInDir(goFiles, dir) {
   });
 }
 
-export async function analyzeDependencyGraph(files, repoRoot) {
+export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = files } = {}) {
   const result = emptyResult();
-  const coverage = computeLanguageCoverage(files);
+  const coverage = computeLanguageCoverage(coverageFiles || files);
   result.coverage = coverage;
   if (coverage.status === "unsupported") {
     info(`Dependency graph: not built — ${coverageLine(coverage, "import analysis")}`);
@@ -265,10 +270,7 @@ export async function analyzeDependencyGraph(files, repoRoot) {
 
   // A package importing its own name (examples, docs, tests written like user code)
   // is not a dependency. Resolve the nearest package.json for each file.
-  // The same walk indexes workspace packages: in a monorepo, `@scope/pkg` that names a
-  // package in this repository is an internal edge, not an external dependency.
   const packageByDir = new Map();
-  const workspacePackages = new Map();
   async function ownPackage(file) {
     let dir = path.posix.dirname(String(file).replace(/\\/g, "/"));
     const visited = [];
@@ -281,23 +283,16 @@ export async function analyzeDependencyGraph(files, repoRoot) {
       visited.push(dir);
       const raw = await readFileSafe(path.join(repoRoot, dir, "package.json"));
       if (raw) {
-        let info = null;
+        let found = null;
         try {
           const parsed = JSON.parse(raw);
-          if (typeof parsed?.name === "string" && parsed.name) {
-            info = { name: parsed.name, dir: dir === "." ? "" : dir, manifest: parsed };
-          }
+          if (typeof parsed?.name === "string" && parsed.name) found = { name: parsed.name, manifest: parsed };
         } catch {
           // invalid package.json: keep walking up
         }
-        if (info) {
-          for (const d of visited) packageByDir.set(d, info);
-          const existing = workspacePackages.get(info.name);
-          // Duplicate names (copied examples) keep the shallowest package.
-          if (!existing || info.dir.split("/").length < existing.dir.split("/").length) {
-            workspacePackages.set(info.name, info);
-          }
-          return info;
+        if (found) {
+          for (const d of visited) packageByDir.set(d, found);
+          return found;
         }
       }
       if (dir === "." || dir === "" || dir === path.posix.dirname(dir)) break;
@@ -306,19 +301,27 @@ export async function analyzeDependencyGraph(files, repoRoot) {
     for (const d of visited) packageByDir.set(d, null);
     return null;
   }
-  async function ownPackageName(file) {
-    const info = await ownPackage(file);
-    return info ? info.name : null;
+
+  // Declared workspace members only (package.json workspaces, pnpm-workspace.yaml,
+  // lerna.json). In a monorepo, `@scope/pkg` naming a member is an internal edge.
+  const workspacePackages = new Map();
+  if (jsFiles.length > 0) {
+    const { packages } = await listWorkspacePackages(repoRoot);
+    for (const pkg of packages) workspacePackages.set(pkg.name, pkg);
   }
 
-  // Index every package that contains a scanned file before reading imports.
-  for (const file of jsFiles) await ownPackage(file);
-
-  function resolveWorkspaceImport(specifier) {
+  function resolveWorkspaceImport(specifier, importer) {
     const name = externalPackageName(specifier);
     if (!name) return null;
     const pkg = workspacePackages.get(name);
     if (!pkg) return null;
+    // `"name": "npm:other@1"` (or a registry version of a same-named package installed
+    // under an alias) means the importer uses the registry package, not the member.
+    const manifest = importer?.manifest || {};
+    for (const field of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
+      const spec = manifest[field]?.[name];
+      if (typeof spec === "string" && spec.startsWith("npm:")) return null;
+    }
     const subpath = specifier.slice(name.length).replace(/^\/+/, "");
     for (const candidate of workspaceCandidates(pkg, subpath)) {
       const key = normalizeFileKey(candidate);
@@ -359,14 +362,15 @@ export async function analyzeDependencyGraph(files, repoRoot) {
     const content = await readFileSafe(path.join(repoRoot, file));
     if (!content) continue;
     const fromKey = normalizeFileKey(file);
-    const selfName = await ownPackageName(file);
+    const importer = await ownPackage(file);
+    const selfName = importer ? importer.name : null;
     const grouped = new Map();
     for (const imported of extractJsImports(content)) {
       let toKey = null;
       if (!isRelativeImport(imported.specifier)) {
         const name = externalPackageName(imported.specifier);
         if (name && name === selfName) continue;
-        const workspace = resolveWorkspaceImport(imported.specifier);
+        const workspace = resolveWorkspaceImport(imported.specifier, importer);
         if (workspace) {
           // Another package in this repository is internal: an edge when it resolves
           // to a scanned file, and never an external dependency either way.
@@ -623,7 +627,12 @@ function buildSummary(result) {
   if (result.stats.cycles > 0) {
     parts.push(`⚠️ ${result.stats.cycles} circular dependency cycle(s)`);
   } else {
-    parts.push("✓ no circular dependencies");
+    parts.push(result.coverage?.status === "partial"
+      ? "✓ no circular dependencies among analyzed files"
+      : "✓ no circular dependencies");
+  }
+  if (result.coverage?.status === "partial") {
+    parts.push(`partial coverage: ${result.coverage.analyzedBase} of ${result.coverage.totalBase} source files`);
   }
   if (result.stats.orphanFiles > 0) {
     parts.push(`${result.stats.orphanFiles} orphan file(s)`);

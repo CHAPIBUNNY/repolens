@@ -114,7 +114,7 @@ describe("2. a C# repository is not scored from one docs script (App-vNext/Polly
     expect(graph.nodes).toEqual([]);
     expect(graph.stats).toBeNull();
     const md = renderDependencyGraph(graph);
-    expect(md).toContain("C# (40 files) is not supported for import analysis yet");
+    expect(md).toContain("C# (40 product files) is not supported for import analysis yet");
     expect(md).not.toContain("no circular dependencies");
     expect(md).not.toContain("Ensure your `scan.include`");
   });
@@ -126,7 +126,7 @@ describe("2. a C# repository is not scored from one docs script (App-vNext/Polly
     const graph = await analyzeDependencyGraph(files, tempDir);
     const health = computeCodeHealth(complexity, graph, null, null);
     expect(health.stats.totalFiles).toBe(0);
-    expect(health.summary).toMatch(/^Not scored: C# \(40 files\)/);
+    expect(health.summary).toMatch(/^Not scored: C# \(40 product files\)/);
     const md = renderCodeHealth(health);
     expect(md).not.toContain("100/100");
     expect(md).toContain("not supported for code health yet");
@@ -139,7 +139,7 @@ describe("2. a C# repository is not scored from one docs script (App-vNext/Polly
     } finally {
       console.error = original;
     }
-    expect(errors.join("\n")).toMatch(/C# \(40 files\) is not supported for code health yet/);
+    expect(errors.join("\n")).toMatch(/C# \(40 product files\) is not supported for code health yet/);
   });
 
   it("lists the primary language first", async () => {
@@ -160,10 +160,10 @@ describe("3. Java is explained as a language limit, not a config problem (google
     for (let i = 0; i < 12; i++) files.push(await write(`gson/src/main/java/com/google/gson/T${i}.java`, `package com.google.gson; class T${i} {}\n`));
     const graph = await analyzeDependencyGraph(files, tempDir);
     const md = renderDependencyGraph(graph);
-    expect(md).toContain("Java/Kotlin (12 files) is not supported for import analysis yet");
+    expect(md).toContain("Java/Kotlin (12 product files) is not supported for import analysis yet");
     expect(md).toContain("not a problem with your `scan.include` patterns");
     const health = computeCodeHealth(await analyzeComplexity(files, tempDir), graph, null, null);
-    expect(renderCodeHealth(health)).toContain("Java/Kotlin (12 files) is not supported for code health yet");
+    expect(renderCodeHealth(health)).toContain("Java/Kotlin (12 product files) is not supported for code health yet");
   });
 
   it("demo help says the graph and health cover JavaScript/TypeScript, Python, and Go only", () => {

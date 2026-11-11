@@ -11,16 +11,20 @@ export const ANALYZED_LANGUAGES_TEXT = "JavaScript/TypeScript, Python, and Go";
 
 const ANALYZED_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py", ".pyw", ".go"]);
 
-// Below this share of product source files, analyzed-language files are incidental
-// (a docs script, a build helper) and do not stand for the repository.
-export const INCIDENTAL_SHARE = 0.1;
+// A code-health badge is one number for the whole repository. Below this share of
+// product source files in analyzed languages, `repolens badge` refuses to print it.
+// The docs still show the partial graph and scores with a coverage note.
+export const BADGE_MIN_SHARE = 0.1;
+
+// Vendored or third-party trees are not the repository's own code, in any language.
+export const VENDORED_DIRECTORIES = new Set([
+  "vendor", "vendored", "third_party", "third-party", "thirdparty", "3rdparty",
+  "deps", "external", "extern", "node_modules", "bower_components",
+]);
 
 const LABEL_BY_EXTENSION = new Map();
 LABEL_BY_EXTENSION.set(".vue", "Vue");
 LABEL_BY_EXTENSION.set(".svelte", "Svelte");
-// Vue and Svelte components sit next to JavaScript/TypeScript that is analyzed, so they
-// never make the analyzed files "incidental" on their own.
-const COMPANION_LABELS = new Set(["Vue", "Svelte"]);
 for (const profile of LANGUAGE_PROFILES) {
   const label = profile.id === "java" ? "Java/Kotlin" : profile.id === "cpp" ? "C/C++" : profile.label;
   for (const ext of profile.extensions) {
@@ -32,63 +36,77 @@ function isDeclarationFile(file) {
   return /\.d\.[cm]?ts$/.test(file);
 }
 
+export function isVendoredPath(file) {
+  const parts = String(file || "").replace(/\\/g, "/").toLowerCase().split("/");
+  parts.pop();
+  return parts.some((segment) => VENDORED_DIRECTORIES.has(segment));
+}
+
 /**
+ * Product source = not a test, docs, tooling, example, or vendored path.
+ *
+ * - "none": no source files in any known language
+ * - "full": every product source file is in an analyzed language
+ * - "partial": analyzed-language product code exists next to other languages; analysis
+ *   runs and every page says what it did not cover
+ * - "unsupported": no analyzed-language product code at all (only a docs script, a test
+ *   helper, or vendored files); graph and health are not built
+ *
  * @param {string[]} files - scanned file paths
- * @returns {{
- *   status: "none" | "full" | "partial" | "unsupported",
- *   analyzedFiles: number, analyzedProductFiles: number,
- *   unanalyzedFiles: number, unanalyzedProductFiles: number,
- *   unanalyzedLanguages: { label: string, files: number }[],
- *   share: number | null,
- * }}
  */
 export function computeLanguageCoverage(files) {
   let analyzedFiles = 0;
   let analyzedProductFiles = 0;
   let unanalyzedFiles = 0;
   let unanalyzedProductFiles = 0;
-  let foreignFiles = 0;
-  let foreignProductFiles = 0;
-  const byLabel = new Map();
+  let vendoredFiles = 0;
+  let vendoredAnalyzedFiles = 0;
+  const byLabelProduct = new Map();
+  const byLabelAll = new Map();
 
   for (const raw of files || []) {
     const file = String(raw).replace(/\\/g, "/");
     if (isDeclarationFile(file)) continue;
     const ext = path.posix.extname(file).toLowerCase();
+    const analyzed = ANALYZED_EXTENSIONS.has(ext);
+    const label = analyzed ? null : LABEL_BY_EXTENSION.get(ext);
+    if (!analyzed && !label) continue;
+    if (isVendoredPath(file)) {
+      vendoredFiles += 1;
+      if (analyzed) vendoredAnalyzedFiles += 1;
+      continue;
+    }
     const product = !isNonProductPath(file);
-    if (ANALYZED_EXTENSIONS.has(ext)) {
+    if (analyzed) {
       analyzedFiles += 1;
       if (product) analyzedProductFiles += 1;
       continue;
     }
-    const label = LABEL_BY_EXTENSION.get(ext);
-    if (!label) continue;
     unanalyzedFiles += 1;
-    if (product) unanalyzedProductFiles += 1;
-    if (!COMPANION_LABELS.has(label)) {
-      foreignFiles += 1;
-      if (product) foreignProductFiles += 1;
+    byLabelAll.set(label, (byLabelAll.get(label) || 0) + 1);
+    if (product) {
+      unanalyzedProductFiles += 1;
+      byLabelProduct.set(label, (byLabelProduct.get(label) || 0) + 1);
     }
-    byLabel.set(label, (byLabel.get(label) || 0) + 1);
   }
+
+  // Product files decide everything; a tree with no product files at all (only tests,
+  // docs, or tooling) falls back to every non-vendored file.
+  const useProduct = analyzedProductFiles + unanalyzedProductFiles > 0;
+  const analyzedBase = useProduct ? analyzedProductFiles : analyzedFiles;
+  const unanalyzedBase = useProduct ? unanalyzedProductFiles : unanalyzedFiles;
+  const byLabel = useProduct ? byLabelProduct : byLabelAll;
+  const totalBase = analyzedBase + unanalyzedBase;
+  const share = totalBase > 0 ? analyzedBase / totalBase : null;
 
   const unanalyzedLanguages = [...byLabel.entries()]
     .map(([label, count]) => ({ label, files: count }))
     .sort((a, b) => b.files - a.files || a.label.localeCompare(b.label));
 
-  // Product files decide the share; when every file is test/docs/tooling, use all files.
-  const useProduct = analyzedProductFiles + unanalyzedProductFiles > 0;
-  const analyzedBase = useProduct ? analyzedProductFiles : analyzedFiles;
-  const unanalyzedBase = useProduct ? unanalyzedProductFiles : unanalyzedFiles;
-  const foreignBase = useProduct ? foreignProductFiles : foreignFiles;
-  const totalBase = analyzedBase + unanalyzedBase;
-  const share = totalBase > 0 ? analyzedBase / totalBase : null;
-
   let status;
-  if (analyzedFiles + unanalyzedFiles === 0) status = "none";
-  else if (unanalyzedFiles === 0) status = "full";
+  if (totalBase === 0) status = "none";
+  else if (unanalyzedBase === 0) status = "full";
   else if (analyzedBase === 0) status = "unsupported";
-  else if (share < INCIDENTAL_SHARE && foreignBase * 2 >= unanalyzedBase) status = "unsupported";
   else status = "partial";
 
   return {
@@ -97,15 +115,37 @@ export function computeLanguageCoverage(files) {
     analyzedProductFiles,
     unanalyzedFiles,
     unanalyzedProductFiles,
+    vendoredFiles,
+    vendoredAnalyzedFiles,
+    productBased: useProduct,
+    analyzedBase,
+    totalBase,
     unanalyzedLanguages,
     share,
   };
 }
 
+/** Whether one code-health number may stand for the repository. */
+export function badgeCoverageOk(coverage) {
+  if (!coverage) return true;
+  if (coverage.status === "full" || coverage.status === "none") return true;
+  if (coverage.status === "unsupported") return false;
+  return (coverage.share ?? 0) >= BADGE_MIN_SHARE;
+}
+
+/**
+ * Short qualifier for claims made from the graph ("no circular dependencies"), or "".
+ * Partial: " (analyzed files only: 50 of 650 product source files; C/C++ not analyzed)".
+ */
+export function coverageScope(coverage) {
+  if (!coverage || coverage.status !== "partial") return "";
+  return ` (analyzed files only: ${coverage.analyzedBase} of ${coverage.totalBase} ${coverage.productBased ? "product " : ""}source files; ${unanalyzedLanguageNames(coverage)} not analyzed)`;
+}
+
 /** "C# (780 files)" / "Java/Kotlin (247 files) and C (3 files)". */
 export function describeUnanalyzedLanguages(coverage, limit = 3) {
   const list = (coverage?.unanalyzedLanguages || []).slice(0, limit)
-    .map(({ label, files }) => `${label} (${files} file${files === 1 ? "" : "s"})`);
+    .map(({ label, files }) => `${label} (${files} ${coverage?.productBased ? "product " : ""}file${files === 1 ? "" : "s"})`);
   if (list.length === 0) return "";
   if (list.length === 1) return list[0];
   return `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
@@ -141,9 +181,9 @@ export function coverageNotice(coverage, what) {
   if (!coverage) return [];
   const langs = describeUnanalyzedLanguages(coverage);
   if (coverage.status === "unsupported") {
-    const n = coverage.analyzedFiles;
+    const n = (coverage.analyzedFiles || 0) + (coverage.vendoredAnalyzedFiles || 0);
     const incidental = n > 0
-      ? ` ${n === 1 ? "One file" : `${n} files`} in a supported language ${n === 1 ? "was" : "were"} found, but ${n === 1 ? "it is" : "they are"} incidental (docs, tooling, tests, or a small share of the code), so ${n === 1 ? "it was" : "they were"} not scored as if ${n === 1 ? "it were" : "they were"} the codebase.`
+      ? ` ${n === 1 ? "One file" : `${n} files`} in a supported language ${n === 1 ? "was" : "were"} found only in docs, tests, tooling, examples, or vendored directories, so ${n === 1 ? "it was" : "they were"} not ${what === "code health" ? "scored" : "graphed"} as if ${n === 1 ? "it were" : "they were"} the codebase.`
       : "";
     return [
       `> ${langs} ${verbFor(coverage)} not supported for ${what} yet. RepoLens ${what === "code health" ? "scores" : "builds import graphs for"} ${ANALYZED_LANGUAGES_TEXT} only.`,
@@ -155,7 +195,7 @@ export function coverageNotice(coverage, what) {
   if (coverage.status === "partial") {
     const pct = coverage.share != null ? Math.round(coverage.share * 100) : null;
     return [
-      `> **Partial coverage:** ${what} covers the ${ANALYZED_LANGUAGES_TEXT} files only${pct != null ? ` (about ${pct}% of product source files)` : ""}. ${langs} ${verbFor(coverage)} not analyzed, so results below do not include ${coverage.unanalyzedLanguages.length > 1 ? "those languages" : "that language"}.`,
+      `> **Partial coverage:** ${what} covers ${coverage.analyzedBase} of ${coverage.totalBase} ${coverage.productBased ? "product " : ""}source files${pct != null ? ` (${pct}%)` : ""}, the ${ANALYZED_LANGUAGES_TEXT} ones. ${langs} ${verbFor(coverage)} not analyzed, so results below say nothing about ${coverage.unanalyzedLanguages.length > 1 ? "those languages" : "that language"}.`,
       "",
     ];
   }
