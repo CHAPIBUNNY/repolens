@@ -231,3 +231,34 @@ describe("badge coverage comes from one consistent walk", () => {
     expect(errors).toMatch(/only 1 of 31 product source files \(3%\)/);
   });
 });
+
+describe("Vue and Svelte component libraries keep their badge", () => {
+  for (const [ext, label] of [["vue", "Vue"], ["svelte", "Svelte"]]) {
+    it(`scores src/index.ts + util.ts next to 40 .${ext} files, with a partial-coverage warning`, async () => {
+      await write("src/index.ts", "export * from './util';\n");
+      await write("src/util.ts", "export const add = (a: number, b: number) => a + b;\n");
+      for (let i = 0; i < 40; i++) await write(`src/components/C${i}.${ext}`, "<template><div /></template>\n");
+      const coverage = computeLanguageCoverage([
+        "src/index.ts", "src/util.ts",
+        ...Array.from({ length: 40 }, (_, i) => `src/components/C${i}.${ext}`),
+      ]);
+      expect(coverage.status).toBe("partial");
+      expect(coverage.unanalyzedLanguages).toEqual([{ label, files: 40 }]);
+      expect(badgeCoverageOk(coverage)).toBe(true);
+      const { value, errors } = await quiet(() => runBadgeCli({ target: tempDir, format: "json" }));
+      expect(value).toBe(0);
+      expect(errors).toMatch(new RegExp(`Partial coverage: .*${label} \\(40 product files\\) is not analyzed`));
+    });
+  }
+
+  it("still refuses C# or Java with incidental docs JS, and Python next to many Rust files", async () => {
+    expect(badgeCoverageOk(computeLanguageCoverage(["docs/site/main.js", "src/A.cs"]))).toBe(false);
+    expect(badgeCoverageOk(computeLanguageCoverage(["docs/main.js", ...Array.from({ length: 20 }, (_, i) => `src/main/java/A${i}.java`)]))).toBe(false);
+    const hybrid = computeLanguageCoverage(["a.py", ...Array.from({ length: 10 }, (_, i) => `r${i}.rs`)]);
+    expect(hybrid.status).toBe("partial");
+    expect(badgeCoverageOk(hybrid)).toBe(false);
+    // Vue does not dilute the share, but it does not rescue a Rust majority either.
+    const mixed = computeLanguageCoverage(["a.ts", ...Array.from({ length: 10 }, (_, i) => `r${i}.rs`), ...Array.from({ length: 50 }, (_, i) => `c${i}.vue`)]);
+    expect(badgeCoverageOk(mixed)).toBe(false);
+  });
+});

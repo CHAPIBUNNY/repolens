@@ -25,6 +25,7 @@ export const VENDORED_DIRECTORIES = new Set([
 const LABEL_BY_EXTENSION = new Map();
 LABEL_BY_EXTENSION.set(".vue", "Vue");
 LABEL_BY_EXTENSION.set(".svelte", "Svelte");
+const COMPANION_LABELS_LIST = ["Vue", "Svelte"];
 for (const profile of LANGUAGE_PROFILES) {
   const label = profile.id === "java" ? "Java/Kotlin" : profile.id === "cpp" ? "C/C++" : profile.label;
   for (const ext of profile.extensions) {
@@ -98,6 +99,11 @@ export function computeLanguageCoverage(files) {
   const byLabel = useProduct ? byLabelProduct : byLabelAll;
   const totalBase = analyzedBase + unanalyzedBase;
   const share = totalBase > 0 ? analyzedBase / totalBase : null;
+  // Vue and Svelte components sit next to analyzed JavaScript/TypeScript. They are not
+  // analyzed, but they do not count against the badge share: a component library with
+  // two .ts files and forty .vue files keeps its (partial) score.
+  const companionBase = COMPANION_LABELS_LIST.reduce((sum, label) => sum + (byLabel.get(label) || 0), 0);
+  const badgeShare = totalBase - companionBase > 0 ? analyzedBase / (totalBase - companionBase) : null;
 
   const unanalyzedLanguages = [...byLabel.entries()]
     .map(([label, count]) => ({ label, files: count }))
@@ -122,6 +128,8 @@ export function computeLanguageCoverage(files) {
     totalBase,
     unanalyzedLanguages,
     share,
+    companionBase,
+    badgeShare,
   };
 }
 
@@ -130,7 +138,8 @@ export function badgeCoverageOk(coverage) {
   if (!coverage) return true;
   if (coverage.status === "full" || coverage.status === "none") return true;
   if (coverage.status === "unsupported") return false;
-  return (coverage.share ?? 0) >= BADGE_MIN_SHARE;
+  const share = coverage.badgeShare ?? coverage.share ?? 0;
+  return share >= BADGE_MIN_SHARE;
 }
 
 /**
