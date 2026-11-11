@@ -1,5 +1,13 @@
 // Generate documentation sections using AI
 
+import { coverageLine, coverageNotice, coverageScope } from "../analyzers/language-coverage.js";
+
+// Partial language coverage is stated next to every graph-based score, so a Rust or
+// C# majority never inherits "clean boundaries" from the JavaScript/Python/Go part.
+function coverageBanner(depGraph) {
+  const lines = coverageNotice(depGraph?.coverage, "import analysis");
+  return lines.length > 0 ? `${lines.join("\n")}\n` : "";
+}
 import { generateText, isAIEnabled } from "./provider.js";
 import { 
   SYSTEM_PROMPT, 
@@ -285,6 +293,7 @@ The system is organized around **${context.domains.length} functional domains**,
     const healthEmoji = healthScore >= 80 ? "🟢" : healthScore >= 60 ? "🟡" : "🔴";
     
     output += `**Overall Health: ${healthEmoji} ${healthScore}/100**\n\n`;
+    output += coverageBanner(depGraph);
     output += `| Metric | Value | Status |\n`;
     output += `|--------|-------|--------|\n`;
     output += `| Internal imports | ${stats.totalEdges} edges | ${stats.totalEdges > 0 ? "✅ Connected" : "⚠️ Isolated"} |\n`;
@@ -296,7 +305,7 @@ The system is organized around **${context.domains.length} functional domains**,
     // Key insights
     output += `\n### Key Insights\n\n`;
     if (stats.cycles === 0) {
-      output += `- ✅ **Clean module boundaries** — No circular dependencies detected, enabling safe refactoring and testing.\n`;
+      output += `- ✅ **Clean module boundaries** — No circular dependencies detected${coverageScope(depGraph.coverage)}, enabling safe refactoring and testing.\n`;
     } else {
       output += `- ${cycleInsight(stats)}\n`;
     }
@@ -311,6 +320,8 @@ The system is organized around **${context.domains.length} functional domains**,
     if (orphanRatio(stats) > ORPHAN_WARN_RATIO) {
       output += `- ⚠️ **Potential dead code** — ${stats.orphanFiles} files (${Math.round(stats.orphanFiles / stats.totalFiles * 100)}%) are not imported anywhere.\n`;
     }
+  } else if (depGraph?.coverage?.status === "unsupported") {
+    output += `Import-graph health is not available: ${coverageLine(depGraph.coverage, "import analysis")}\n`;
   }
 
   // Data flows summary
@@ -525,11 +536,12 @@ The system is built on a modern technology foundation:\n\n`;
     
     output += `## Dependency Graph\n\n`;
     output += `**Codebase Health: ${healthEmoji} ${healthScore}/100**\n\n`;
+    output += coverageBanner(depGraph);
     output += `| Metric | Value | Assessment |\n`;
     output += `|--------|-------|------------|\n`;
     output += `| Internal Imports | ${stats.totalEdges} | ${stats.totalEdges > 0 ? "Modules are connected" : "No internal imports"} |\n`;
     output += `| External Packages | ${externalPackagesLabel(stats)} | ${stats.externalDeps < 50 ? "Lean dependencies" : stats.externalDeps < 100 ? "Moderate dependencies" : "Many dependencies"} |\n`;
-    output += `| Circular Dependencies | ${stats.cycles} | ${stats.cycles === 0 ? "✅ Clean" : "⚠️ Needs attention"} |\n`;
+    output += `| Circular Dependencies | ${stats.cycles} | ${stats.cycles === 0 ? `✅ Clean${coverageScope(depGraph.coverage)}` : "⚠️ Needs attention"} |\n`;
     output += `| Orphan Files | ${stats.orphanFiles} | ${orphanStatus(stats)} |\n`;
     
     if (stats.hubs && stats.hubs.length > 0) {
@@ -825,20 +837,21 @@ function getFallbackArchitectureOverview(context, enrichment = {}) {
     
     output += `\n## Dependency Health\n\n`;
     output += `**Architecture Health Score: ${healthEmoji} ${healthScore}/100**\n\n`;
+    output += coverageBanner(depGraph);
     
     output += `| Metric | Value | Status | Recommendation |\n`;
     output += `|--------|-------|--------|----------------|\n`;
     output += `| Import Edges | ${stats.totalEdges} | ${stats.totalEdges > 0 ? "✅" : "⚠️"} | ${stats.totalEdges > 0 ? "Healthy module connectivity" : "Consider connecting modules"} |\n`;
     output += `| External Packages | ${externalPackagesLabel(stats)} | ${stats.externalDeps < 50 ? "✅" : stats.externalDeps < 100 ? "⚠️" : "🔴"} | ${stats.externalDeps >= 100 ? "Audit for unused dependencies" : stats.externalDeps >= 50 ? "Review dependency necessity" : "Lean dependency set"} |\n`;
     const archCycle = cycleStatusCell(stats);
-    output += `| Circular Deps | ${stats.cycles} | ${stats.cycles === 0 ? "✅" : archCycle.mark} | ${stats.cycles === 0 ? "Clean module boundaries" : archCycle.advice} |\n`;
+    output += `| Circular Deps | ${stats.cycles} | ${stats.cycles === 0 ? "✅" : archCycle.mark} | ${stats.cycles === 0 ? `Clean module boundaries${coverageScope(depGraph.coverage)}` : archCycle.advice} |\n`;
     output += `| Orphan Files | ${stats.orphanFiles} | ${orphanRatio(stats) > ORPHAN_WARN_RATIO ? "⚠️" : "✅"} | ${stats.orphanFiles === 0 ? "All code is connected" : orphanRatio(stats) > ORPHAN_WARN_RATIO ? "Review for dead code" : "A few unconnected files (examples, type tests, entry points) are normal"} |\n`;
 
     // Architectural strengths and concerns
     output += `\n### Architectural Strengths\n\n`;
     const strengths = [];
     if (stats.cycles === 0) {
-      strengths.push("**Clean module boundaries** — No circular dependencies detected. This enables safe refactoring, isolated testing, and clear ownership boundaries.");
+      strengths.push(`**Clean module boundaries** — No circular dependencies detected${coverageScope(depGraph.coverage)}. This enables safe refactoring, isolated testing, and clear ownership boundaries.`);
     }
     if (stats.orphanFiles === 0) {
       strengths.push("**Fully connected codebase** — Every file is part of the dependency graph. No dead code or forgotten modules.");
@@ -1780,8 +1793,13 @@ function getFrameworkArchitecturalImplication(frameworks) {
 }
 
 // Helper: architectural implication of languages
+// Languages arrive most-files-first, so the first one is the primary language. A C#
+// repository with one docs script is not "dynamic typing".
+const STATIC_PRIMARY = new Set(["c#", "java", "kotlin", "scala", "swift", "c", "c++"]);
+
 function getLanguageImplication(languages) {
   const langs = (languages || []).map(l => l.toLowerCase());
+  if (STATIC_PRIMARY.has(langs[0])) return "Static typing; compiled language";
   if (langs.includes("typescript")) return "Static typing enables tooling and refactoring confidence";
   if (langs.includes("javascript")) return "Dynamic typing, flexible but requires discipline";
   if (langs.includes("python")) return "Readable syntax, rich ecosystem";
@@ -1892,6 +1910,7 @@ function getFrameworkLearningTip(frameworks) {
 // Helper: language learning tip
 function getLanguageLearningTip(languages) {
   const langs = (languages || []).map(l => l.toLowerCase());
+  if (STATIC_PRIMARY.has(langs[0])) return "Strong typing — let the compiler and IDE guide navigation";
   if (langs.includes("typescript")) return "Strong typing — check types when debugging";
   if (langs.includes("javascript")) return "Dynamic typing — use console.log for runtime inspection";
   if (langs.includes("python")) return "Read docstrings and type hints";

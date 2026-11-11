@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.16.2  
+**Current Version:** 1.16.3  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.16.2)
+## What's Shipped (v0.1.0 → v1.16.3)
 
 Everything below is live, tested, and available on npm.
 
@@ -164,6 +164,12 @@ Everything below is live, tested, and available on npm.
 - ✅ `server.json` for the MCP Registry (`io.github.CHAPIBUNNY/repolens`) and `smithery.yaml`
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
+
+## v1.16.3 — Gap-test accuracy fixes
+
+- ✅ Declared workspace packages (npm/yarn `workspaces`, `pnpm-workspace.yaml`, `lerna.json`) are internal graph edges, not external packages
+- ✅ Graph and code health say when a language (C#, Java/Kotlin, …) is not supported, show partial coverage for mixed repositories, and `repolens badge` no longer scores incidental files
+- ✅ GraphQL detection from imports and a string-safe comment stripper; test-heavy modules labelled; empty API Surface pages skipped
 
 ## v1.16.1 — Scan noise and cycle priority
 

@@ -2,11 +2,17 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { analyzeComplexity, computeCodeHealth } from "./analyzers/complexity-analyzer.js";
 import { analyzeDependencyGraph } from "./analyzers/dependency-graph.js";
+import { badgeCoverageOk, coverageLine } from "./analyzers/language-coverage.js";
 import { analyzeJSDoc } from "./analyzers/jsdoc-analyzer.js";
 import { analyzeSecurityPatterns } from "./analyzers/security-patterns.js";
 import { GALLERY_URL, REPO_URL } from "./delivery/comment-constants.js";
 
 const SOURCE_EXT = new Set([".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".pyw", ".go"]);
+const OTHER_SOURCE_EXT = new Set([
+  ".rs", ".java", ".kt", ".kts", ".scala", ".rb", ".php", ".cs", ".swift",
+  ".c", ".cc", ".cpp", ".h", ".hpp", ".vue", ".svelte",
+]);
+const MAX_SOURCE_FILES = 20000;
 const SKIP_DIR = new Set([
   "node_modules", ".git", "dist", "build", "vendor", "target", "coverage",
   ".repolens", "__pycache__", ".cache",
@@ -119,15 +125,19 @@ export function compactHealth(health) {
   };
 }
 
-export async function listScoreFiles(root, { maxFiles = 2500 } = {}) {
-  const out = [];
+/**
+ * Walk the tree once. Up to `maxFiles` scored files are analyzed, but every source file
+ * (scored languages and others alike) is counted up to `maxSourceFiles`, with the same
+ * skip rules, so the language-coverage decision never compares a capped sample of one
+ * language against an uncapped count of another. `coverageTruncated` is true when that
+ * shared limit was hit, and the ratio is then an estimate.
+ */
+export async function listScoreFiles(root, { maxFiles = 2500, maxSourceFiles = MAX_SOURCE_FILES } = {}) {
+  const scored = [];
+  const others = [];
   const stack = [root];
-  let capped = false;
-  while (stack.length) {
-    if (out.length >= maxFiles) {
-      capped = true;
-      break;
-    }
+  let coverageTruncated = false;
+  walk: while (stack.length) {
     const dir = stack.pop();
     let entries;
     try {
@@ -146,33 +156,47 @@ export async function listScoreFiles(root, { maxFiles = 2500 } = {}) {
       }
       if (!entry.isFile()) continue;
       if (entry.name.endsWith(".snap")) continue;
-      if (!SOURCE_EXT.has(path.extname(entry.name))) continue;
-      if (out.length >= maxFiles) {
-        capped = true;
-        break;
+      const ext = path.extname(entry.name);
+      const isScored = SOURCE_EXT.has(ext);
+      if (!isScored && !OTHER_SOURCE_EXT.has(ext.toLowerCase())) continue;
+      if (scored.length + others.length >= maxSourceFiles) {
+        coverageTruncated = true;
+        break walk;
       }
       const rel = path.relative(root, full).replace(/\\/g, "/");
-      out.push(rel);
+      (isScored ? scored : others).push(rel);
     }
   }
-  out.sort();
-  return { files: out, capped };
+  const capped = scored.length > maxFiles || coverageTruncated;
+  const files = scored.slice(0, maxFiles).sort();
+  return {
+    files,
+    capped,
+    others: others.sort(),
+    coverageFiles: [...scored, ...others],
+    coverageTruncated,
+  };
 }
 
 export async function scoreRepository(root, { files, maxFiles = 2500 } = {}) {
   let list = files;
   let capped = false;
+  let coverageFiles = files;
+  let coverageTruncated = false;
   if (!list) {
     const walked = await listScoreFiles(root, { maxFiles });
     list = walked.files;
     capped = walked.capped;
+    coverageFiles = walked.coverageFiles;
+    coverageTruncated = walked.coverageTruncated;
   }
-  const complexity = await analyzeComplexity(list, root);
-  const depGraph = await analyzeDependencyGraph(list, root);
+  // Coverage is judged on every counted source file; only `list` is analyzed.
+  const complexity = await analyzeComplexity(list, root, { coverageFiles });
+  const depGraph = await analyzeDependencyGraph(list, root, { coverageFiles });
   const jsdoc = await analyzeJSDoc(list, root);
   const security = await analyzeSecurityPatterns(list, root);
   const health = computeCodeHealth(complexity, depGraph, jsdoc, security);
-  return { health, depGraph, files: list, capped };
+  return { health, depGraph, files: list, capped, coverageTruncated };
 }
 
 function resolveOutPaths(outPath) {
@@ -228,6 +252,23 @@ export async function runBadgeCli({
     return 1;
   }
   const total = scored.health?.stats?.totalFiles || 0;
+  const coverage = scored.health?.coverage;
+  if (scored.coverageTruncated) {
+    console.error(`Note: language coverage was estimated from the first ${MAX_SOURCE_FILES} source files.`);
+  }
+  if (coverage && !badgeCoverageOk(coverage)) {
+    if (coverage.status === "unsupported") {
+      console.error(`Not scored: ${coverageLine(coverage, "code health")}`);
+    } else {
+      const pct = Math.round((coverage.share || 0) * 100);
+      console.error(`Not scored: only ${coverage.analyzedBase} of ${coverage.totalBase} product source files (${pct}%) are ${"JavaScript/TypeScript, Python, or Go"}; ${coverageLine(coverage, "code health")}`);
+    }
+    console.error("No badge was printed: one score would not stand for this repository.");
+    return 2;
+  }
+  if (coverage?.status === "partial") {
+    console.error(`Partial coverage: ${coverageLine(coverage, "code health")}`);
+  }
   if (!total) {
     console.error("No source files analyzed.");
     console.error("Code health covers JavaScript, TypeScript, Python, and Go. Empty documentation was not scored.");

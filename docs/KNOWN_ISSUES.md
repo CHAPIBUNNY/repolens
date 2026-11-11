@@ -3,7 +3,11 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** October 2026  
-**Version:** 1.16.2
+**Version:** 1.16.3
+
+## Workspace edges, unsupported languages, and GraphQL false positives (fixed in 1.16.3)
+
+A gap test of 1.16.2 on trpc/trpc listed its own `@trpc/*` workspace packages as external dependencies and lost the cross-package edges. App-vNext/Polly (C#) got "no circular dependencies" and health 100/100 from one docs script, google/gson (Java) was told to fix `scan.include`, and comments mentioning Apollo or urql produced a GraphQL page on tRPC. 1.16.3 resolves declared workspace packages internally, reports unsupported or partial language coverage instead of a score, detects GraphQL from imports, and skips empty API Surface pages. Java and C# import graphs are still on the roadmap.
 
 ## Orval's snapshots, samples, and cycles (fixed in 1.16.1)
 

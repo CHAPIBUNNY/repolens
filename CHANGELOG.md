@@ -2,6 +2,37 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.16.3 (2026-11-11)
+
+Fixes found by the 2026-11-11 gap test of 1.16.2 on trpc/trpc, App-vNext/Polly, google/gson, charmbracelet/glow, and pallets/itsdangerous.
+
+### Upgrade notes (read before publishing docs)
+
+- **Monorepo graphs change.** Imports between declared workspace packages are now edges, not external packages. Expect higher edge counts, fewer orphans, new Hub Modules, fewer external packages, and different module roles on the first run after upgrading. On trpc/trpc: 913 → 1,533 edges, orphans 254 → 126, external packages 95 → 89. If you keep an architecture baseline, the next drift report lists these as changes; they are a measurement fix, not a code change.
+- **`repolens badge` can now exit 2 where it used to print a score.** A repository whose product source has no JavaScript/TypeScript, Python, or Go (only a docs script, test helper, or vendored copy) is reported as unsupported; App-vNext/Polly used to get a false "100". A repository where those languages are under 10% of product source files also exits 2, because one number would not stand for it. CI steps that publish the badge should tolerate exit 2 or skip the badge for such repositories. Vue (`.vue`) and Svelte (`.svelte`) component files are not analyzed (no imports, complexity, or health from them), but they do not count toward that 10% share: a component library with a few `.ts` files and many components still gets a badge, scored on its JavaScript/TypeScript only, with a partial-coverage warning on stderr and in the docs naming the component files that were not analyzed.
+- **Empty pages are no longer written.** API Surface (no routes, no external API integrations, no documented exports) and GraphQL Schema (no real GraphQL evidence) are skipped unless `documentation.sections` lists them. Pages published by earlier versions to Notion, Confluence, GitHub Wiki, or Obsidian are not deleted: they stay as last published until you remove them. The Markdown publisher overwrites files but does not delete an old `06-api-surface.md` or `11-graphql-schema.md` in the output directory.
+- **GraphQL detection is narrower.** Libraries count only when imported. A bare mention of "hasura" in code or comments no longer reports Hasura; a `hasura/config.yaml` (or root `config.yaml`) with `metadata_directory`, or an `@hasura/*` / `hasura-*` import, does.
+
+### Dependency graph
+
+- Workspace packages are internal. Members come only from declarations: root `package.json` `workspaces` (array or `{ packages }`, `!` exclusions honoured), `pnpm-workspace.yaml` `packages`, and `lerna.json` `packages`. A stray `package.json` (a test stub named `express`, a fixture) is not a workspace member. An import of `@scope/pkg` or `@scope/pkg/subpath` naming a member resolves to its source through `exports`, `main`, or `src/`, with `dist/`, `lib/`, and `build/` targets mapped back to `src/`. Targets and subpaths that leave the package (`..`, absolute paths, URLs, wildcards) are ignored. A dependency declared as `npm:alias@version` stays external. On trpc/trpc `@trpc/*` is gone from external packages, a Hub Modules section appears, and `packages/server` reads "Shared infrastructure (imported by 7 modules)" instead of "Connector (1 in, 2 out)". The MCP `get_dependency_graph` tool uses the same graph.
+- Flow steps name a package entry `server/src` rather than a bare `src`.
+
+### Language coverage
+
+- The dependency graph and code health cover JavaScript/TypeScript, Python, and Go. Coverage is measured on product source: tests, docs, tooling, examples, and vendored trees (`vendor`, `third_party`, `deps`, `external`, and similar) do not count.
+- No supported product code at all: graph and health pages say the language is not supported yet instead of building a graph or score from a docs script. Polly no longer reports "no circular dependencies" and "Average health 100/100"; gson names Java/Kotlin instead of telling the user to check `scan.include`.
+- Supported product code next to other languages (for example 5 Python files and 80 Rust files): the graph and health are built for the supported files, and the dependency graph, code health, executive summary, system overview, and architecture overview all say "Partial coverage: … covers N of M product source files". Cycle claims read "among analyzed files", and "Acyclic dependency graph" is not listed as a pattern.
+- `repolens badge` counts every source file in one walk (up to 20,000, with a note when that limit is hit) and analyzes up to 2,500, so the coverage ratio is not skewed by the analysis cap.
+- `demo --help`, `init --help`, and the README say detection is not full analysis.
+- The language list is ordered by file count (Polly reads "C#, JavaScript"), and a statically typed primary language is no longer described as "Dynamic typing".
+
+### Output accuracy
+
+- GraphQL libraries are detected from imports. SDL and resolver maps are read after a comment stripper that keeps strings, template literals (including `${}` expressions), and regex literals, so `'src/*.graphql'` or `' // '` in a string no longer erases real SDL. Comments that mention Apollo or urql and React Query `useQuery:` hook maps no longer produce a GraphQL page; trpc/trpc's `11-graphql-schema.md` is skipped.
+- A module whose files are mostly tests says so ("Mostly tests and fixtures (204 of 212 files)") instead of "Application module".
+- When API Surface is written with no routes, it no longer blames `scan.include`.
+
 ## 1.16.2
 
 ### Branding

@@ -406,7 +406,8 @@ function inferArchitecturalPatterns(modules, depGraph = null, projectKind = null
 
   // Structural patterns from dep graph (not keyword-based)
   if (depGraph?.stats) {
-    if (depGraph.stats.cycles === 0 && depGraph.stats.totalEdges > 10) {
+    // Only a fully analyzed codebase can be called acyclic.
+    if (depGraph.stats.cycles === 0 && depGraph.stats.totalEdges > 10 && depGraph.coverage?.status !== "partial") {
       patterns.push("Acyclic dependency graph — clean layering");
     }
   }

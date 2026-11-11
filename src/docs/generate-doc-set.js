@@ -130,7 +130,7 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
   
   for (const docPlan of activeDocuments) {
     docIndex++;
-    const emptyReason = emptyDocumentReason(docPlan, { config, scanResult, graphqlResult });
+    const emptyReason = emptyDocumentReason(docPlan, { config, scanResult, graphqlResult, jsdocResult });
     if (emptyReason) {
       info(`[${docIndex}/${totalDocs}] Skipping ${docPlan.key}: ${emptyReason}`);
       continue;
@@ -244,10 +244,11 @@ export async function generateDocumentSet(scanResult, config, diffData = null, p
 
 /**
  * Documents that would only say "nothing found" are not written. A library has no GraphQL
- * schema and no routes, so those two pages would be noise. A document the config lists
+ * schema and no routes, so those two pages would be noise, and a CLI or library with no
+ * routes, no external API clients, and no documented exports has no API Surface to show. A document the config lists
  * explicitly in `documentation.sections` is always written.
  */
-export function emptyDocumentReason(docPlan, { config, scanResult, graphqlResult }) {
+export function emptyDocumentReason(docPlan, { config, scanResult, graphqlResult, jsdocResult = null }) {
   if (config?.documentation?.sections?.includes(docPlan.key)) return null;
   if (docPlan.key === "graphql_schema" && !graphqlResult?.detected) {
     return "no GraphQL schema detected";
@@ -255,7 +256,14 @@ export function emptyDocumentReason(docPlan, { config, scanResult, graphqlResult
   if (docPlan.key === "route_map" && !(scanResult?.pages?.length) && !(scanResult?.api?.length)) {
     return "no pages or API routes detected";
   }
+  if (docPlan.key === "api_surface" && !(scanResult?.api?.length) && !(scanResult?.externalApis?.length) && !hasDocumentedExports(jsdocResult)) {
+    return "no API routes, external API integrations, or documented exports detected";
+  }
   return null;
+}
+
+function hasDocumentedExports(jsdocResult) {
+  return Boolean(jsdocResult?.detected && Array.isArray(jsdocResult.exports) && jsdocResult.exports.length > 0);
 }
 
 async function generateDocument(docPlan, context) {
