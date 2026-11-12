@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.16.3  
+**Current Version:** 1.16.4  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.16.3)
+## What's Shipped (v0.1.0 → v1.16.4)
 
 Everything below is live, tested, and available on npm.
 
@@ -164,6 +164,11 @@ Everything below is live, tested, and available on npm.
 - ✅ `server.json` for the MCP Registry (`io.github.CHAPIBUNNY/repolens`) and `smithery.yaml`
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
+
+## v1.16.4 — Type-only import cycles
+
+- ✅ TypeScript imports the compiler removes (interfaces, type aliases, classes used only as types) are type-only, not runtime edges; checked against `tsconfig.json` settings that keep imports (`verbatimModuleSyntax`, `preserveValueImports`, `erasableSyntaxOnly`, `emitDecoratorMetadata` on decorated files)
+- ✅ Cycles that close through a type-only import, including mixed cycles, are listed apart with each type-only link and are not counted; files linked only by type imports are not orphans
 
 ## v1.16.3 — Gap-test accuracy fixes
 

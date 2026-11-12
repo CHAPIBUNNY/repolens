@@ -3,7 +3,13 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** October 2026  
-**Version:** 1.16.3
+**Version:** 1.16.4
+
+## Cycles through imports TypeScript removes (fixed in 1.16.4)
+
+A gap test of 1.16.3 on lukeautry/tsoa (ce4daec) reported 10 import cycles. Nine existed only because TypeScript files imported interfaces (`ExtendedRoutesConfig`) or a class used only as a constructor-parameter type (`MetadataGenerator`) without `import type`. `tsc`, esbuild, swc, and Babel drop those imports, so there is no runtime cycle. The fix treats an import in a `.ts` file as type-only when every imported name is an interface or type alias in the target file or is used only in type positions, and an import in a `.d.ts` file as type-only. In `.tsx` files only the interface / type-alias check applies. Cycles that close through a type-only import are listed under "Type-only cycles" with the type-only links marked *syntax* or *inferred*; they are not counted and do not lower the health score or badge. tsoa now reports 1 circular dependency (typeResolver/members ↔ models).
+
+Limits: inference is off under `verbatimModuleSyntax`, `preserveValueImports`, `importsNotUsedAsValues: "preserve"`/`"error"`, or `erasableSyntaxOnly` (the import stays at runtime), and in files with decorators under `emitDecoratorMetadata`. `tsconfig.json` is read from the nearest directory, following relative `extends` and package `extends` installed in `node_modules`. When part of the `extends` chain is not in the checkout (an uninstalled package, a generated `.nuxt/tsconfig.json`), only interface / type-alias imports count as type-only; a class used only as a type stays a runtime edge. The same applies to a file the tokenizer cannot read cleanly. Other build setups that keep every import (Deno, Babel `onlyRemoveTypeImports`) are not detected from `tsconfig.json`. Names re-exported through `export *` barrels are not followed to their declaration, so an interface imported through a barrel counts as type-only only when it is used only in type positions. External packages are not affected: an npm import used only as a type is still listed as a dependency.
 
 ## Workspace edges, unsupported languages, and GraphQL false positives (fixed in 1.16.3)
 

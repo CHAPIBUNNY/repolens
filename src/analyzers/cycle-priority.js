@@ -162,6 +162,9 @@ export function cycleInsight(stats) {
   if (!hasCyclePriorities(stats)) {
     return `🔴 **Architectural concern** — ${stats.cycles} circular dependenc${stats.cycles === 1 ? "y" : "ies"} detected. These create tight coupling and make testing difficult.`;
   }
+  if ((stats.highCycles || 0) === 0 && (stats.mediumCycles || 0) > 0) {
+    return `🟡 **Circular dependencies** — ${stats.cycles} detected. Small cycle; review. Priority: Medium.`;
+  }
   if ((stats.highCycles || 0) === 0) {
     return `🟡 **Circular dependencies** — ${stats.cycles} detected. mutual recursion, probably intentional; verify. Priority: Low.`;
   }

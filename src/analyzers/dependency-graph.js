@@ -1,6 +1,9 @@
 // Dependency graph analysis with cycle detection.
 // JavaScript, TypeScript, Python, and Go imports become edges.
-// Comments and strings are ignored. Type-only TypeScript imports are not runtime edges.
+// Comments and strings are ignored. Type-only TypeScript imports are not runtime edges:
+// `import type` / `export type` / all-`type` specifier lists (syntax), and imports the
+// TypeScript compiler removes because every binding is used only as a type or names
+// an interface or type alias (inferred, see ts-elision.js).
 // Cycle priority is in cycle-priority.js: mutual recursion and type-only cycles are
 // not "Priority: High refactor". Large multi-module cycles stay high.
 
@@ -21,6 +24,7 @@ import {
 import { isNonProductPath } from "../utils/path-roles.js";
 import { computeLanguageCoverage, coverageLine } from "./language-coverage.js";
 import { listWorkspacePackages } from "./workspace-packages.js";
+import { usageByName, declaredKinds, createElisionSettings, isTypeScriptFile } from "./ts-elision.js";
 import {
   classifyRuntimeCycles,
   priorityCounts,
@@ -152,6 +156,7 @@ function emptyResult() {
     cycles: [],
     cycleReports: [],
     typeOnlyReports: [],
+    typeOnlyEdges: [],
     externalDeps: [],
     externalRuntime: [],
     externalDev: [],
@@ -337,7 +342,7 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
   // and are classified on their own so they are never "Priority: High refactor".
   const edgeRecords = new Map();
 
-  function rememberEdge(fromKey, toKey, fromFile, typeOnly, calls) {
+  function rememberEdge(fromKey, toKey, fromFile, typeOnly, calls, reason = null) {
     if (!toKey || toKey === fromKey || !allFileKeys.has(toKey)) return;
     const id = `${fromKey}->${toKey}`;
     let record = edgeRecords.get(id);
@@ -348,14 +353,70 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
         fromFile,
         toFile: fileKeyToFile.get(toKey) || toKey,
         typeOnly: true,
+        typeOnlyReason: null,
         calls: 0,
       };
       edgeRecords.set(id, record);
     }
     if (!typeOnly) {
       record.typeOnly = false;
+      record.typeOnlyReason = null;
       record.calls += calls;
+    } else if (record.typeOnly) {
+      // "syntax" (`import type`) wins over "inferred" when both reach the same file.
+      if (reason === "syntax" || !record.typeOnlyReason) record.typeOnlyReason = reason || "syntax";
     }
+  }
+
+  // TypeScript import elision. Contents and declared kinds are cached per file.
+  const elisionFor = createElisionSettings(repoRoot);
+  const contentByKey = new Map();
+  const kindsByKey = new Map();
+  async function contentOf(key) {
+    if (!contentByKey.has(key)) {
+      const file = fileKeyToFile.get(key);
+      contentByKey.set(key, file ? await readFileSafe(path.join(repoRoot, file)) : "");
+    }
+    return contentByKey.get(key);
+  }
+  async function kindsOf(key) {
+    if (!kindsByKey.has(key)) {
+      const file = fileKeyToFile.get(key);
+      kindsByKey.set(key, file && isTypeScriptFile(file) ? declaredKinds(await contentOf(key)) : null);
+    }
+    return kindsByKey.get(key);
+  }
+
+  // True when the compiler drops this import or re-export from the JavaScript output.
+  async function elidedByCompiler(imported, toKey, file, content, state) {
+    // A declaration file (`.d.ts`) never runs: none of its imports load a module.
+    if (/\.d\.[cm]?ts$/.test(file)) return true;
+    if (!isTypeScriptFile(file)) return false;
+    if (imported.kind !== "import" && imported.kind !== "reexport") return false;
+    const bindings = imported.bindings || [];
+    if (bindings.length === 0) return false;
+    if (!state.settings) state.settings = await elisionFor(file);
+    if (!state.settings.elide) return false;
+    // `emitDecoratorMetadata` turns annotations on decorated members into runtime
+    // references (`design:paramtypes`); isolated transpilers (swc, esbuild) keep
+    // even interface imports there. A decorated file under it keeps every import.
+    if (!state.usage) state.usage = usageByName(content, { jsx: /\.[jt]sx$/.test(file) });
+    if (state.settings.decoratorMetadata && state.usage.decorators) return false;
+    const kinds = await kindsOf(toKey);
+    const declaredType = (name) => Boolean(kinds) && name !== "default" && name !== "*" && kinds.types.has(name);
+    if (imported.kind === "reexport") return bindings.every((item) => declaredType(item.imported));
+    // Usage-based inference: .ts/.mts/.cts only. In .tsx, JSX text can look like code
+    // (`list as they're posted`), so only interface / type alias names count there.
+    // When part of the tsconfig `extends` chain is not in the checkout, only
+    // interface / type alias names count (`inferUsage: false`).
+    // A file the tokenizer misread (`malformed`) gets the same treatment.
+    const useInference = !/\.tsx$/.test(file) && state.settings.inferUsage !== false && !state.usage.malformed;
+    return bindings.every((item) => {
+      if (declaredType(item.imported)) return true;
+      if (!useInference || !item.local) return false;
+      const use = state.usage.uses.get(item.local);
+      return !use || use.value === 0;
+    });
   }
 
   for (const file of jsFiles) {
@@ -365,6 +426,7 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     const importer = await ownPackage(file);
     const selfName = importer ? importer.name : null;
     const grouped = new Map();
+    const state = { settings: null, usage: null };
     for (const imported of extractJsImports(content)) {
       let toKey = null;
       if (!isRelativeImport(imported.specifier)) {
@@ -385,20 +447,28 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
         toKey = resolveImportPath(file, imported.specifier);
       }
       if (!toKey) continue;
+      let typeOnly = imported.typeOnly;
+      let reason = typeOnly ? "syntax" : null;
+      if (!typeOnly && allFileKeys.has(toKey) && toKey !== fromKey && await elidedByCompiler(imported, toKey, file, content, state)) {
+        typeOnly = true;
+        reason = "inferred";
+      }
       const id = `${fromKey}->${toKey}`;
       let slot = grouped.get(id);
       if (!slot) {
-        slot = { toKey, typeOnly: true, names: new Set() };
+        slot = { toKey, typeOnly: true, reason: null, names: new Set() };
         grouped.set(id, slot);
       }
-      if (!imported.typeOnly) {
+      if (!typeOnly) {
         slot.typeOnly = false;
         for (const binding of imported.names || []) slot.names.add(binding);
+      } else if (reason === "syntax" || !slot.reason) {
+        slot.reason = reason;
       }
     }
     for (const slot of grouped.values()) {
       const calls = slot.typeOnly ? 0 : countBindingCalls(content, [...slot.names]);
-      rememberEdge(fromKey, slot.toKey, file, slot.typeOnly, calls);
+      rememberEdge(fromKey, slot.toKey, file, slot.typeOnly, calls, slot.reason);
     }
   }
 
@@ -468,20 +538,49 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
   const runtimeEdgeList = [...edgeRecords.values()].filter((edge) => !edge.typeOnly);
   result.cycleReports = classifyRuntimeCycles(result.cycles, runtimeEdgeList, fileForKey);
 
-  const typeOnlyAdj = new Map();
+  // Type-only cycles: cycles of runtime + type-only edges that need at least one
+  // type-only edge. They are reported on their own and never as runtime cycles.
+  const combinedAdj = new Map();
+  for (const [from, deps] of adjacency) combinedAdj.set(from, new Set(deps));
+  const typeOnlyEdgeById = new Map();
   for (const edge of edgeRecords.values()) {
     if (!edge.typeOnly) continue;
-    if (!typeOnlyAdj.has(edge.from)) typeOnlyAdj.set(edge.from, new Set());
-    if (!typeOnlyAdj.has(edge.to)) typeOnlyAdj.set(edge.to, new Set());
-    typeOnlyAdj.get(edge.from).add(edge.to);
+    typeOnlyEdgeById.set(`${edge.from}->${edge.to}`, edge);
+    if (!combinedAdj.has(edge.from)) combinedAdj.set(edge.from, new Set());
+    if (!combinedAdj.has(edge.to)) combinedAdj.set(edge.to, new Set());
+    combinedAdj.get(edge.from).add(edge.to);
   }
-  result.typeOnlyReports = detectCycles(typeOnlyAdj).map((path) => typeOnlyReport(path));
+  result.typeOnlyReports = typeOnlyEdgeById.size === 0 ? [] : detectCycles(combinedAdj)
+    .map((cyclePath) => {
+      const links = [];
+      for (let i = 0; i + 1 < cyclePath.length; i += 1) {
+        const from = cyclePath[i];
+        const to = cyclePath[i + 1];
+        if (adjacency.get(from)?.has(to)) continue;
+        const edge = typeOnlyEdgeById.get(`${from}->${to}`);
+        if (edge) links.push({ from, to, reason: edge.typeOnlyReason || "syntax" });
+      }
+      if (links.length === 0) return null;
+      return { ...typeOnlyReport(cyclePath), typeOnlyLinks: links };
+    })
+    .filter(Boolean);
+  result.typeOnlyEdges = [...typeOnlyEdgeById.values()].map((edge) => ({
+    from: edge.from,
+    to: edge.to,
+    reason: edge.typeOnlyReason || "syntax",
+  }));
 
   const priorities = priorityCounts(result.cycleReports);
 
   // Stats
   const totalImports = result.edges.length;
-  const orphans = result.nodes.filter(n => n.imports.length === 0 && n.importedBy.length === 0);
+  // A file connected only by type-only imports (a types module) is not dead code.
+  const typeConnected = new Set();
+  for (const edge of result.typeOnlyEdges) {
+    typeConnected.add(edge.from);
+    typeConnected.add(edge.to);
+  }
+  const orphans = result.nodes.filter(n => n.imports.length === 0 && n.importedBy.length === 0 && !typeConnected.has(n.key));
   const sourceNodeCount = result.nodes.filter((n) => !isNonProductPath(n.file || n.key)).length;
   const hubThreshold = Math.max(5, Math.round(sourceNodeCount * 0.07));
   const hubs = aggregateHubs(result.nodes, fileKeyToFile, goModulePath, hubThreshold);
@@ -502,16 +601,22 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     highCycles: priorities.high,
     mediumCycles: priorities.medium,
     lowCycles: priorities.low,
+    typeOnlyCycles: result.typeOnlyReports.length,
+    typeOnlyEdges: result.typeOnlyEdges.length,
+    inferredTypeOnlyEdges: result.typeOnlyEdges.filter((edge) => edge.reason === "inferred").length,
     orphanFiles: orphans.length,
     hubs,
   };
 
   result.summary = buildSummary(result);
 
+  const typeOnlyNote = result.typeOnlyReports.length > 0
+    ? ` (${result.typeOnlyReports.length} type-only cycle(s) not counted)`
+    : "";
   if (result.cycles.length > 0) {
-    warn(`Dependency graph: ${result.cycles.length} circular dependency cycle(s) detected`);
+    warn(`Dependency graph: ${result.cycles.length} circular dependency cycle(s) detected${typeOnlyNote}`);
   } else {
-    info(`Dependency graph: ${totalImports} edges across ${codeFiles.length} files, no cycles`);
+    info(`Dependency graph: ${totalImports} edges across ${codeFiles.length} files, no cycles${typeOnlyNote}`);
   }
 
   return result;
@@ -630,6 +735,9 @@ function buildSummary(result) {
     parts.push(result.coverage?.status === "partial"
       ? "✓ no circular dependencies among analyzed files"
       : "✓ no circular dependencies");
+  }
+  if (result.stats.typeOnlyCycles > 0) {
+    parts.push(`${result.stats.typeOnlyCycles} type-only cycle(s), not runtime`);
   }
   if (result.coverage?.status === "partial") {
     parts.push(`partial coverage: ${result.coverage.analyzedBase} of ${result.coverage.totalBase} source files`);

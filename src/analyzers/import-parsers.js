@@ -164,6 +164,23 @@ function localNames(inner) {
   return names;
 }
 
+/** `{ a, b as c, type D }` → [{ imported: "a", local: "a" }, { imported: "b", local: "c" }]. */
+function braceBindings(inner) {
+  const out = [];
+  for (const part of splitTopCommas(inner)) {
+    const trimmed = part.trim().replace(/\s+/g, " ");
+    if (!trimmed || /^type\s+/.test(trimmed)) continue;
+    const asMatch = trimmed.match(/^([A-Za-z_$][\w$]*|"[^"]*"|'[^']*')\s+as\s+([A-Za-z_$][\w$]*)$/);
+    if (asMatch) {
+      out.push({ imported: asMatch[1].replace(/^["']|["']$/g, ""), local: asMatch[2] });
+      continue;
+    }
+    const id = trimmed.match(/^([A-Za-z_$][\w$]*)$/);
+    if (id) out.push({ imported: id[1], local: id[1] });
+  }
+  return out;
+}
+
 function readAlias(source, i) {
   let j = skipWs(source, i);
   const word = readWord(source, j);
@@ -206,7 +223,7 @@ function readFromClause(source, i) {
 }
 
 /**
- * @returns {{ specifier: string, typeOnly: boolean, names: string[] }[]}
+ * @returns {{ specifier: string, typeOnly: boolean, names: string[], kind: string, bindings: { imported: string, local: string|null }[] }[]}
  * `names` are the local bindings (`import { a as b }` → `b`) so callers can
  * count `b(` as a use of this import. Type-only imports still list names.
  */
@@ -215,7 +232,12 @@ export function extractJsImports(source) {
   const n = source.length;
   let i = 0;
 
-  function add(specifier, typeOnly, names = []) {
+  // `kind`: "import" (has local bindings), "reexport" (`export { a } from`),
+  // "reexport-all" (`export * from`), "side-effect" (`import "x"`), or "dynamic"
+  // (`import()` / `require()`). `bindings` pair each imported name with its local
+  // name (`*` for a namespace import, `default` for a default import); for a
+  // re-export, `local` is null.
+  function add(specifier, typeOnly, names = [], kind = "import", bindings = []) {
     if (typeof specifier !== "string") return;
     const locals = [];
     const seen = new Set();
@@ -224,7 +246,7 @@ export function extractJsImports(source) {
       seen.add(name);
       locals.push(name);
     }
-    imports.push({ specifier, typeOnly: Boolean(typeOnly), names: locals });
+    imports.push({ specifier, typeOnly: Boolean(typeOnly), names: locals, kind, bindings: typeOnly ? [] : bindings });
   }
 
   function parseRequire(at) {
@@ -234,7 +256,7 @@ export function extractJsImports(source) {
     if (!lit) return at;
     const after = skipWs(source, lit.next);
     if (source[after] !== ")") return at;
-    add(lit.value, false);
+    add(lit.value, false, [], "dynamic");
     return after + 1;
   }
 
@@ -245,7 +267,7 @@ export function extractJsImports(source) {
       if (!lit) return at;
       const after = skipWs(source, lit.next);
       if (source[after] !== ")") return at;
-      add(lit.value, false);
+      add(lit.value, false, [], "dynamic");
       return after + 1;
     }
     if (source[j] === ".") return at;
@@ -264,22 +286,26 @@ export function extractJsImports(source) {
       const clause = readFromClause(source, close + 1);
       if (!clause) return close + 1;
       const onlyTypes = typeOnly || braceIsTypeOnly(inner);
-      add(clause.value, onlyTypes, typeOnly ? [] : localNames(inner));
+      add(clause.value, onlyTypes, typeOnly ? [] : localNames(inner), "import", typeOnly ? [] : braceBindings(inner));
       return clause.next;
     }
 
     if (source[j] === "*" || isIdentStart(source[j]) || source[j] === "'" || source[j] === '"') {
       if (source[j] === "'" || source[j] === '"') {
         const lit = readJsString(source, j);
-        if (lit) add(lit.value, typeOnly);
+        if (lit) add(lit.value, typeOnly, [], "side-effect");
         return lit ? lit.next : j;
       }
       // default binding, namespace, or `name, { ... }`
       let sawValue = !typeOnly;
       const names = [];
+      const bindings = [];
       if (source[j] !== "*") {
         const binding = readWord(source, j);
-        if (binding.word && !typeOnly) names.push(binding.word);
+        if (binding.word && !typeOnly) {
+          names.push(binding.word);
+          bindings.push({ imported: "default", local: binding.word });
+        }
         j = skipWs(source, binding.next);
         if (source[j] === ",") {
           sawValue = !typeOnly;
@@ -288,7 +314,10 @@ export function extractJsImports(source) {
       } else {
         j = skipWs(source, j + 1);
         const alias = readAlias(source, j);
-        if (alias.name && !typeOnly) names.push(alias.name);
+        if (alias.name && !typeOnly) {
+          names.push(alias.name);
+          bindings.push({ imported: "*", local: alias.name });
+        }
         j = skipWs(source, alias.next);
       }
       if (source[j] === "{") {
@@ -298,13 +327,16 @@ export function extractJsImports(source) {
         const clause = readFromClause(source, close + 1);
         if (!clause) return close + 1;
         const onlyTypes = typeOnly || (!sawValue && braceIsTypeOnly(inner));
-        if (!onlyTypes) names.push(...localNames(inner));
-        add(clause.value, onlyTypes, names);
+        if (!onlyTypes) {
+          names.push(...localNames(inner));
+          bindings.push(...braceBindings(inner));
+        }
+        add(clause.value, onlyTypes, names, "import", bindings);
         return clause.next;
       }
       const clause = readFromClause(source, j);
       if (!clause) return at;
-      add(clause.value, typeOnly, typeOnly ? [] : names);
+      add(clause.value, typeOnly, typeOnly ? [] : names, "import", bindings);
       return clause.next;
     }
 
@@ -322,7 +354,7 @@ export function extractJsImports(source) {
     if (source[j] === "*") {
       const clause = readFromClause(source, j + 1);
       if (!clause) return at;
-      add(clause.value, typeOnly);
+      add(clause.value, typeOnly, [], "reexport-all");
       return clause.next;
     }
     if (source[j] === "{") {
@@ -331,7 +363,8 @@ export function extractJsImports(source) {
       const inner = source.slice(j + 1, close);
       const clause = readFromClause(source, close + 1);
       if (!clause) return close + 1;
-      add(clause.value, typeOnly || braceIsTypeOnly(inner));
+      const bindings = braceBindings(inner).map((item) => ({ imported: item.imported, local: null }));
+      add(clause.value, typeOnly || braceIsTypeOnly(inner), [], "reexport", bindings);
       return clause.next;
     }
     return at;
