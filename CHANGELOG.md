@@ -2,7 +2,7 @@
 
 All notable changes to RepoLens will be documented in this file.
 
-## Unreleased
+## 1.16.4 (2026-11-12)
 
 Fix found by the 2026-11-12 gap test of 1.16.3 on lukeautry/tsoa (ce4daec).
 
@@ -17,7 +17,9 @@ Fix found by the 2026-11-12 gap test of 1.16.3 on lukeautry/tsoa (ce4daec).
 - In `.ts` files, an import whose names are all interfaces or type aliases in the target file, or are all used only in type positions (annotations, generic arguments and constraints, `as` / `satisfies`, `implements`, type aliases, interfaces, `declare` blocks), is type-only (*inferred*). Value uses (`new`, calls, member access, `extends` of a class, `instanceof`, decorators, `typeof` in an expression, object shorthand, default values, `export { X }`, JSX tags) keep the import a runtime edge. A name that is both an interface and a value (declaration merging) is a value.
 - `export { X } from` is type-only when every name is an interface or type alias in the target. `export * from`, side-effect imports, `import()`, and `require()` stay runtime edges. Imports inside `.d.ts` files are type-only.
 - In `.tsx` files only the interface / type-alias check applies, because JSX text can look like code.
-- Inference is off where the compiler keeps the import: `verbatimModuleSyntax`, `preserveValueImports`, or `importsNotUsedAsValues: "preserve"`/`"error"` in the nearest `tsconfig.json` (relative `extends` followed), and files with decorators under `emitDecoratorMetadata`.
+- Inference is off where the compiler keeps the import: `verbatimModuleSyntax`, `preserveValueImports`, `importsNotUsedAsValues: "preserve"`/`"error"`, or `erasableSyntaxOnly` (Node type stripping removes only `import type`) in the nearest `tsconfig.json`, and files with decorators under `emitDecoratorMetadata`. The `extends` chain is followed for relative paths and for packages installed in `node_modules` (bare names, `package.json` `tsconfig` field, parent folders).
+- When part of the `extends` chain is not in the checkout (an uninstalled package, a generated `.nuxt/tsconfig.json`), or the file could not be tokenized cleanly, only interface / type-alias imports count as type-only; usage-based inference is skipped so a class used only as a type stays a runtime edge.
+- Only top-level interfaces and type aliases of the target file count. A nested one (`namespace N { interface Foo }`, inside a function or `declare module`) does not make an import of `Foo` type-only, and names the target re-exports from another module (`export { Foo } from`, `export * as Foo from`) or aliases with `import Foo = require()` are treated as values.
 - `import type`, `export type`, and all-`type` lists (`import { type A, type B }`) are type-only as before (*syntax*). A mixed `import { type A, b }` is type-only only when `b` is used only as a type.
 - The dependency graph page and the MCP `get_dependency_graph` tool list "Type-only cycles" with each type-only link and whether it is *syntax* or *inferred*, plus "Type-only cycles" and "Type-only imports" rows in the overview table. The CLI log says "(N type-only cycle(s) not counted)". Health score, badge, and cycle findings count runtime cycles only.
 - External packages are unchanged: an npm import used only as a type is still listed.

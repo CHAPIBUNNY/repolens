@@ -402,7 +402,7 @@ export function renderDependencyGraph(depResult) {
     lines.push("");
     lines.push(`**${reports.length}** cycle${reports.length === 1 ? " closes" : "s close"} only through type-only imports. The compiler removes those imports, so there is no runtime cycle. They are not counted as circular dependencies and do not lower the health score. Priority: Low — type-only imports; verify.`);
     lines.push("");
-    lines.push("A type-only import is `import type`, `export type`, or an import list whose names are all marked `type` (*syntax*). In TypeScript files it is also an import whose names are interfaces or type aliases, or are used only in type positions (*inferred*). Inference is off under `verbatimModuleSyntax`, `preserveValueImports`, or `importsNotUsedAsValues: \"preserve\"`, which keep the import at runtime.");
+    lines.push("A type-only import is `import type`, `export type`, or an import list whose names are all marked `type` (*syntax*). In TypeScript files it is also an import whose names are interfaces or type aliases, or are used only in type positions (*inferred*). Inference is off under `verbatimModuleSyntax`, `preserveValueImports`, `importsNotUsedAsValues: \"preserve\"`, or `erasableSyntaxOnly`, which keep the import at runtime.");
     lines.push("");
     const limit = Math.min(reports.length, 20);
     for (let i = 0; i < limit; i++) {

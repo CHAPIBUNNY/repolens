@@ -83,6 +83,10 @@ export function tokenize(source) {
   const src = String(source ?? "");
   const n = src.length;
   const tokens = [];
+  // Set when a string, template, or regex literal does not close: valid source
+  // never does that, so the tokenizer misread something (for example a regex
+  // after `)` read as division) and some code may be hidden inside a literal.
+  tokens.malformed = false;
   // Brace stack: "{" for code braces, "${" for template expressions.
   const braces = [];
   let i = 0;
@@ -115,6 +119,7 @@ export function tokenize(source) {
       j += 1;
     }
     push("str", "`", at);
+    tokens.malformed = true;
     return n;
   }
 
@@ -149,6 +154,7 @@ export function tokenize(source) {
     if (ch === "'" || ch === '"') {
       let j = i + 1;
       while (j < n && src[j] !== ch && src[j] !== "\n") j += src[j] === "\\" ? 2 : 1;
+      if (src[j] !== ch) tokens.malformed = true;
       push("str", src.slice(i, Math.min(j + 1, n)), i);
       i = Math.min(j + 1, n);
       continue;
@@ -190,6 +196,7 @@ export function tokenize(source) {
         else if (src[j] === "/" && !inClass) break;
         j += 1;
       }
+      if (src[j] !== "/") tokens.malformed = true;
       j += 1;
       while (j < n && isIdentPart(src[j])) j += 1;
       push("regex", src.slice(i, j), i);
@@ -406,7 +413,9 @@ function skipModuleDeclaration(tokens, i) {
 
 /**
  * Classify identifier uses in TypeScript source.
- * Returns { uses: Map<name, { value, type }>, decorators: boolean }.
+ * Returns { uses: Map<name, { value, type }>, decorators: boolean, malformed: boolean }.
+ * `malformed`: the tokenizer misread the file, so uses may be missing; callers
+ * must not treat an unseen or type-only name as removable.
  * Import and re-export declarations are not uses. Property names after `.`
  * are not uses of a binding with that name.
  */
@@ -693,36 +702,65 @@ export function usageByName(source, { jsx = false, jsxFactories = ["React"] } = 
     }
   }
 
-  return { uses, decorators };
+  return { uses, decorators, malformed: Boolean(tokens.malformed) };
 }
 
 /**
  * Names a TypeScript file declares only as types (interface or type alias),
  * and names it declares as values. A name in both (declaration merging) is a value.
+ * Only top-level interface / type alias declarations count as types: a nested
+ * one (`namespace N { interface Foo }`, inside a function or `declare module`)
+ * is not what an importer of `Foo` gets. Names re-exported from another module
+ * (`export { Foo } from "./impl"`, `export * as Foo from`) and import-equals
+ * aliases (`import Foo = require()`) are values: their kind is unknown here.
  */
 export function declaredKinds(source) {
   const tokens = tokenize(source);
   const types = new Set();
   const values = new Set();
+  let depth = 0;
   for (let i = 0; i < tokens.length; i += 1) {
     const tok = tokens[i];
+    if (tok.t === "punc") {
+      if (tok.v === "{" || tok.v === "${") depth += 1;
+      else if (tok.v === "}") depth = Math.max(0, depth - 1);
+      continue;
+    }
     if (tok.t !== "id") continue;
     const prev = tokens[i - 1];
     if (isPunc(prev, ".") || isPunc(prev, "?.")) continue;
     const next = tokens[i + 1];
-    if (tok.v === "interface" && isName(next)) types.add(next.v);
-    else if (tok.v === "type" && isName(next) && (isPunc(tokens[i + 2], "=") || isPunc(tokens[i + 2], "<"))) types.add(next.v);
-    else if (["const", "let", "var", "class", "enum", "namespace", "module"].includes(tok.v) && isName(next)) values.add(next.v);
+    if (tok.v === "interface" && isName(next)) {
+      if (depth === 0) types.add(next.v);
+    } else if (tok.v === "type" && isName(next) && (isPunc(tokens[i + 2], "=") || isPunc(tokens[i + 2], "<"))) {
+      if (depth === 0) types.add(next.v);
+    } else if (["const", "let", "var", "class", "enum", "namespace", "module"].includes(tok.v) && isName(next)) values.add(next.v);
     else if (tok.v === "function" && (isName(next) || (isPunc(next, "*") && isName(tokens[i + 2])))) values.add(isName(next) ? next.v : tokens[i + 2].v);
-    else if (tok.v === "as" && isName(next) && (isPunc(tokens[i + 2], ",") || isPunc(tokens[i + 2], "}"))) values.add(next.v);
+    else if (tok.v === "as" && isName(next) && (isPunc(tokens[i + 2], ",") || isPunc(tokens[i + 2], "}") || isWord(tokens[i + 2], "from"))) values.add(next.v);
     else if ((tok.v === "const" || tok.v === "let" || tok.v === "var") && (isPunc(next, "{") || isPunc(next, "["))) {
       const close = matchingClose(tokens, i + 1);
       for (let j = i + 2; j < close; j += 1) if (isName(tokens[j])) values.add(tokens[j].v);
+    } else if (tok.v === "export" && isPunc(next, "{")) {
+      // `export { a, b as c } from "x"`: re-exported names, kind unknown.
+      const close = matchingClose(tokens, i + 1);
+      if (isWord(tokens[close + 1], "from")) {
+        for (let j = i + 2; j < close; j += 1) {
+          if (isName(tokens[j]) && !isWord(tokens[j + 1], "as")) values.add(tokens[j].v);
+        }
+      }
+    } else if (tok.v === "import" && isName(next) && isPunc(tokens[i + 2], "=")) {
+      values.add(next.v);
+    } else if (tok.v === "import" && isWord(next, "type") && isName(tokens[i + 2]) && isPunc(tokens[i + 3], "=")) {
+      values.add(tokens[i + 2].v);
     } else if (tok.v === "import") {
       // Imported names re-exported from here: kind unknown, treat as value.
       const end = skipModuleDeclaration(tokens, i);
       if (end !== -1) {
-        for (let j = i + 1; j < end; j += 1) if (isName(tokens[j])) values.add(tokens[j].v);
+        for (let j = i + 1; j < end; j += 1) {
+          if (isName(tokens[j])) values.add(tokens[j].v);
+          else if (isPunc(tokens[j], "{")) depth += 1;
+          else if (isPunc(tokens[j], "}")) depth = Math.max(0, depth - 1);
+        }
         i = end;
       }
     }
@@ -762,39 +800,85 @@ function parseJsonc(text) {
   return JSON.parse(out);
 }
 
-async function readCompilerOptions(repoRoot, configRel, depth = 0, seen = new Set()) {
-  if (depth > 6 || seen.has(configRel)) return {};
-  seen.add(configRel);
-  let parsed;
+async function readJsonc(repoRoot, rel) {
   try {
-    parsed = parseJsonc(await fs.readFile(path.join(repoRoot, configRel), "utf8"));
+    return parseJsonc(await fs.readFile(path.join(repoRoot, rel), "utf8"));
   } catch {
-    return {};
+    return undefined;
   }
+}
+
+// Candidate repo-relative paths for a package `extends` ("@tsconfig/node18",
+// "@tsconfig/node18/tsconfig.json", "pkg/base"), looked up in every
+// node_modules from the config's folder up to the repository root.
+async function resolvePackageExtends(repoRoot, configRel, parent) {
+  const dirs = [];
+  let dir = path.posix.dirname(configRel);
+  for (;;) {
+    dirs.push(dir === "." ? "node_modules" : `${dir}/node_modules`);
+    if (dir === "." || dir === "" || dir === "/") break;
+    dir = path.posix.dirname(dir);
+  }
+  for (const modules of dirs) {
+    const base = path.posix.join(modules, parent);
+    const candidates = [base, `${base}.json`, `${base}/tsconfig.json`];
+    const pkg = await readJsonc(repoRoot, `${base}/package.json`);
+    if (pkg && typeof pkg.tsconfig === "string") candidates.unshift(path.posix.join(base, pkg.tsconfig));
+    for (const candidate of candidates) {
+      if (!candidate.endsWith(".json")) continue;
+      if ((await readJsonc(repoRoot, candidate)) !== undefined) return candidate;
+    }
+  }
+  return null;
+}
+
+/**
+ * Compiler options of a tsconfig with its `extends` chain. `unresolved` is true
+ * when a parent config is not in the checkout (a package that is not installed,
+ * or a generated file such as `.nuxt/tsconfig.json`): its options are unknown
+ * and may keep imports (`verbatimModuleSyntax`).
+ */
+async function readCompilerOptions(repoRoot, configRel, depth = 0, seen = new Set()) {
+  if (depth > 6 || seen.has(configRel)) return { options: {}, unresolved: false };
+  seen.add(configRel);
+  const parsed = await readJsonc(repoRoot, configRel);
+  if (parsed === undefined) return { options: {}, unresolved: true };
   let options = {};
+  let unresolved = false;
   const parents = Array.isArray(parsed?.extends) ? parsed.extends : parsed?.extends ? [parsed.extends] : [];
   for (const parent of parents) {
     if (typeof parent !== "string") continue;
     let rel = null;
     if (parent.startsWith(".") || parent.startsWith("/")) {
       rel = path.posix.normalize(path.posix.join(path.posix.dirname(configRel), parent));
+      if (!rel.endsWith(".json")) rel += ".json";
+      if (rel.startsWith("..") || path.posix.isAbsolute(rel)) rel = null;
     } else {
-      // Package configs (`@tsconfig/node18/tsconfig.json`) under node_modules, when installed.
-      rel = path.posix.join("node_modules", parent);
+      rel = await resolvePackageExtends(repoRoot, configRel, parent);
     }
-    if (rel.startsWith("..") || path.posix.isAbsolute(rel)) continue;
-    if (!rel.endsWith(".json")) rel += ".json";
-    options = { ...options, ...(await readCompilerOptions(repoRoot, rel, depth + 1, seen)) };
+    if (!rel) {
+      unresolved = true;
+      continue;
+    }
+    const inherited = await readCompilerOptions(repoRoot, rel, depth + 1, seen);
+    if (inherited.unresolved) unresolved = true;
+    options = { ...options, ...inherited.options };
   }
-  return { ...options, ...(parsed?.compilerOptions || {}) };
+  return { options: { ...options, ...(parsed?.compilerOptions || {}) }, unresolved };
 }
 
 /**
- * Per-file elision settings from the nearest tsconfig.json (with relative
- * `extends`). `elide: false` when the compiler keeps import statements
- * (`verbatimModuleSyntax`, `preserveValueImports`, or `importsNotUsedAsValues`
- * set to "preserve"/"error"). `decoratorMetadata` when `emitDecoratorMetadata`
- * is on: annotations on decorated members are then runtime references.
+ * Per-file elision settings from the nearest tsconfig.json (with its `extends`
+ * chain). `elide: false` when the compiler keeps import statements
+ * (`verbatimModuleSyntax`, `preserveValueImports`, `importsNotUsedAsValues`
+ * set to "preserve"/"error", or `erasableSyntaxOnly`, the setting for Node's
+ * type stripping, which removes only `import type`). `inferUsage: false` when
+ * part of the `extends` chain is not in the checkout: then only names declared
+ * as interface / type alias are treated as type-only (code that compiles under
+ * `verbatimModuleSyntax` cannot import those without `type`), and a class used
+ * only as a type stays a runtime edge. `decoratorMetadata` when
+ * `emitDecoratorMetadata` is on: annotations on decorated members are then
+ * runtime references.
  */
 export function createElisionSettings(repoRoot) {
   const byDir = new Map();
@@ -810,13 +894,20 @@ export function createElisionSettings(repoRoot) {
         exists = false;
       }
       if (exists) {
-        const options = await readCompilerOptions(repoRoot, configRel);
+        const { options, unresolved } = await readCompilerOptions(repoRoot, configRel);
         const preserve = options.verbatimModuleSyntax === true
           || options.preserveValueImports === true
+          || options.erasableSyntaxOnly === true
           || ["preserve", "error"].includes(String(options.importsNotUsedAsValues || "").toLowerCase());
-        return { elide: !preserve, decoratorMetadata: options.emitDecoratorMetadata === true, config: configRel };
+        return {
+          elide: !preserve,
+          inferUsage: !preserve && !unresolved,
+          decoratorMetadata: options.emitDecoratorMetadata === true,
+          config: configRel,
+          unresolved,
+        };
       }
-      if (dir === "." || dir === "") return { elide: true, decoratorMetadata: false, config: null };
+      if (dir === "." || dir === "") return { elide: true, inferUsage: true, decoratorMetadata: false, config: null, unresolved: false };
       return forDir(path.posix.dirname(dir));
     })();
     byDir.set(dir, promise);

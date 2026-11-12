@@ -509,3 +509,105 @@ describe("declaredKinds and import bindings", () => {
     expect(side.kind).toBe("side-effect");
   });
 });
+
+// Independent review (1.16.4): cases where a runtime edge must never be removed.
+describe("review: runtime edges that must stay", () => {
+  const graph = async (files) => {
+    for (const [rel, content] of Object.entries(files)) await write(rel, content);
+    const list = Object.keys(files).filter((rel) => /\.[cm]?tsx?$/.test(rel));
+    return analyzeDependencyGraph(list, tempDir);
+  };
+  const classShape = {
+    "src/a.ts": "import { Gen } from './b';\nexport function f(g: Gen) { return g; }\n",
+    "src/b.ts": "export class Gen {}\n",
+  };
+
+  it("keeps a re-export of a class when the target only declares a same-named interface in a nested scope", async () => {
+    const result = await graph({
+      "src/index.ts": "export { Foo } from './barrel';\n",
+      "src/barrel.ts": "export { Foo } from './impl';\nnamespace N { export interface Foo { a: 1 } }\nfunction f() { type Foo = string; return 1 as unknown as Foo; }\n",
+      "src/impl.ts": "export class Foo {}\n",
+    });
+    expect(edgeIds(result)).toEqual(["src->src/barrel", "src/barrel->src/impl"]);
+    expect(result.typeOnlyEdges).toEqual([]);
+  });
+
+  it("declaredKinds counts only top-level types, and re-exported or import-equals names as values", () => {
+    const kinds = declaredKinds([
+      "export { A } from './a';",
+      "export { B as C } from './b';",
+      "export * as D from './d';",
+      "import E = require('./e');",
+      "namespace N { export interface F {} }",
+      "declare module 'm' { interface G {} }",
+      "function h() { type H = string; }",
+      "export interface A {}",
+      "export type Top = number;",
+    ].join("\n"));
+    expect([...kinds.types]).toEqual(["Top"]);
+    for (const name of ["A", "C", "D", "E"]) expect(kinds.values.has(name)).toBe(true);
+  });
+
+  it("keeps imports when a package tsconfig in `extends` sets verbatimModuleSyntax (installed, bare name)", async () => {
+    const result = await graph({
+      ...classShape,
+      "tsconfig.json": '{ "extends": "@acme/tsconfig" }',
+      "node_modules/@acme/tsconfig/tsconfig.json": '{ "compilerOptions": { "verbatimModuleSyntax": true } }',
+    });
+    expect(edgeIds(result)).toEqual(["src/a->src/b"]);
+  });
+
+  it("follows a package.json `tsconfig` field and node_modules in parent folders", async () => {
+    const result = await graph({
+      ...classShape,
+      "src/tsconfig.json": '{ "extends": "@acme/base" }',
+      "node_modules/@acme/base/package.json": '{ "tsconfig": "./strict.json" }',
+      "node_modules/@acme/base/strict.json": '{ "compilerOptions": { "preserveValueImports": true } }',
+    });
+    expect(edgeIds(result)).toEqual(["src/a->src/b"]);
+  });
+
+  it("does not infer from usage when part of the extends chain is not in the checkout", async () => {
+    const result = await graph({
+      ...classShape,
+      "src/types.ts": "export interface Opts { a: number }\n",
+      "src/c.ts": "import { Opts } from './types';\nexport const c = (o: Opts) => o.a;\n",
+      "tsconfig.json": '{ "extends": ["@tsconfig/strictest", "./.nuxt/tsconfig.json"] }',
+    });
+    // A class used only as a type stays a runtime edge (the base may set verbatimModuleSyntax)...
+    expect(edgeIds(result)).toContain("src/a->src/b");
+    // ...but an interface import is still type-only: it cannot compile without `type` under verbatim.
+    expect(edgeIds(result)).not.toContain("src/c->src/types");
+  });
+
+  it("keeps imports under erasableSyntaxOnly (Node type stripping keeps every value import)", async () => {
+    const result = await graph({ ...classShape, "tsconfig.json": '{ "compilerOptions": { "erasableSyntaxOnly": true } }' });
+    expect(edgeIds(result)).toEqual(["src/a->src/b"]);
+  });
+
+  it("keeps imports in a file the tokenizer misreads (regex after `)` read as division)", async () => {
+    const source = "import { Foo } from './foo';\nif (x) /a'/.test(s); Foo();\n";
+    expect(usageByName(source).malformed).toBe(true);
+    expect(usageByName("const r = /a'b/g; const s = 'x';").malformed).toBe(false);
+    const result = await graph({ "src/a.ts": source, "src/foo.ts": "export function Foo() {}\n" });
+    expect(edgeIds(result)).toEqual(["src/a->src/foo"]);
+  });
+
+  it("namespace imports, import-equals, enums, and class value uses", async () => {
+    const result = await graph({
+      "src/ns-type.ts": "import * as m from './m';\nexport let v: m.Shape;\n",
+      "src/ns-value.ts": "import * as m from './m';\nexport const v = m.make();\n",
+      "src/req.ts": "import m = require('./m');\nexport let v: m.Shape;\n",
+      "src/enum-value.ts": "import { Color } from './m';\nexport const c: Color = Color.Red;\n",
+      "src/enum-type.ts": "import { Color } from './m';\nexport let c: Color;\n",
+      "src/class-both.ts": "import { Gen } from './m';\nexport const g: Gen = new Gen();\n",
+      "src/extends.ts": "import { Gen } from './m';\nexport class Sub extends Gen {}\n",
+      "src/typeof.ts": "import { Gen } from './m';\nexport let t: typeof Gen;\n",
+      "src/m.ts": "export interface Shape {}\nexport function make() {}\nexport enum Color { Red }\nexport class Gen {}\n",
+    });
+    const ids = edgeIds(result);
+    for (const from of ["ns-value", "req", "enum-value", "class-both", "extends"]) expect(ids).toContain(`src/${from}->src/m`);
+    // TypeScript removes these (checked against transpileModule).
+    for (const from of ["ns-type", "enum-type", "typeof"]) expect(ids).not.toContain(`src/${from}->src/m`);
+  });
+});

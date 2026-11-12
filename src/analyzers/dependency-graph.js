@@ -407,7 +407,10 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     if (imported.kind === "reexport") return bindings.every((item) => declaredType(item.imported));
     // Usage-based inference: .ts/.mts/.cts only. In .tsx, JSX text can look like code
     // (`list as they're posted`), so only interface / type alias names count there.
-    const useInference = !/\.tsx$/.test(file);
+    // When part of the tsconfig `extends` chain is not in the checkout, only
+    // interface / type alias names count (`inferUsage: false`).
+    // A file the tokenizer misread (`malformed`) gets the same treatment.
+    const useInference = !/\.tsx$/.test(file) && state.settings.inferUsage !== false && !state.usage.malformed;
     return bindings.every((item) => {
       if (declaredType(item.imported)) return true;
       if (!useInference || !item.local) return false;
