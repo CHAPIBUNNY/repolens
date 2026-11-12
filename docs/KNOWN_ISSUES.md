@@ -5,6 +5,12 @@ This document tracks known issues, limitations, and edge cases in RepoLens. We'r
 **Last Updated:** October 2026  
 **Version:** 1.16.3
 
+## Cycles through imports TypeScript removes (fixed, unreleased)
+
+A gap test of 1.16.3 on lukeautry/tsoa (ce4daec) reported 10 import cycles. Nine existed only because TypeScript files imported interfaces (`ExtendedRoutesConfig`) or a class used only as a constructor-parameter type (`MetadataGenerator`) without `import type`. `tsc`, esbuild, swc, and Babel drop those imports, so there is no runtime cycle. The fix treats an import in a `.ts` file as type-only when every imported name is an interface or type alias in the target file or is used only in type positions, and an import in a `.d.ts` file as type-only. In `.tsx` files only the interface / type-alias check applies. Cycles that close through a type-only import are listed under "Type-only cycles" with the type-only links marked *syntax* or *inferred*; they are not counted and do not lower the health score or badge. tsoa now reports 1 circular dependency (typeResolver/members ↔ models).
+
+Limits: inference is off under `verbatimModuleSyntax`, `preserveValueImports`, or `importsNotUsedAsValues: "preserve"`/`"error"` (the import stays at runtime), and in files with decorators under `emitDecoratorMetadata`. `tsconfig.json` is read from the nearest directory with relative `extends`; `extends` into an uninstalled package is ignored. Names re-exported through `export *` barrels are not followed to their declaration, so an interface imported through a barrel counts as type-only only when it is used only in type positions. External packages are not affected: an npm import used only as a type is still listed as a dependency.
+
 ## Workspace edges, unsupported languages, and GraphQL false positives (fixed in 1.16.3)
 
 A gap test of 1.16.2 on trpc/trpc listed its own `@trpc/*` workspace packages as external dependencies and lost the cross-package edges. App-vNext/Polly (C#) got "no circular dependencies" and health 100/100 from one docs script, google/gson (Java) was told to fix `scan.include`, and comments mentioning Apollo or urql produced a GraphQL page on tRPC. 1.16.3 resolves declared workspace packages internally, reports unsupported or partial language coverage instead of a score, detects GraphQL from imports, and skips empty API Surface pages. Java and C# import graphs are still on the roadmap.
