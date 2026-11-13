@@ -2,9 +2,15 @@
 //
 // Not every circular import is a refactor. The heuristic:
 //
-// 1. Type-only. Every edge in the cycle is `import type` or `export type`.
-//    There is no runtime cycle. Priority: Low. Wording: type-only imports; verify.
+// 1. Type-only. Every edge in the cycle is `import type` or `export type`,
+//    or a Python import under `if TYPE_CHECKING:`. There is no runtime cycle.
+//    Priority: Low. Wording: type-only imports; verify.
 //    These stay out of the runtime cycle list (`cycles` / `stats.cycles`).
+//
+// 1b. Deferred. The cycle closes through a Python import inside a function or
+//    method. That import runs when the function runs, not at module import
+//    time, so it is not a load-time cycle. Priority: Low. Wording: deferred
+//    imports; verify. Also stays out of the runtime cycle list.
 //
 // 2. Recursive-descent pair (mutual recursion). The cycle stays inside two parent
 //    directories, and those two directories import each other in both directions
@@ -102,6 +108,10 @@ export function classifyRuntimeCycles(cycles, edges, fileForKey) {
 
 export function typeOnlyReport(path) {
   return report(path, "low", "type-only", "type-only imports; verify");
+}
+
+export function deferredReport(path) {
+  return report(path, "low", "deferred", "deferred imports; verify");
 }
 
 export function priorityCounts(reports) {

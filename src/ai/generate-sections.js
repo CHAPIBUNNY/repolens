@@ -1527,7 +1527,6 @@ const MODULE_DESCRIPTION_RULES = [
   [/service/, "Service layer / business logic"],
   [/model|schema|entity/, "Data models and schemas"],
   [/config|setting/, "Configuration management"],
-  [/test|spec/, "Test infrastructure"],
   [/style|css|theme/, "Styling and theming"],
   [/page|view|screen/, "Application pages and views"],
   [/store|state|redux/, "State management"],
@@ -1539,23 +1538,47 @@ const MODULE_DESCRIPTION_RULES = [
   [/analyz/, "Code analysis and inference"],
 ];
 
+// Match test/spec as a path segment or test file name, not as a substring.
+// Otherwise `litestar` (contains "test") and `inspect` (contains "spec") are
+// labelled "Test infrastructure".
+function isTestLikeSegment(segment) {
+  const raw = String(segment || "").toLowerCase();
+  const withoutExt = raw.replace(/\.[a-z0-9]+$/i, "");
+  const candidates = raw === withoutExt ? [raw] : [raw, withoutExt];
+  for (const base of candidates) {
+    if (/^(tests?|specs?|testing|__tests__|__mocks__)$/.test(base)) return true;
+    if (/^(test_|spec_)/.test(base)) return true;
+    if (/(_test|_spec)$/.test(base)) return true;
+    if (/\.(test|spec)$/.test(base)) return true;
+  }
+  return false;
+}
+
+const PACKAGE_FILE_SEGMENTS = new Set(["__init__", "index"]);
+
 function titleizeSegment(segment) {
   const clean = String(segment).replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").trim();
   return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : "Project";
 }
 
-function describeOnboardingModule(key) {
+export function describeOnboardingModule(key) {
   const segments = String(key).replace(/\\/g, "/").toLowerCase().split("/").filter(Boolean);
-  const last = (segments[segments.length - 1] || "").replace(/\.[a-z0-9]+$/i, "");
+  let last = (segments[segments.length - 1] || "").replace(/\.[a-z0-9]+$/i, "");
   const parents = segments.slice(0, -1).filter((segment) => !GENERIC_CONTAINER_SEGMENTS.has(segment));
+  // `__init__.py` and `index.ts` name the package, not the file stem.
+  if (PACKAGE_FILE_SEGMENTS.has(last) && parents.length > 0) {
+    last = parents.pop();
+  }
 
   // The module's own name decides first. A parent folder like `lib/` is only a container,
   // so `lib/ogg` is not "utility functions" just because it lives under lib.
+  if (isTestLikeSegment(last)) return "Test infrastructure";
   for (const [pattern, description] of MODULE_DESCRIPTION_RULES) {
     if (pattern.test(last)) return description;
   }
   if (GENERIC_CONTAINER_SEGMENTS.has(last) && segments.length === 1) return "Application source code";
   for (const segment of parents) {
+    if (isTestLikeSegment(segment)) return "Test infrastructure";
     for (const [pattern, description] of MODULE_DESCRIPTION_RULES) {
       if (pattern.test(segment)) return description;
     }
