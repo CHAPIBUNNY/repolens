@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.16.4  
+**Current Version:** 1.16.5  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** October 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.16.4)
+## What's Shipped (v0.1.0 → v1.16.5)
 
 Everything below is live, tested, and available on npm.
 
@@ -164,6 +164,12 @@ Everything below is live, tested, and available on npm.
 - ✅ `server.json` for the MCP Registry (`io.github.CHAPIBUNNY/repolens`) and `smithery.yaml`
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
+
+## v1.16.5 — Python accuracy
+
+- ✅ Python imports inside a function or method are deferred (not load-time edges); imports under `if TYPE_CHECKING:` are type-only and listed like TypeScript type-only cycles
+- ✅ `from pkg import submodule` resolves to the submodule when it exists, not to `pkg/__init__.py`
+- ✅ Data-flow and onboarding roles match test/spec on path segments and test file names, not as a substring (so `litestar` is not "Test infrastructure")
 
 ## v1.16.4 — Type-only import cycles
 
