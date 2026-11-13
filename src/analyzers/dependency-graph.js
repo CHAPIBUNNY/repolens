@@ -4,8 +4,9 @@
 // `import type` / `export type` / all-`type` specifier lists (syntax), and imports the
 // TypeScript compiler removes because every binding is used only as a type or names
 // an interface or type alias (inferred, see ts-elision.js).
-// Cycle priority is in cycle-priority.js: mutual recursion and type-only cycles are
-// not "Priority: High refactor". Large multi-module cycles stay high.
+// Cycle priority is in cycle-priority.js: mutual recursion, type-only cycles, and
+// Python deferred-import cycles are not "Priority: High refactor". Large
+// multi-module runtime cycles stay high.
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -27,6 +28,7 @@ import { listWorkspacePackages } from "./workspace-packages.js";
 import { usageByName, declaredKinds, createElisionSettings, isTypeScriptFile } from "./ts-elision.js";
 import {
   classifyRuntimeCycles,
+  deferredReport,
   priorityCounts,
   typeOnlyReport,
 } from "./cycle-priority.js";
@@ -157,6 +159,8 @@ function emptyResult() {
     cycleReports: [],
     typeOnlyReports: [],
     typeOnlyEdges: [],
+    deferredReports: [],
+    deferredEdges: [],
     externalDeps: [],
     externalRuntime: [],
     externalDev: [],
@@ -342,7 +346,7 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
   // and are classified on their own so they are never "Priority: High refactor".
   const edgeRecords = new Map();
 
-  function rememberEdge(fromKey, toKey, fromFile, typeOnly, calls, reason = null) {
+  function rememberEdge(fromKey, toKey, fromFile, typeOnly, calls, reason = null, deferred = false) {
     if (!toKey || toKey === fromKey || !allFileKeys.has(toKey)) return;
     const id = `${fromKey}->${toKey}`;
     let record = edgeRecords.get(id);
@@ -353,19 +357,31 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
         fromFile,
         toFile: fileKeyToFile.get(toKey) || toKey,
         typeOnly: true,
+        deferred: false,
         typeOnlyReason: null,
         calls: 0,
       };
       edgeRecords.set(id, record);
     }
-    if (!typeOnly) {
+    const soft = Boolean(typeOnly) || Boolean(deferred);
+    if (!soft) {
       record.typeOnly = false;
+      record.deferred = false;
       record.typeOnlyReason = null;
       record.calls += calls;
-    } else if (record.typeOnly) {
-      // "syntax" (`import type`) wins over "inferred" when both reach the same file.
-      if (reason === "syntax" || !record.typeOnlyReason) record.typeOnlyReason = reason || "syntax";
+      return;
     }
+    // Runtime wins over deferred, deferred wins over type-only.
+    if (!record.typeOnly && !record.deferred) return;
+    if (deferred) {
+      record.typeOnly = false;
+      record.deferred = true;
+      record.typeOnlyReason = "deferred";
+      return;
+    }
+    if (record.deferred) return;
+    // "syntax" (`import type` / TYPE_CHECKING) wins over "inferred" when both reach the same file.
+    if (reason === "syntax" || !record.typeOnlyReason) record.typeOnlyReason = reason || "syntax";
   }
 
   // TypeScript import elision. Contents and declared kinds are cached per file.
@@ -472,20 +488,26 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     }
   }
 
-  for (const record of edgeRecords.values()) {
-    if (!record.typeOnly) addEdge(record.from, record.to);
-  }
-
   for (const file of pyFiles) {
     const content = await readFileSafe(path.join(repoRoot, file));
     if (!content) continue;
     const fromKey = normalizeFileKey(file);
     for (const imported of extractPythonImports(content)) {
-      if (imported.typeOnly) continue;
       const resolved = resolvePythonImport(file, imported, pyIndex);
-      if (resolved.kind === "internal") addEdge(fromKey, normalizeFileKey(resolved.file));
-      else if (resolved.kind === "external") addExternal(fromKey, resolved.name);
+      if (resolved.kind === "internal") {
+        const typeOnly = Boolean(imported.typeOnly);
+        const deferred = Boolean(imported.deferred) && !typeOnly;
+        const reason = typeOnly ? "syntax" : deferred ? "deferred" : null;
+        rememberEdge(fromKey, normalizeFileKey(resolved.file), file, typeOnly || deferred, 0, reason, deferred);
+      } else if (resolved.kind === "external" && !imported.typeOnly) {
+        // Deferred external imports still run, so they count as dependencies.
+        addExternal(fromKey, resolved.name);
+      }
     }
+  }
+
+  for (const record of edgeRecords.values()) {
+    if (!record.typeOnly && !record.deferred) addEdge(record.from, record.to);
   }
 
   for (const file of goFiles) {
@@ -535,52 +557,69 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
   result.cycles = detectCycles(adjacency);
 
   const fileForKey = (key) => fileKeyToFile.get(key) || key;
-  const runtimeEdgeList = [...edgeRecords.values()].filter((edge) => !edge.typeOnly);
+  const runtimeEdgeList = [...edgeRecords.values()].filter((edge) => !edge.typeOnly && !edge.deferred);
   result.cycleReports = classifyRuntimeCycles(result.cycles, runtimeEdgeList, fileForKey);
 
-  // Type-only cycles: cycles of runtime + type-only edges that need at least one
-  // type-only edge. They are reported on their own and never as runtime cycles.
+  // Non-runtime cycles: cycles of runtime + type-only + deferred edges that need
+  // at least one soft edge. Type-only and deferred cycles are reported separately
+  // and never as runtime cycles.
   const combinedAdj = new Map();
   for (const [from, deps] of adjacency) combinedAdj.set(from, new Set(deps));
-  const typeOnlyEdgeById = new Map();
+  const softEdgeById = new Map();
   for (const edge of edgeRecords.values()) {
-    if (!edge.typeOnly) continue;
-    typeOnlyEdgeById.set(`${edge.from}->${edge.to}`, edge);
+    if (!edge.typeOnly && !edge.deferred) continue;
+    softEdgeById.set(`${edge.from}->${edge.to}`, edge);
     if (!combinedAdj.has(edge.from)) combinedAdj.set(edge.from, new Set());
     if (!combinedAdj.has(edge.to)) combinedAdj.set(edge.to, new Set());
     combinedAdj.get(edge.from).add(edge.to);
   }
-  result.typeOnlyReports = typeOnlyEdgeById.size === 0 ? [] : detectCycles(combinedAdj)
-    .map((cyclePath) => {
+  const typeOnlyReports = [];
+  const deferredReports = [];
+  if (softEdgeById.size > 0) {
+    for (const cyclePath of detectCycles(combinedAdj)) {
       const links = [];
       for (let i = 0; i + 1 < cyclePath.length; i += 1) {
         const from = cyclePath[i];
         const to = cyclePath[i + 1];
         if (adjacency.get(from)?.has(to)) continue;
-        const edge = typeOnlyEdgeById.get(`${from}->${to}`);
-        if (edge) links.push({ from, to, reason: edge.typeOnlyReason || "syntax" });
+        const edge = softEdgeById.get(`${from}->${to}`);
+        if (edge) {
+          const reason = edge.deferred ? "deferred" : (edge.typeOnlyReason || "syntax");
+          links.push({ from, to, reason });
+        }
       }
-      if (links.length === 0) return null;
-      return { ...typeOnlyReport(cyclePath), typeOnlyLinks: links };
-    })
-    .filter(Boolean);
-  result.typeOnlyEdges = [...typeOnlyEdgeById.values()].map((edge) => ({
+      if (links.length === 0) continue;
+      if (links.some((link) => link.reason === "deferred")) {
+        deferredReports.push({ ...deferredReport(cyclePath), deferredLinks: links });
+      } else {
+        typeOnlyReports.push({ ...typeOnlyReport(cyclePath), typeOnlyLinks: links });
+      }
+    }
+  }
+  result.typeOnlyReports = typeOnlyReports;
+  result.deferredReports = deferredReports;
+  result.typeOnlyEdges = [...softEdgeById.values()].filter((edge) => edge.typeOnly && !edge.deferred).map((edge) => ({
     from: edge.from,
     to: edge.to,
     reason: edge.typeOnlyReason || "syntax",
+  }));
+  result.deferredEdges = [...softEdgeById.values()].filter((edge) => edge.deferred).map((edge) => ({
+    from: edge.from,
+    to: edge.to,
+    reason: "deferred",
   }));
 
   const priorities = priorityCounts(result.cycleReports);
 
   // Stats
   const totalImports = result.edges.length;
-  // A file connected only by type-only imports (a types module) is not dead code.
-  const typeConnected = new Set();
-  for (const edge of result.typeOnlyEdges) {
-    typeConnected.add(edge.from);
-    typeConnected.add(edge.to);
+  // A file connected only by type-only or deferred imports is not dead code.
+  const softConnected = new Set();
+  for (const edge of [...result.typeOnlyEdges, ...result.deferredEdges]) {
+    softConnected.add(edge.from);
+    softConnected.add(edge.to);
   }
-  const orphans = result.nodes.filter(n => n.imports.length === 0 && n.importedBy.length === 0 && !typeConnected.has(n.key));
+  const orphans = result.nodes.filter(n => n.imports.length === 0 && n.importedBy.length === 0 && !softConnected.has(n.key));
   const sourceNodeCount = result.nodes.filter((n) => !isNonProductPath(n.file || n.key)).length;
   const hubThreshold = Math.max(5, Math.round(sourceNodeCount * 0.07));
   const hubs = aggregateHubs(result.nodes, fileKeyToFile, goModulePath, hubThreshold);
@@ -604,15 +643,18 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     typeOnlyCycles: result.typeOnlyReports.length,
     typeOnlyEdges: result.typeOnlyEdges.length,
     inferredTypeOnlyEdges: result.typeOnlyEdges.filter((edge) => edge.reason === "inferred").length,
+    deferredCycles: result.deferredReports.length,
+    deferredEdges: result.deferredEdges.length,
     orphanFiles: orphans.length,
     hubs,
   };
 
   result.summary = buildSummary(result);
 
-  const typeOnlyNote = result.typeOnlyReports.length > 0
-    ? ` (${result.typeOnlyReports.length} type-only cycle(s) not counted)`
-    : "";
+  const softNotes = [];
+  if (result.typeOnlyReports.length > 0) softNotes.push(`${result.typeOnlyReports.length} type-only cycle(s)`);
+  if (result.deferredReports.length > 0) softNotes.push(`${result.deferredReports.length} deferred cycle(s)`);
+  const typeOnlyNote = softNotes.length > 0 ? ` (${softNotes.join(", ")} not counted)` : "";
   if (result.cycles.length > 0) {
     warn(`Dependency graph: ${result.cycles.length} circular dependency cycle(s) detected${typeOnlyNote}`);
   } else {
@@ -738,6 +780,9 @@ function buildSummary(result) {
   }
   if (result.stats.typeOnlyCycles > 0) {
     parts.push(`${result.stats.typeOnlyCycles} type-only cycle(s), not runtime`);
+  }
+  if (result.stats.deferredCycles > 0) {
+    parts.push(`${result.stats.deferredCycles} deferred cycle(s), not load-time`);
   }
   if (result.coverage?.status === "partial") {
     parts.push(`partial coverage: ${result.coverage.analyzedBase} of ${result.coverage.totalBase} source files`);

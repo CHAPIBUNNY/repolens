@@ -358,6 +358,8 @@ export function renderDependencyGraph(depResult) {
   lines.push(`| Circular dependencies | ${s.cycles} |`);
   if (s.typeOnlyCycles > 0) lines.push(`| Type-only cycles (not runtime, not counted) | ${s.typeOnlyCycles} |`);
   if (s.typeOnlyEdges > 0) lines.push(`| Type-only imports (not import edges) | ${s.typeOnlyEdges} |`);
+  if (s.deferredCycles > 0) lines.push(`| Deferred import cycles (not load-time, not counted) | ${s.deferredCycles} |`);
+  if (s.deferredEdges > 0) lines.push(`| Deferred imports (not import edges) | ${s.deferredEdges} |`);
   lines.push(`| Orphan files (no imports or importers) | ${s.orphanFiles} |`);
   lines.push("");
 
@@ -380,7 +382,7 @@ export function renderDependencyGraph(depResult) {
     const reports = Array.isArray(depResult.cycleReports) ? depResult.cycleReports : [];
     lines.push("## Circular Dependencies");
     lines.push("");
-    lines.push(`**${depResult.cycles.length}** circular dependency chain${depResult.cycles.length === 1 ? " was" : "s were"} detected. A large cycle across three or more folders is a high-priority refactor. A two-folder recursive-descent pair (many imports and calls both ways) is mutual recursion, probably intentional; verify. A cycle that exists only through type-only imports is not a runtime cycle.`);
+    lines.push(`**${depResult.cycles.length}** circular dependency chain${depResult.cycles.length === 1 ? " was" : "s were"} detected. A large cycle across three or more folders is a high-priority refactor. A two-folder recursive-descent pair (many imports and calls both ways) is mutual recursion, probably intentional; verify. A cycle that exists only through type-only or deferred (function-local) imports is not a runtime cycle.`);
     lines.push("");
     const limit = Math.min(depResult.cycles.length, 20);
     for (let i = 0; i < limit; i++) {
@@ -402,7 +404,7 @@ export function renderDependencyGraph(depResult) {
     lines.push("");
     lines.push(`**${reports.length}** cycle${reports.length === 1 ? " closes" : "s close"} only through type-only imports. The compiler removes those imports, so there is no runtime cycle. They are not counted as circular dependencies and do not lower the health score. Priority: Low — type-only imports; verify.`);
     lines.push("");
-    lines.push("A type-only import is `import type`, `export type`, or an import list whose names are all marked `type` (*syntax*). In TypeScript files it is also an import whose names are interfaces or type aliases, or are used only in type positions (*inferred*). Inference is off under `verbatimModuleSyntax`, `preserveValueImports`, `importsNotUsedAsValues: \"preserve\"`, or `erasableSyntaxOnly`, which keep the import at runtime.");
+    lines.push("A type-only import is `import type`, `export type`, or an import list whose names are all marked `type` (*syntax*), a Python import under `if TYPE_CHECKING:` (*syntax*), or in TypeScript files an import whose names are interfaces or type aliases, or are used only in type positions (*inferred*). Inference is off under `verbatimModuleSyntax`, `preserveValueImports`, `importsNotUsedAsValues: \"preserve\"`, or `erasableSyntaxOnly`, which keep the import at runtime.");
     lines.push("");
     const limit = Math.min(reports.length, 20);
     for (let i = 0; i < limit; i++) {
@@ -417,6 +419,29 @@ export function renderDependencyGraph(depResult) {
     }
     if (reports.length > 20) {
       lines.push(`\n*...and ${reports.length - 20} more type-only cycles*`);
+    }
+    lines.push("");
+  }
+
+  if (Array.isArray(depResult.deferredReports) && depResult.deferredReports.length > 0) {
+    const reports = depResult.deferredReports;
+    lines.push("## Deferred import cycles");
+    lines.push("");
+    lines.push(`**${reports.length}** cycle${reports.length === 1 ? " closes" : "s close"} only through deferred (function-local) imports. Those imports run when the function runs, not at module import time, so they are not load-time cycles. They are not counted as circular dependencies and do not lower the health score. Priority: Low — deferred imports; verify.`);
+    lines.push("");
+    const limit = Math.min(reports.length, 20);
+    for (let i = 0; i < limit; i++) {
+      const report = reports[i];
+      const pathText = Array.isArray(report.path) ? report.path.join("` → `") : String(report.path);
+      lines.push(`${i + 1}. \`${pathText}\``);
+      const links = Array.isArray(report.deferredLinks) ? report.deferredLinks : [];
+      if (links.length > 0) {
+        const text = links.map((link) => `\`${link.from}\` → \`${link.to}\` (${link.reason === "deferred" ? "deferred" : link.reason === "inferred" ? "inferred" : "syntax"})`).join("; ");
+        lines.push(`   Deferred link${links.length === 1 ? "" : "s"}: ${text}`);
+      }
+    }
+    if (reports.length > 20) {
+      lines.push(`\n*...and ${reports.length - 20} more deferred cycles*`);
     }
     lines.push("");
   }
@@ -454,7 +479,7 @@ export function renderDependencyGraph(depResult) {
 
   lines.push("---");
   lines.push("");
-  lines.push("*Generated by RepoLens import analysis. Dependency detection covers JavaScript and TypeScript (ES modules, dynamic import, CommonJS, re-exports; comments, strings, and Node.js built-ins are skipped; type-only imports, including TypeScript imports whose names are used only as types, are not import edges), Python (`import` / `from ... import`, including relative imports; `TYPE_CHECKING` blocks are skipped), and Go (`go.mod` module paths, hubs grouped by package). Go `*_test.go` files are not part of the graph.*");
+  lines.push("*Generated by RepoLens import analysis. Dependency detection covers JavaScript and TypeScript (ES modules, dynamic import, CommonJS, re-exports; comments, strings, and Node.js built-ins are skipped; type-only imports, including TypeScript imports whose names are used only as types, are not import edges), Python (`import` / `from ... import`, including relative imports; `TYPE_CHECKING` blocks and function-local imports are not runtime edges; `from pkg import submodule` resolves to the submodule when it exists), and Go (`go.mod` module paths, hubs grouped by package). Go `*_test.go` files are not part of the graph.*");
   lines.push("");
 
   return lines.join("\n");

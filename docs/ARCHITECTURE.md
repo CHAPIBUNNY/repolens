@@ -25,7 +25,7 @@ from patterns    stack patterns      with insights       + Confluence pages
 - Detects build tools (Vite, Webpack, Turbo, esbuild)
 - Identifies test frameworks (Vitest, Jest, Playwright)
 - Scores code health for JavaScript/TypeScript, Python, and Go (regex complexity, not an AST)
-- Builds an import graph for JavaScript/TypeScript, Python, and Go. Comments, strings, Python `TYPE_CHECKING` blocks, and Node.js built-ins are skipped. TypeScript type-only imports are not runtime edges: `import type` / `export type` / all-`type` specifier lists, and imports the compiler removes because every name is an interface or type alias or is used only in type positions (`ts-elision.js`; off under `verbatimModuleSyntax`, `preserveValueImports`, `importsNotUsedAsValues: "preserve"`, `erasableSyntaxOnly`, and in decorated files under `emitDecoratorMetadata`; usage inference is also off when part of the tsconfig `extends` chain is not in the checkout). Cycles that close only through them are listed as type-only cycles and not counted. Go `*_test.go` files are not graph nodes. Go hub rows are packages, not files
+- Builds an import graph for JavaScript/TypeScript, Python, and Go. Comments, strings, and Node.js built-ins are skipped. Python `TYPE_CHECKING` blocks and function-local imports are not runtime edges; `from pkg import submodule` resolves to the submodule when it exists. TypeScript type-only imports are not runtime edges: `import type` / `export type` / all-`type` specifier lists, and imports the compiler removes because every name is an interface or type alias or is used only in type positions (`ts-elision.js`; off under `verbatimModuleSyntax`, `preserveValueImports`, `importsNotUsedAsValues: "preserve"`, `erasableSyntaxOnly`, and in decorated files under `emitDecoratorMetadata`; usage inference is also off when part of the tsconfig `extends` chain is not in the checkout). Cycles that close only through them are listed as type-only cycles and not counted. Go `*_test.go` files are not graph nodes. Go hub rows are packages, not files
 - Infers module relationships and dependencies. Pattern names cite the path token or import that matched. Test files are not evidence, and neither are the generic folder names `src` and `lib`. A package with `main`, `module`, or `exports` is a library, so it gets no CLI pattern. "API route pattern" requires an `api`, `routes`, `router`, `endpoint`, `controller`, or `handler` directory
 
 **Render Phase:**
@@ -112,8 +112,8 @@ repolens/
 │   │   ├── graphql-analyzer.js    # GraphQL schema detection
 │   │   ├── typescript-analyzer.js # TypeScript type graph analysis
 │   │   ├── dependency-graph.js    # Import graph with cycle detection (JS/TS, Python, Go; Go hubs per package; hubs ignore tests and examples; runtime vs dev packages)
-│   │   ├── cycle-priority.js      # High refactor only for 3+ folder cycles; mutual recursion and type-only cycles are low
-│   │   ├── import-parsers.js      # Comment-aware JS/TS, Python (skips TYPE_CHECKING), and Go import parsers
+│   │   ├── cycle-priority.js      # High refactor only for 3+ folder cycles; mutual recursion, type-only, and deferred cycles are low
+│   │   ├── import-parsers.js      # Comment-aware JS/TS, Python (TYPE_CHECKING and deferred), and Go import parsers
 │   │   ├── ts-elision.js          # TypeScript import elision: value vs type positions, interface/type-alias exports, tsconfig switches
 │   │   ├── drift-detector.js      # Architecture drift detection
 │   │   ├── monorepo-detector.js   # npm, yarn, pnpm, and Lerna workspaces

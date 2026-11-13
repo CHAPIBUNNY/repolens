@@ -2,6 +2,25 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.16.5 (2026-11-13)
+
+Fix found by the 2026-11-13 gap test of 1.16.4 on litestar-org/litestar (6aa278b).
+
+### Upgrade notes
+
+- **Fewer cycles and edges in Python repositories.** Function-local (deferred) imports and `if TYPE_CHECKING:` imports are no longer runtime edges. `from pkg import submodule` resolves to the submodule when it exists, not to `pkg/__init__.py`. On litestar: circular dependencies 45 → 4 (all Medium; 0 High refactor), import edges 2,368 → 2,334, with 542 type-only imports (36 type-only cycles) and 38 deferred imports (12 deferred cycles) listed separately. Orphans 73 → 72. Architecture health 55 → 65. Architecture baselines and drift reports will show the drop once; it is a measurement fix, not a code change.
+
+### Dependency graph
+
+- A Python import inside a function or method is deferred. It runs when the function runs, not at module import time, so it is not a load-time edge. Cycles that close only through a deferred import are listed under "Deferred import cycles" with Priority: Low — deferred imports; verify. They are not counted and do not lower the health score or badge.
+- Python imports under `if TYPE_CHECKING:` / `if typing.TYPE_CHECKING:` (including aliases such as `import typing as t` and one-line forms) are type-only (*syntax*), the same way TypeScript `import type` is. They were already omitted from the runtime graph (1.15.3); they are now recorded as type-only edges and listed under "Type-only cycles" when a cycle closes through them.
+- `from pkg import name` (and `from .pkg import name`) resolves to `pkg.name` when that submodule exists (`pkg/name.py` or `pkg/name/__init__.py`). A name that is only a binding in `pkg/__init__.py` still points at the package. This stops long false cycles that were routed through the package `__init__.py`.
+- The dependency graph page and the MCP `get_dependency_graph` tool list "Deferred import cycles" and keep the "Type-only cycles" section, plus overview rows for both. The CLI log says "(N type-only cycle(s), M deferred cycle(s) not counted)". Health score, badge, and cycle findings count runtime cycles only.
+
+### Output accuracy
+
+- Data-flow and onboarding module roles no longer treat a substring `test` or `spec` as "Test infrastructure". The match is a path segment or a test file name (`tests/`, `testing/`, `test_app.py`, `helpers.spec.ts`). On litestar, hubs such as `exceptions`, `enums`, and `types` were labelled "Test infrastructure" because the package name contains "test"; they are now "Exceptions module", "Enums module", and "Types module". Modules under `litestar/testing/` stay "Test infrastructure". `__init__.py` and `index` files are described by their package folder, not as an "Init module".
+
 ## 1.16.4 (2026-11-12)
 
 Fix found by the 2026-11-12 gap test of 1.16.3 on lukeautry/tsoa (ce4daec).

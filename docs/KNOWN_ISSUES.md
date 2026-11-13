@@ -2,8 +2,16 @@
 
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
-**Last Updated:** October 2026  
-**Version:** 1.16.4
+**Last Updated:** November 2026  
+**Version:** 1.16.5
+
+## Python deferred imports, submodule resolution, and test labels (fixed in 1.16.5)
+
+A gap test of 1.16.4 on litestar-org/litestar (6aa278b) reported 45 import cycles, 37 of them "High refactor". Most existed only because function-local imports (for example `from litestar.di import Dependency` inside a function in `typing.py`) and `if TYPE_CHECKING:` imports were treated as module-level runtime edges, and because `from litestar import connection, datastructures` was an edge on `litestar/__init__.py` instead of the submodules. The data-flows page also labelled product hubs (`exceptions`, `enums`, `types`) as "Test infrastructure" because `/test|spec/` matched the substring "test" in "litestar".
+
+The fix treats a Python import inside a function or method as deferred and an import under `if TYPE_CHECKING:` as type-only, lists those cycles separately (Low, not counted, same as TypeScript type-only cycles in 1.16.4), resolves `from pkg import submodule` to the submodule when it exists, and matches test/spec labels on path segments and test file names only. litestar now reports 4 circular dependencies (all Medium), 36 type-only cycles, and 12 deferred cycles, with 2,334 import edges (was 2,368).
+
+Limits: a module-level `import` or `from` still counts even when it sits under a plain `if` / `try` (version checks, optional extras). Imports in a class body run at class definition time and stay runtime edges. `from pkg import *` still points at the package. A deferred import of an external package is still listed as a dependency, because it runs when the function runs.
 
 ## Cycles through imports TypeScript removes (fixed in 1.16.4)
 
@@ -62,7 +70,7 @@ Running 1.15.3 on Borewit/music-metadata (v12, 10 years old) gave nine wrong or 
 
 ## TYPE_CHECKING imports and coarse patterns (fixed in 1.15.3)
 
-1.15.2 parsed Python imports, including imports that only run under `if TYPE_CHECKING:` or `if typing.TYPE_CHECKING:` (`import typing as t` in click). Those edges showed up as circular dependencies: 10 in click and 12 in httpx. 1.15.3 skips those blocks. Runtime imports, including imports inside functions, are still edges. Node built-ins such as `fs` and `node:path` are not external packages. Go hub tables group files into the `go.mod` package path. Test modules are not evidence for architecture patterns, and "API route pattern" requires a directory named `api`, `routes`, `router`, `endpoint`, `controller`, or `handler`.
+1.15.2 parsed Python imports, including imports that only run under `if TYPE_CHECKING:` or `if typing.TYPE_CHECKING:` (`import typing as t` in click). Those edges showed up as circular dependencies: 10 in click and 12 in httpx. 1.15.3 skips those blocks. 1.16.5 also treats imports inside functions as deferred (not load-time edges) and lists TYPE_CHECKING cycles under Type-only cycles. Node built-ins such as `fs` and `node:path` are not external packages. Go hub tables group files into the `go.mod` package path. Test modules are not evidence for architecture patterns, and "API route pattern" requires a directory named `api`, `routes`, `router`, `endpoint`, `controller`, or `handler`.
 
 ## Dependency graph skipped Python and Go (fixed in 1.15.2)
 

@@ -520,22 +520,25 @@ function noteTypingBindings(statement, aliases, flags) {
   }
 }
 
-function isTypeCheckingGuard(statement, aliases, flags) {
-  const match = statement.match(/^(?:if|elif)\s+(.+?)\s*:\s*$/);
-  if (!match) return false;
-  const cond = match[1].trim();
-  if (cond === "TYPE_CHECKING" || flags.has(cond)) return true;
-  if (cond === "typing.TYPE_CHECKING") return true;
-  const attr = cond.match(/^([A-Za-z_]\w*)\.TYPE_CHECKING$/);
-  return Boolean(attr && aliases.has(attr[1]));
+function pythonImportedNames(rest) {
+  const names = [];
+  for (const part of String(rest).replace(/[()]/g, " ").split(",")) {
+    const token = part.trim();
+    if (!token) continue;
+    if (token === "*") return ["*"];
+    const match = token.match(/^([A-Za-z_]\w*)(?:\s+as\s+[A-Za-z_]\w*)?$/);
+    if (match) names.push(match[1]);
+  }
+  return names;
 }
 
-function pushPythonImport(imports, statement, typeOnly) {
+function pushPythonImport(imports, statement, typeOnly, deferred) {
+  const flags = { typeOnly: Boolean(typeOnly), deferred: Boolean(deferred) && !typeOnly };
   if (statement.startsWith("import ")) {
     const rest = statement.slice("import ".length).replace(/[()]/g, " ");
     for (const part of rest.split(",")) {
       const name = part.trim().split(/\s+/)[0];
-      if (name && /^[\w.]+$/.test(name)) imports.push({ module: name, level: 0, typeOnly });
+      if (name && /^[\w.]+$/.test(name)) imports.push({ module: name, level: 0, ...flags });
     }
     return;
   }
@@ -543,26 +546,72 @@ function pushPythonImport(imports, statement, typeOnly) {
   if (relative) {
     const level = relative[1].length;
     const base = relative[2] || "";
+    const names = pythonImportedNames(relative[3]);
+    const star = names.includes("*") || names.length === 0;
     if (base) {
-      imports.push({ module: base, level, typeOnly });
+      if (star) {
+        imports.push({ module: base, level, ...flags });
+        return;
+      }
+      for (const name of names) imports.push({ module: base, name, level, ...flags });
       return;
     }
-    for (const part of relative[3].replace(/[()]/g, " ").split(",")) {
-      const name = part.trim().split(/\s+/)[0];
-      if (name && /^[A-Za-z_]\w*$/.test(name)) imports.push({ module: name, level, typeOnly });
+    for (const name of names) {
+      if (name !== "*") imports.push({ module: name, level, ...flags });
     }
     return;
   }
-  const match = statement.match(/^from\s+([\w.]+)\s+import\b/);
+  const match = statement.match(/^from\s+([\w.]+)\s+import\s+(.+)$/);
   if (!match) return;
-  imports.push({ module: match[1], level: 0, typeOnly });
+  const names = pythonImportedNames(match[2]);
+  if (names.includes("*") || names.length === 0) {
+    imports.push({ module: match[1], level: 0, ...flags });
+    return;
+  }
+  for (const name of names) imports.push({ module: match[1], name, level: 0, ...flags });
+}
+
+function isTypeCheckingCondition(cond, aliases, flags) {
+  if (cond === "TYPE_CHECKING" || flags.has(cond)) return true;
+  if (cond === "typing.TYPE_CHECKING") return true;
+  const attr = cond.match(/^([A-Za-z_]\w*)\.TYPE_CHECKING$/);
+  return Boolean(attr && aliases.has(attr[1]));
+}
+
+function typeCheckingHeader(statement, aliases, flags) {
+  const match = statement.match(/^(?:if|elif)\s+(.+?)\s*:(.*)$/);
+  if (!match) return null;
+  if (!isTypeCheckingCondition(match[1].trim(), aliases, flags)) return null;
+  return { rest: match[2].trim() };
+}
+
+function functionHeader(statement) {
+  const match = statement.match(/^(?:async\s+)?def\s+.+?:(.*)$/);
+  if (!match) return null;
+  return { rest: match[1].trim() };
+}
+
+function classHeader(statement) {
+  const match = statement.match(/^class\s+.+?:(.*)$/);
+  if (!match) return null;
+  return { rest: match[1].trim() };
+}
+
+function otherBlockHeader(statement) {
+  const match = statement.match(/^(?:if|elif|else|for|while|try|except|finally|with|match|case|async\s+for|async\s+with)\b.*:(.*)$/);
+  if (!match) return null;
+  return { rest: match[1].trim() };
 }
 
 /**
- * @returns {{ module: string, level: number, typeOnly: boolean }[]}
+ * @returns {{ module: string, name?: string, level: number, typeOnly: boolean, deferred: boolean }[]}
  * level 0 is an absolute import. level N is a relative import with N dots.
+ * `name` is a `from module import name` binding; resolve it to `module.name`
+ * when that submodule exists.
  * Imports under `if TYPE_CHECKING:` / `if typing.TYPE_CHECKING:` (including
- * `import typing as t`) are typeOnly and must not become runtime edges.
+ * `import typing as t` and one-line forms) are typeOnly and must not become
+ * runtime edges. Imports inside a function or method are deferred: they run
+ * when the function runs, not at module import time.
  */
 export function extractPythonImports(source) {
   const stripped = stripPythonNoise(source).replace(/\\\n/g, " ");
@@ -570,17 +619,20 @@ export function extractPythonImports(source) {
   const imports = [];
   const aliases = new Set(["typing"]);
   const flags = new Set(["TYPE_CHECKING"]);
-  const blockIndents = [];
+  const blocks = [];
   let buf = "";
   let depth = 0;
-  let bufTypeOnly = false;
   let bufIndent = 0;
 
-  function inTypeChecking(indent) {
-    while (blockIndents.length && indent <= blockIndents[blockIndents.length - 1]) {
-      blockIndents.pop();
+  function kindsAt(indent) {
+    while (blocks.length && indent <= blocks[blocks.length - 1].indent) {
+      blocks.pop();
     }
-    return blockIndents.length > 0;
+    return blocks.map((block) => block.kind);
+  }
+
+  function openBlock(kind, indent) {
+    blocks.push({ kind, indent });
   }
 
   function finishStatement() {
@@ -588,23 +640,42 @@ export function extractPythonImports(source) {
     buf = "";
     depth = 0;
     if (!statement) return;
-    if (bufTypeOnly) {
-      pushPythonImport(imports, statement, true);
+    const kinds = kindsAt(bufIndent);
+    const typeOnly = kinds.includes("type_checking");
+    const deferred = !typeOnly && kinds.includes("function");
+
+    const typeHeader = typeCheckingHeader(statement, aliases, flags);
+    if (typeHeader) {
+      openBlock("type_checking", bufIndent);
+      if (typeHeader.rest) pushPythonImport(imports, typeHeader.rest, true, false);
       return;
     }
-    if (isTypeCheckingGuard(statement, aliases, flags)) {
-      blockIndents.push(bufIndent);
+    const fnHeader = functionHeader(statement);
+    if (fnHeader) {
+      openBlock("function", bufIndent);
+      if (fnHeader.rest) pushPythonImport(imports, fnHeader.rest, typeOnly, !typeOnly);
+      return;
+    }
+    const clsHeader = classHeader(statement);
+    if (clsHeader) {
+      openBlock("class", bufIndent);
+      if (clsHeader.rest) pushPythonImport(imports, clsHeader.rest, typeOnly, deferred);
+      return;
+    }
+    const otherHeader = otherBlockHeader(statement);
+    if (otherHeader) {
+      openBlock("other", bufIndent);
+      if (otherHeader.rest) pushPythonImport(imports, otherHeader.rest, typeOnly, deferred);
       return;
     }
     noteTypingBindings(statement, aliases, flags);
-    pushPythonImport(imports, statement, false);
+    pushPythonImport(imports, statement, typeOnly, deferred);
   }
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed && depth === 0) continue;
     if (depth === 0) {
-      bufTypeOnly = inTypeChecking(leadingIndent(line));
       bufIndent = leadingIndent(line);
       buf = trimmed;
     } else {
@@ -677,6 +748,12 @@ export function resolvePythonImport(file, imported, index) {
   }
 
   if (!dotted) return { kind: "unresolved" };
+  // `from pkg import submodule` loads pkg.submodule when that module exists,
+  // not pkg/__init__.py.
+  if (imported.name && imported.name !== "*") {
+    const submodule = `${dotted}.${imported.name}`;
+    if (index.has(submodule)) return { kind: "internal", file: index.get(submodule) };
+  }
   if (index.has(dotted)) return { kind: "internal", file: index.get(dotted) };
 
   if (level > 0) {
