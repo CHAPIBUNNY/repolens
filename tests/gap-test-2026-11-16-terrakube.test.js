@@ -425,3 +425,28 @@ describe("1d. JVM module descriptions use the package, not the Maven module (rev
     expect(describeOnboardingModule("src/api")).toBe("API layer and route handlers");
   });
 });
+
+describe("CodeQL: path helpers stay linear on long `/` runs", async () => {
+  const { trimTrailingSlashes } = await import("../src/utils/path-roles.js");
+  const { splitJvmSourcePath } = await import("../src/core/jvm-modules.js");
+  const { stripContainerSegments } = await import("../src/analyzers/domain-inference.js");
+
+  it("trims trailing slashes and splits JVM source paths", () => {
+    expect(trimTrailingSlashes("a/b///")).toBe("a/b");
+    expect(trimTrailingSlashes("a")).toBe("a");
+    expect(splitJvmSourcePath("api/src/main/java/io/x/A.java")).toMatchObject({ prefix: "api", set: "main", lang: "java", rel: "io/x/A.java", sourceRoot: "api/src/main/java" });
+    expect(splitJvmSourcePath("src/test/kotlin")).toMatchObject({ prefix: "", set: "test", rel: "" });
+    expect(splitJvmSourcePath("lib/src/x.js")).toBeNull();
+    expect(stripContainerSegments("api/src/main/java")).toBe("");
+    expect(stripContainerSegments("api/src/testFixtures/java")).toBe("testFixtures");
+  });
+
+  it("handles adversarial input quickly", () => {
+    const evil = `src/a/java/${"a/src/./java/".repeat(20000)}x${"/".repeat(50000)}!`;
+    const start = Date.now();
+    trimTrailingSlashes(`${"/".repeat(100000)}x`);
+    splitJvmSourcePath(evil);
+    stripContainerSegments(evil);
+    expect(Date.now() - start).toBeLessThan(500);
+  });
+});

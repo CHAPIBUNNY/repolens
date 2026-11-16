@@ -1,7 +1,7 @@
 // Build structured AI context from deterministic scan results
 
 import { groupModulesByDomain, pathHasKeyword, stripContainerSegments, hasContainerSegment } from "./domain-inference.js";
-import { isTestPath } from "../utils/path-roles.js";
+import { isTestPath, trimTrailingSlashes } from "../utils/path-roles.js";
 
 /**
  * Compute per-module dependency metrics from the dep graph.
@@ -136,7 +136,7 @@ export function isLibraryProject(context) {
  * folders, largest first.
  */
 export function repositoryRoots(moduleRoots = [], modules = []) {
-  const roots = (moduleRoots || []).map((root) => String(root).replace(/\\/g, "/").replace(/\/+$/, "")).filter(Boolean);
+  const roots = (moduleRoots || []).map((root) => String(root).replace(/\\/g, "/")).map(trimTrailingSlashes).filter(Boolean);
   if (!Array.isArray(modules) || modules.length === 0) return roots;
   const covers = (root, key) => root === "." || key === root || key.startsWith(`${root}/`);
   const extra = new Map();

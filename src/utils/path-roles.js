@@ -96,3 +96,11 @@ export function isBuildOrExamplePath(filePath) {
 export function isNonProductPath(filePath) {
   return isTestPath(filePath) || isToolingPath(filePath);
 }
+
+/** `a/b//` → `a/b`. A loop, not `/\/+$/`, which is quadratic on long runs of `/`. */
+export function trimTrailingSlashes(value) {
+  const text = String(value);
+  let end = text.length;
+  while (end > 0 && text.charCodeAt(end - 1) === 47) end -= 1;
+  return end === text.length ? text : text.slice(0, end);
+}

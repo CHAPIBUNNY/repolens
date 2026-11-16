@@ -1,3 +1,5 @@
+import { trimTrailingSlashes } from "../utils/path-roles.js";
+
 // Module keys for JVM source sets. A Maven/Gradle source set (`<module>/src/main/java`)
 // is split by package, one module per top-level package below the package prefix all
 // its files share: `api/src/main/java/io/terrakube/api/rs`, `.../plugin`, and so on.
@@ -5,7 +7,8 @@
 // between its packages, so every module looked "Isolated".
 // Test-like source sets (`src/test/java`, `src/jmh/java`, ...) stay one module each.
 
-const SOURCE_SET = /^(?:(.+?)\/)?src\/([A-Za-z0-9_.-]+)\/(java|kotlin|scala|groovy)\/(.+)$/;
+const JVM_LANG_DIRS = new Set(["java", "kotlin", "scala", "groovy"]);
+const SET_NAME = /^[A-Za-z0-9_.-]+$/;
 const JVM_FILE = /\.(java|kt|scala|groovy)$/;
 const TEST_LIKE_SET = /^(test|tests|it|jmh|bench|benchmarks?|fixtures)([A-Z]\w*)?$|[a-z0-9](Test|Tests|IT|Jmh|Bench|Benchmarks?|Fixtures)$/;
 
@@ -17,11 +20,27 @@ function norm(file) {
 export function jvmSourceSetOf(file) {
   const normalized = norm(file);
   if (!JVM_FILE.test(normalized)) return null;
-  const match = normalized.match(SOURCE_SET);
-  if (!match) return null;
-  const [, prefix, set, lang, rel] = match;
-  const sourceRoot = `${prefix ? `${prefix}/` : ""}src/${set}/${lang}`;
-  return { sourceRoot, rel, set };
+  const parts = splitJvmSourcePath(normalized);
+  if (!parts || !parts.rel) return null;
+  return { sourceRoot: parts.sourceRoot, rel: parts.rel, set: parts.set };
+}
+
+/**
+ * Split `<prefix>/src/<set>/<java|kotlin|scala|groovy>[/<rel>]` at the first source set
+ * in the path. `rel` is "" for the source root itself. Null when there is none.
+ * Segment parsing, not a regex: a backtracking pattern is slow on paths with many `/`.
+ */
+export function splitJvmSourcePath(value) {
+  const segments = norm(value).split("/");
+  for (let i = 0; i + 2 < segments.length; i += 1) {
+    if (segments[i] !== "src" || !SET_NAME.test(segments[i + 1]) || !JVM_LANG_DIRS.has(segments[i + 2])) continue;
+    const prefix = segments.slice(0, i).join("/");
+    const set = segments[i + 1];
+    const lang = segments[i + 2];
+    const rel = segments.slice(i + 3).join("/");
+    return { prefix, set, lang, rel, sourceRoot: `${prefix ? `${prefix}/` : ""}src/${set}/${lang}` };
+  }
+  return null;
 }
 
 function commonDirPrefix(dirs) {
@@ -42,7 +61,7 @@ function commonDirPrefix(dirs) {
  * `src/main/java/com/acme`) wins: those files keep the folder rule.
  */
 export function buildJvmModuleKeyer(files, moduleRoots = []) {
-  const roots = (moduleRoots || []).map((root) => norm(root).replace(/\/+$/, "")).filter((root) => root && root !== ".");
+  const roots = (moduleRoots || []).map((root) => trimTrailingSlashes(norm(root))).filter((root) => root && root !== ".");
   const dirsBySourceRoot = new Map();
   for (const file of files) {
     const info = jvmSourceSetOf(file);

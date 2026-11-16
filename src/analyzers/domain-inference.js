@@ -1,4 +1,5 @@
 // Domain inference - map folder/file names to business domains
+import { splitJvmSourcePath } from "../core/jvm-modules.js";
 
 const DEFAULT_DOMAIN_HINTS = [
   { 
@@ -200,8 +201,12 @@ export function stripContainerSegments(modulePath) {
   // package (`repository`), not by the Maven module or reverse-domain prefix, which
   // would make every package of an `api` service an "API" module. A whole source set
   // (`api/src/test/java`) is typed by the set name (`test`).
-  const jvm = normalized.match(/^(?:.+\/)?src\/([^/]+)\/(?:java|kotlin|scala|groovy)(?:\/(.+))?$/);
-  if (jvm) return jvm[2] ? jvm[2].split("/").filter(Boolean).pop() : (jvm[1] === "main" ? "" : jvm[1]);
+  const jvm = splitJvmSourcePath(normalized);
+  if (jvm) {
+    const packageSegments = jvm.rel.split("/").filter(Boolean);
+    if (packageSegments.length > 0) return packageSegments[packageSegments.length - 1];
+    return jvm.set === "main" ? "" : jvm.set;
+  }
   return normalized
     .split("/")
     .filter((segment) => segment && !GENERIC_CONTAINER_SEGMENTS.has(segment.toLowerCase()))

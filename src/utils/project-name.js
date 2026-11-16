@@ -5,6 +5,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { trimTrailingSlashes } from "./path-roles.js";
 
 const MAX_NAME = 214;
 
@@ -71,7 +72,7 @@ function gitConfigPath(dir) {
 /** Repository name from a git remote URL (`https://host/org/repo.git`, `git@host:org/repo`). */
 export function repoNameFromRemoteUrl(url) {
   if (typeof url !== "string") return null;
-  const trimmed = url.trim().replace(/[?#].*$/, "").replace(/\/+$/, "");
+  const trimmed = trimTrailingSlashes(url.trim().replace(/[?#].*$/, ""));
   if (!trimmed) return null;
   const last = trimmed.split(/[/:]/).pop() || "";
   return clean(last.replace(/\.git$/i, ""));

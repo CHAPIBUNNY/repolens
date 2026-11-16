@@ -6,6 +6,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { readJsonc, resolvePackageExtends } from "./ts-elision.js";
+import { trimTrailingSlashes } from "../utils/path-roles.js";
+
+// TypeScript allows one `*` in a paths target; it takes the text the pattern's `*` matched.
+function substituteStar(target, capture) {
+  const star = target.indexOf("*");
+  return star === -1 ? target : `${target.slice(0, star)}${capture}${target.slice(star + 1)}`;
+}
 
 const TS_CONFIGS = ["tsconfig.json", "jsconfig.json"];
 const VITE_CONFIGS = ["vite.config.ts", "vite.config.mts", "vite.config.js", "vite.config.mjs", "vite.config.cts", "vite.config.cjs"];
@@ -19,7 +26,7 @@ function inRepo(rel) {
 
 function joinRel(dir, target) {
   const joined = posix.normalize(posix.join(dir === "" ? "." : dir, target));
-  return joined === "." ? "" : joined.replace(/\/+$/, "");
+  return joined === "." ? "" : trimTrailingSlashes(joined);
 }
 
 async function exists(repoRoot, rel) {
@@ -221,7 +228,7 @@ export function parseViteAliases(source) {
 function viteEntries(aliases, dir) {
   const entries = [];
   for (const { find, target } of aliases) {
-    const key = find.replace(/\/+$/, "");
+    const key = trimTrailingSlashes(find);
     if (!key) continue;
     const base = dir;
     entries.push({ pattern: key, targets: [{ base, target }], source: "vite" });
@@ -317,7 +324,7 @@ export function createAliasResolver(repoRoot) {
       if (!best) continue;
       let local = false;
       for (const { base, target } of best.entry.targets) {
-        const rel = joinRel(base, target.replace("*", best.capture));
+        const rel = joinRel(base, substituteStar(target, best.capture));
         if (!inRepo(rel) || !rel) continue;
         candidates.push(rel);
         if (!/(^|\/)node_modules(\/|$)/.test(rel)) local = true;
