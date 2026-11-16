@@ -341,7 +341,7 @@ REPOLENS_AI_TIMEOUT_MS=120000  # 2 minutes
 
 **Fix:**
 
-- Use `CHAPIBUNNY/repolens@v1.16.5` (or a later tag) with `command: comment`. Tag `v1.15.1` does not contain that mode
+- Use `CHAPIBUNNY/repolens@v1.17.0` (or a later tag) with `command: comment`. Tag `v1.15.1` does not contain that mode
 - Set `fetch-depth: 0`
 - Set `permissions: contents: read` and `pull-requests: write`
 - For a fork, open the job summary. RepoLens writes the diff there and exits 0
@@ -439,7 +439,7 @@ The directory has no `.git`. RepoLens still scans files. It does not print `git 
 
 ### `Code health: no source files analyzed`
 
-Code health scores JavaScript, TypeScript, Python, and Go. Other languages are scanned for documentation but do not get a health score. Python tests (`test_*.py`, `*_test.py`, `tests/`) and Go tests (`*_test.go`) are left out of the score.
+Code health scores JavaScript, TypeScript, Python, Go, Java, and C#. Other languages (Kotlin, Scala, Rust, Swift, …) are scanned for documentation but do not get a health score. Python tests (`test_*.py`, `*_test.py`, `tests/`), Go tests (`*_test.go`), Java tests (`src/test`, `*Test.java`, `*IT.java`), and C# test projects (`*.Tests`, `*.UnitTests`, `*.Specs`, `*Tests.cs`) are left out of the score.
 
 ### `Missing publisher credentials (--strict)`
 

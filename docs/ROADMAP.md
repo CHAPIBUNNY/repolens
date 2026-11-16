@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.16.5  
+**Current Version:** 1.17.0  
 **npm Package:** `@chappibunny/repolens`  
-**Last Updated:** October 2026
+**Last Updated:** November 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.16.5)
+## What's Shipped (v0.1.0 → v1.17.0)
 
 Everything below is live, tested, and available on npm.
 
@@ -165,6 +165,13 @@ Everything below is live, tested, and available on npm.
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
 
+## v1.17.0 — Java and C#
+
+- ✅ Java import graph from type names: single-type, on-demand, static, and nested-type imports, same-package types, and qualified names; Maven/Gradle modules and source roots decide between duplicate types; imports used only in Javadoc are not edges
+- ✅ C# import graph: `using` directives resolved in the enclosing namespace, `global using` and `<Using>` items, aliases, attributes, and `.csproj` `<ProjectReference>` visibility
+- ✅ Java and C# cycles between packages / namespaces (parent/child Low, through a parent Medium, three or more unrelated High), hubs, orphans, external libraries by Maven groupId or NuGet package, and the PR architecture comment
+- ✅ Code health, `repolens badge`, and the architecture health score for `.java` and `.cs`; JUnit, TestNG, xUnit, NUnit, and MSTest count as test frameworks
+
 ## v1.16.5 — Python accuracy
 
 - ✅ Python imports inside a function or method are deferred (not load-time edges); imports under `if TYPE_CHECKING:` are type-only and listed like TypeScript type-only cycles
@@ -179,7 +186,7 @@ Everything below is live, tested, and available on npm.
 ## v1.16.3 — Gap-test accuracy fixes
 
 - ✅ Declared workspace packages (npm/yarn `workspaces`, `pnpm-workspace.yaml`, `lerna.json`) are internal graph edges, not external packages
-- ✅ Graph and code health say when a language (C#, Java/Kotlin, …) is not supported, show partial coverage for mixed repositories, and `repolens badge` no longer scores incidental files
+- ✅ Graph and code health say when a language (C#, Java/Kotlin, …; Java and C# analyzed since 1.17.0) is not supported, show partial coverage for mixed repositories, and `repolens badge` no longer scores incidental files
 - ✅ GraphQL detection from imports and a string-safe comment stripper; test-heavy modules labelled; empty API Surface pages skipped
 
 ## v1.16.1 — Scan noise and cycle priority
@@ -265,7 +272,7 @@ The [gallery](https://chapibunny.github.io/repolens/) is a static flat Material 
 
 Planned in this order:
 
-1. [ ] Java and C# language support — analyzers for Java (Maven/Gradle modules, package/import graph, Spring conventions) and C# (`.sln`/`.csproj` projects, namespace/`using` graph), giving the same module map, dependency graph, cycles, hubs, patterns, and PR comment as JS/TS/Python/Go
+1. [x] Java and C# language support — analyzers for Java (Maven/Gradle modules, package/import graph, Spring conventions) and C# (`.sln`/`.csproj` projects, namespace/`using` graph), giving the same module map, dependency graph, cycles, hubs, patterns, and PR comment as JS/TS/Python/Go. Shipped in 1.17.0: dependency graph, package / namespace cycles, hubs, orphans, code health, badge, and PR comment. Not in 1.17.0: Spring and ASP.NET pattern detection, and a module map split by Maven/Gradle module or `.csproj` (modules still follow folders); see [KNOWN_ISSUES.md](KNOWN_ISSUES.md)
 2. [ ] Grounded AI explanations and Q&A — builds on the existing optional AI layer (`REPOLENS_AI_ENABLED`): plain-English "why it matters + suggested fix" under the PR architecture-diff comment, `repolens ask "<question>"` CLI and an MCP `ask` tool answering from RepoLens's own graph with file citations, and VS Code hover explanations per module. Off by default, bring-your-own key, every claim backed by a real graph edge. This sits on top of the map RepoLens already pushes out unasked (every module, cycle and hub, regenerated on each PR), because a chat answer only covers what someone thought to ask. A new contributor does not know what to ask, so the full map is the baseline and Q&A is for follow-up
 3. [ ] Slack notifications
 4. [ ] Custom webhook support

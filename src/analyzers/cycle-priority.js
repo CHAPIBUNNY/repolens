@@ -23,6 +23,10 @@
 // 3. Large multi-module cycle. The cycle touches 3 or more parent directories.
 //    Priority: High refactor.
 //
+// 3b. Java packages and C# namespaces (dependency-graph.js classifyPackageCycle): a
+//    parent/child loop is Low, three or more otherwise unrelated packages High, two
+//    sibling packages Medium. Classes of one package referring to each other are not cycles.
+//
 // 4. Anything else (a short accidental cycle, one import each way, no real call
 //    traffic) is Medium: review, not a blanket high-priority refactor.
 //
@@ -114,6 +118,23 @@ export function deferredReport(path) {
   return report(path, "low", "deferred", "deferred imports; verify");
 }
 
+const MUTUAL_RECURSION_LABEL = "mutual recursion, probably intentional; verify";
+
+/**
+ * Wording for low-priority runtime cycles: mutual recursion (JS/TS), parent/child
+ * packages or namespaces (Java/C#), or a generic "probably intentional; verify" when mixed.
+ */
+export function lowCycleLabel(reports) {
+  const labels = [...new Set((reports || []).filter((r) => r.priority === "low").map((r) => r.label))];
+  if (labels.length === 0) return null;
+  if (labels.length === 1) return labels[0];
+  return "probably intentional; verify";
+}
+
+function lowText(stats) {
+  return stats?.lowCycleLabel || MUTUAL_RECURSION_LABEL;
+}
+
 export function priorityCounts(reports) {
   const counts = { high: 0, medium: 0, low: 0 };
   for (const item of reports || []) {
@@ -142,7 +163,7 @@ export function cycleHealthPenalty(stats) {
 export function cycleStatusCell(stats) {
   if (!stats || stats.cycles === 0) return { mark: "✅", advice: "Clean module boundaries" };
   if (hasCyclePriorities(stats) && (stats.highCycles || 0) === 0 && (stats.lowCycles || 0) > 0 && !(stats.mediumCycles > 0)) {
-    return { mark: "🟡", advice: "mutual recursion, probably intentional; verify" };
+    return { mark: "🟡", advice: lowText(stats) };
   }
   if (hasCyclePriorities(stats) && (stats.highCycles || 0) === 0) {
     return { mark: "🟡", advice: "Small cycle; review" };
@@ -162,7 +183,7 @@ export function cycleConcern(stats) {
     return `**Circular dependencies detected** — ${high} large multi-module ${highNoun}. Priority: High refactor.`;
   }
   if ((stats.lowCycles || 0) > 0 && !(stats.mediumCycles > 0)) {
-    return `**Circular dependencies detected** — ${stats.cycles} ${noun}. mutual recursion, probably intentional; verify. Priority: Low.`;
+    return `**Circular dependencies detected** — ${stats.cycles} ${noun}. ${lowText(stats)}. Priority: Low.`;
   }
   return `**Circular dependencies detected** — ${stats.cycles} ${noun}. Priority: Medium.`;
 }
@@ -176,7 +197,7 @@ export function cycleInsight(stats) {
     return `🟡 **Circular dependencies** — ${stats.cycles} detected. Small cycle; review. Priority: Medium.`;
   }
   if ((stats.highCycles || 0) === 0) {
-    return `🟡 **Circular dependencies** — ${stats.cycles} detected. mutual recursion, probably intentional; verify. Priority: Low.`;
+    return `🟡 **Circular dependencies** — ${stats.cycles} detected. ${lowText(stats)}. Priority: Low.`;
   }
   return `🔴 **Architectural concern** — ${stats.highCycles} large multi-module circular dependenc${stats.highCycles === 1 ? "y" : "ies"} detected. Priority: High refactor.`;
 }

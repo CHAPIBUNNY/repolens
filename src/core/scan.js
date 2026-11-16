@@ -251,6 +251,56 @@ function detectLanguagesFromFiles(files) {
   return languages;
 }
 
+// Maven, Gradle, and .NET project files: build tool and test framework. Without this a
+// Java or C# repository with JUnit or xUnit tests read as "no test framework".
+const JVM_DOTNET_BUILD_GLOBS = [
+  "pom.xml", "*/pom.xml", "*/*/pom.xml",
+  "build.gradle", "build.gradle.kts", "*/build.gradle", "*/build.gradle.kts", "*/*/build.gradle", "*/*/build.gradle.kts",
+  "gradle/libs.versions.toml",
+  "**/*.csproj", "**/Directory.Packages.props", "**/Directory.Build.props",
+];
+
+const JVM_DOTNET_TEST_FRAMEWORKS = [
+  [/\bjunit-jupiter|org\.junit\.jupiter|junit-bom/i, "JUnit 5"],
+  [/<artifactId>\s*junit\s*<\/artifactId>|["']junit:junit|\bjunit\s*=|libs\.junit\b/i, "JUnit"],
+  [/\btestng\b/i, "TestNG"],
+  [/\bspock-core\b/i, "Spock"],
+  [/Include="xunit(\.v3)?(\.core)?"|Include="xunit"/i, "xUnit"],
+  [/Include="NUnit"/i, "NUnit"],
+  [/Include="MSTest(\.TestFramework)?"/i, "MSTest"],
+];
+
+export async function detectJvmDotnetTooling(repoRoot, metadata) {
+  let buildFiles = [];
+  try {
+    buildFiles = await fg(JVM_DOTNET_BUILD_GLOBS, {
+      cwd: repoRoot,
+      deep: 5,
+      onlyFiles: true,
+      followSymbolicLinks: false,
+      ignore: ["**/node_modules/**", "**/obj/**", "**/bin/**", "**/target/**", "**/build/**", "**/.git/**"],
+    });
+  } catch {
+    return;
+  }
+  buildFiles.sort();
+  for (const file of buildFiles.slice(0, 80)) {
+    const base = path.posix.basename(file);
+    if (base === "pom.xml") metadata.buildTools.push("Maven");
+    else if (base.startsWith("build.gradle") || base === "libs.versions.toml") metadata.buildTools.push("Gradle");
+    else if (base.endsWith(".csproj")) metadata.buildTools.push("MSBuild (.NET)");
+    let content = "";
+    try {
+      content = await fs.readFile(path.join(repoRoot, file), "utf8");
+    } catch {
+      continue;
+    }
+    for (const [pattern, name] of JVM_DOTNET_TEST_FRAMEWORKS) {
+      if (pattern.test(content)) metadata.testFrameworks.push(name);
+    }
+  }
+}
+
 async function extractRepoMetadata(repoRoot, files = []) {
   const metadata = {
     hasPackageJson: false,
@@ -407,6 +457,8 @@ async function extractRepoMetadata(repoRoot, files = []) {
   } catch {
     // No Cargo.toml
   }
+
+  await detectJvmDotnetTooling(repoRoot, metadata);
 
   // Merge languages detected from file extensions
   const fileLanguages = detectLanguagesFromFiles(files);

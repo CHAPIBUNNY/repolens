@@ -15,7 +15,7 @@
 RepoLens is an AI-assisted documentation intelligence system that generates architecture documentation for both technical and non-technical audiences. It analyzes codebases, infers business context and data flows, and creates audience-aware documentation using optional AI enhancement. It operates autonomously via GitHub Actions and can be triggered locally.
 
 **npm Package:** `@chappibunny/repolens`  
-**Version:** 1.16.5  
+**Version:** 1.17.0  
 **Status:** Production-ready, stable (v1.0+ with semver guarantees)  
 **License:** MIT  
 **Repository:** https://github.com/CHAPIBUNNY/repolens  
@@ -510,11 +510,11 @@ initTelemetry(); // Only activates if REPOLENS_TELEMETRY_ENABLED=true
 - Breaking change detection (export signature comparison)
 - Cross-repository architecture analysis
 - Slack notifications, custom webhooks
-- Java and C# language support
 - Grounded AI explanations and Q&A (`repolens ask`, MCP ask tool), layered on the always-published map. A chat answer only covers what was asked, so the full map stays the baseline
 - Interactive HTML output and ADR generation
 
 ### Shipped
+- ~~Java and C# language support~~ ✅ Shipped in v1.17.0 (dependency graph, package / namespace cycles, code health; not Spring/ASP.NET patterns or a module map per Maven module / `.csproj`)
 - ~~GitHub App webhook (`repolens app`)~~ ✅ Shipped in v1.16.0. Registration is still an owner step
 - ~~MCP registry name `io.github.CHAPIBUNNY/repolens`~~ ✅ Shipped in v1.14.1
 - ~~MCP server, GitHub Action, docs badge~~ ✅ Shipped in v1.14.0

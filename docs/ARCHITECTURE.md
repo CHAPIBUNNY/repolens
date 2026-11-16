@@ -24,8 +24,8 @@ from patterns    stack patterns      with insights       + Confluence pages
 - Extracts frameworks (Next.js, React, Vue, Express, etc.)
 - Detects build tools (Vite, Webpack, Turbo, esbuild)
 - Identifies test frameworks (Vitest, Jest, Playwright)
-- Scores code health for JavaScript/TypeScript, Python, and Go (regex complexity, not an AST)
-- Builds an import graph for JavaScript/TypeScript, Python, and Go. Comments, strings, and Node.js built-ins are skipped. Python `TYPE_CHECKING` blocks and function-local imports are not runtime edges; `from pkg import submodule` resolves to the submodule when it exists. TypeScript type-only imports are not runtime edges: `import type` / `export type` / all-`type` specifier lists, and imports the compiler removes because every name is an interface or type alias or is used only in type positions (`ts-elision.js`; off under `verbatimModuleSyntax`, `preserveValueImports`, `importsNotUsedAsValues: "preserve"`, `erasableSyntaxOnly`, and in decorated files under `emitDecoratorMetadata`; usage inference is also off when part of the tsconfig `extends` chain is not in the checkout). Cycles that close only through them are listed as type-only cycles and not counted. Go `*_test.go` files are not graph nodes. Go hub rows are packages, not files
+- Scores code health for JavaScript/TypeScript, Python, Go, Java, and C# (regex complexity, not an AST)
+- Builds an import graph for JavaScript/TypeScript, Python, Go, Java, and C#. Java and C# edges come from type names (`java-csharp.js`): Java imports, on-demand and static imports, same-package types, and Maven/Gradle modules; C# `using` directives resolved in the enclosing namespace, global usings, and `.csproj` project references. Their cycles are listed between packages / namespaces, not classes. Comments, strings, and Node.js built-ins are skipped. Python `TYPE_CHECKING` blocks and function-local imports are not runtime edges; `from pkg import submodule` resolves to the submodule when it exists. TypeScript type-only imports are not runtime edges: `import type` / `export type` / all-`type` specifier lists, and imports the compiler removes because every name is an interface or type alias or is used only in type positions (`ts-elision.js`; off under `verbatimModuleSyntax`, `preserveValueImports`, `importsNotUsedAsValues: "preserve"`, `erasableSyntaxOnly`, and in decorated files under `emitDecoratorMetadata`; usage inference is also off when part of the tsconfig `extends` chain is not in the checkout). Cycles that close only through them are listed as type-only cycles and not counted. Go `*_test.go` files are not graph nodes. Go hub rows are packages, not files
 - Infers module relationships and dependencies. Pattern names cite the path token or import that matched. Test files are not evidence, and neither are the generic folder names `src` and `lib`. A package with `main`, `module`, or `exports` is a library, so it gets no CLI pattern. "API route pattern" requires an `api`, `routes`, `router`, `endpoint`, `controller`, or `handler` directory
 
 **Render Phase:**
@@ -111,16 +111,17 @@ repolens/
 │   │   ├── flow-inference.js      # Data flow detection
 │   │   ├── graphql-analyzer.js    # GraphQL schema detection
 │   │   ├── typescript-analyzer.js # TypeScript type graph analysis
-│   │   ├── dependency-graph.js    # Import graph with cycle detection (JS/TS, Python, Go; Go hubs per package; hubs ignore tests and examples; runtime vs dev packages)
-│   │   ├── cycle-priority.js      # High refactor only for 3+ folder cycles; mutual recursion, type-only, and deferred cycles are low
+│   │   ├── dependency-graph.js    # Import graph with cycle detection (JS/TS, Python, Go, Java, C#; Java/C# cycles per package; Go hubs per package; hubs ignore tests and examples; runtime vs dev packages)
+│   │   ├── cycle-priority.js      # High refactor only for 3+ folder cycles; mutual recursion, type-only, deferred, and parent/child package cycles are low
 │   │   ├── import-parsers.js      # Comment-aware JS/TS, Python (TYPE_CHECKING and deferred), and Go import parsers
+│   │   ├── java-csharp.js         # Java and C# type-name resolution: imports, usings, packages, namespaces, Maven/Gradle modules, .csproj projects
 │   │   ├── ts-elision.js          # TypeScript import elision: value vs type positions, interface/type-alias exports, tsconfig switches
 │   │   ├── drift-detector.js      # Architecture drift detection
 │   │   ├── monorepo-detector.js   # npm, yarn, pnpm, and Lerna workspaces
 │   │   ├── codeowners.js          # CODEOWNERS ownership
 │   │   ├── jsdoc-analyzer.js      # JSDoc and TSDoc on the API surface
 │   │   ├── security-patterns.js   # Security hotspots (fixed-string innerHTML ignored; examples and build scripts are low severity)
-│   │   ├── complexity-analyzer.js # Complexity and code health (JS/TS, Python, Go)
+│   │   ├── complexity-analyzer.js # Complexity and code health (JS/TS, Python, Go, Java, C#)
 │   │   └── maturity.js            # Maturity from version, history, tests, CI, docs, and dependency health
 │   ├── ai/
 │   │   ├── provider.js          # Provider-agnostic AI generation

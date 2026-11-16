@@ -1,5 +1,7 @@
 // Dependency graph analysis with cycle detection.
-// JavaScript, TypeScript, Python, and Go imports become edges.
+// JavaScript, TypeScript, Python, Go, Java, and C# imports become edges.
+// Java and C# edges come from type names (java-csharp.js). Their cycles are reported
+// between packages / namespaces, not between classes of one package.
 // Comments and strings are ignored. Type-only TypeScript imports are not runtime edges:
 // `import type` / `export type` / all-`type` specifier lists (syntax), and imports the
 // TypeScript compiler removes because every binding is used only as a type or names
@@ -22,12 +24,27 @@ import {
   isGoStdlib,
   parseGoModule,
 } from "./import-parsers.js";
-import { isNonProductPath } from "../utils/path-roles.js";
+import { isNonProductPath, isTestPath } from "../utils/path-roles.js";
+import {
+  isJavaFile,
+  isCSharpFile,
+  isJavaMetadataFile,
+  isGeneratedCSharpFile,
+  parseJavaFile,
+  parseCSharpFile,
+  buildJavaIndex,
+  buildCSharpIndex,
+  resolveJavaFile,
+  resolveCSharpFile,
+  packageLabelOf,
+} from "./java-csharp.js";
 import { computeLanguageCoverage, coverageLine } from "./language-coverage.js";
 import { listWorkspacePackages } from "./workspace-packages.js";
 import { usageByName, declaredKinds, createElisionSettings, isTypeScriptFile } from "./ts-elision.js";
 import {
   classifyRuntimeCycles,
+  priorityLine,
+  lowCycleLabel,
   deferredReport,
   priorityCounts,
   typeOnlyReport,
@@ -245,7 +262,11 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
   const jsFiles = files.filter((file) => JS_EXTENSIONS.has(path.extname(file)));
   const pyFiles = files.filter((file) => PY_EXTENSIONS.has(path.extname(file)));
   const goFiles = files.filter((file) => GO_EXTENSIONS.has(path.extname(file)) && !isGoTestFile(file));
-  const codeFiles = [...jsFiles, ...pyFiles, ...goFiles];
+  // Sorted: the scan's file order varies between runs, and candidate ties and package
+  // cycle search must not.
+  const javaFiles = files.filter((file) => isJavaFile(file) && !isJavaMetadataFile(file)).sort();
+  const csFiles = files.filter((file) => isCSharpFile(file) && !isGeneratedCSharpFile(file)).sort();
+  const codeFiles = [...jsFiles, ...pyFiles, ...goFiles, ...javaFiles, ...csFiles];
 
   if (codeFiles.length === 0) return result;
 
@@ -526,6 +547,34 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     }
   }
 
+  // Java and C#: type-name resolution. Each file also records its package / namespace
+  // (plus source root or project, so `src/test` and `src/main` stay apart) for cycles.
+  const packageOfKey = new Map();
+  let docOnlyImports = 0;
+  async function addTypeLanguage(langFiles, lang) {
+    if (langFiles.length === 0) return;
+    const entries = [];
+    for (const file of langFiles) {
+      const content = await readFileSafe(path.join(repoRoot, file));
+      const facts = lang === "java" ? parseJavaFile(content) : parseCSharpFile(content);
+      entries.push({ file, facts });
+    }
+    const index = lang === "java" ? await buildJavaIndex(entries, repoRoot) : await buildCSharpIndex(entries, repoRoot);
+    const resolve = lang === "java" ? resolveJavaFile : resolveCSharpFile;
+    for (const { file, facts } of entries) {
+      const fromKey = normalizeFileKey(file);
+      const { targets, externals, docOnly } = resolve(file, facts, index, { isTestPath });
+      docOnlyImports += docOnly ? docOnly.length : 0;
+      for (const target of targets) addEdge(fromKey, normalizeFileKey(target));
+      for (const name of externals) addExternal(fromKey, name);
+      const label = packageLabelOf(file, facts, lang);
+      const scope = lang === "java" ? index.rootOf.get(file) : (index.projectOf.get(file) ?? "");
+      packageOfKey.set(fromKey, { id: `${lang}:${scope}:${label}`, label, scope });
+    }
+  }
+  await addTypeLanguage(javaFiles, "java");
+  await addTypeLanguage(csFiles, "csharp");
+
   // Build nodes and edges
   const importedByMap = new Map();
   for (const key of allFileKeys) {
@@ -553,18 +602,32 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
 
   result.externalDeps = [...externalSet].sort();
 
-  // Detect cycles using iterative DFS (Tarjan-lite / coloring)
-  result.cycles = detectCycles(adjacency);
+  // Detect cycles using iterative DFS (Tarjan-lite / coloring). Java and C# files are
+  // left out of the file-level search: classes of one package referring to each other is
+  // normal there. Their cycles are found between packages / namespaces below.
+  const fileAdjacency = new Map();
+  for (const [from, deps] of adjacency) {
+    if (packageOfKey.has(from)) continue;
+    fileAdjacency.set(from, new Set([...deps].filter((to) => !packageOfKey.has(to))));
+  }
+  result.cycles = detectCycles(fileAdjacency);
 
   const fileForKey = (key) => fileKeyToFile.get(key) || key;
   const runtimeEdgeList = [...edgeRecords.values()].filter((edge) => !edge.typeOnly && !edge.deferred);
   result.cycleReports = classifyRuntimeCycles(result.cycles, runtimeEdgeList, fileForKey);
 
+  const packageCycles = detectPackageCycles(adjacency, packageOfKey);
+  result.packageCycles = packageCycles.length;
+  for (const cycle of packageCycles) {
+    result.cycles.push(cycle.path);
+    result.cycleReports.push(classifyPackageCycle(cycle));
+  }
+
   // Non-runtime cycles: cycles of runtime + type-only + deferred edges that need
   // at least one soft edge. Type-only and deferred cycles are reported separately
   // and never as runtime cycles.
   const combinedAdj = new Map();
-  for (const [from, deps] of adjacency) combinedAdj.set(from, new Set(deps));
+  for (const [from, deps] of fileAdjacency) combinedAdj.set(from, new Set(deps));
   const softEdgeById = new Map();
   for (const edge of edgeRecords.values()) {
     if (!edge.typeOnly && !edge.deferred) continue;
@@ -637,9 +700,12 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     externalRuntime: externalRuntime.length,
     externalDev: externalDev.length,
     cycles: result.cycles.length,
+    packageCycles: result.packageCycles,
+    docOnlyImports,
     highCycles: priorities.high,
     mediumCycles: priorities.medium,
     lowCycles: priorities.low,
+    lowCycleLabel: lowCycleLabel(result.cycleReports),
     typeOnlyCycles: result.typeOnlyReports.length,
     typeOnlyEdges: result.typeOnlyEdges.length,
     inferredTypeOnlyEdges: result.typeOnlyEdges.filter((edge) => edge.reason === "inferred").length,
@@ -669,8 +735,8 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
  * A package declared in `devDependencies` is development tooling. One declared in
  * `dependencies`, `optionalDependencies`, or `peerDependencies` is runtime. An undeclared
  * package is runtime when a product file (not a test, example, or build script) imports it,
- * and development tooling when only tests or examples import it. Python and Go have no
- * package.json, so that import split is the whole decision.
+ * and development tooling when only tests or examples import it. Python, Go, Java, and C#
+ * have no package.json, so that import split is the whole decision.
  */
 async function splitExternalDeps(result, repoRoot) {
   const raw = await readFileSafe(path.join(repoRoot, "package.json"));
@@ -704,6 +770,92 @@ async function splitExternalDeps(result, repoRoot) {
 function isBuildScript(file) {
   const base = String(file || "").replace(/\\/g, "/").split("/").pop() || "";
   return /^build([-_.]|$)/i.test(base) || /\.config\.[cm]?[jt]s$/i.test(base);
+}
+
+/**
+ * Package-level (Java) and namespace-level (C#) cycles. A node is one package in one
+ * source root or project. Each cycle path is a list of package names; when two nodes
+ * share a name, the source root or project is added: `com.example (core/src/main/java)`.
+ * `links` count the class-level imports behind each step.
+ */
+export function detectPackageCycles(adjacency, packageOfKey) {
+  if (!packageOfKey || packageOfKey.size === 0) return [];
+  const pkgAdj = new Map();
+  const linkCount = new Map();
+  const labels = new Map();
+  const labelUse = new Map();
+  for (const info of packageOfKey.values()) {
+    if (labels.has(info.id)) continue;
+    labels.set(info.id, info);
+    labelUse.set(info.label, (labelUse.get(info.label) || 0) + 1);
+    pkgAdj.set(info.id, new Set());
+  }
+  for (const [from, deps] of adjacency) {
+    const a = packageOfKey.get(from);
+    if (!a) continue;
+    for (const to of deps) {
+      const b = packageOfKey.get(to);
+      if (!b || b.id === a.id) continue;
+      pkgAdj.get(a.id).add(b.id);
+      const id = `${a.id}->${b.id}`;
+      linkCount.set(id, (linkCount.get(id) || 0) + 1);
+    }
+  }
+  // A package name shared by a test source root and a product root (`src/test/java` and
+  // `src/main/java`) keeps the bare name for the single product node.
+  const productUse = new Map();
+  for (const info of labels.values()) {
+    if (!isNonProductPath(`${info.scope}/x`)) productUse.set(info.label, (productUse.get(info.label) || 0) + 1);
+  }
+  const display = (id) => {
+    const info = labels.get(id);
+    if (labelUse.get(info.label) <= 1 || !info.scope) return info.label;
+    if (productUse.get(info.label) === 1 && !isNonProductPath(`${info.scope}/x`)) return info.label;
+    return `${info.label} (${info.scope})`;
+  };
+  const sortedAdj = new Map();
+  for (const id of [...pkgAdj.keys()].sort()) sortedAdj.set(id, new Set([...pkgAdj.get(id)].sort()));
+  return detectCycles(sortedAdj).map((ids) => {
+    const links = [];
+    for (let i = 0; i + 1 < ids.length; i += 1) links.push(linkCount.get(`${ids[i]}->${ids[i + 1]}`) || 0);
+    return {
+      path: ids.map(display),
+      lang: ids[0].split(":")[0],
+      links,
+    };
+  });
+}
+
+/**
+ * Priority for a package / namespace cycle.
+ * - Parent/child: two packages, one inside the other (`com.example` ↔
+ *   `com.example.internal`, `Polly` ↔ `Polly.Retry`). API ↔ implementation packages and
+ *   .NET extension methods in the root namespace look like this. Priority: Low; verify.
+ * - Through a parent: three or more packages, one of which contains all the others
+ *   (`gson` → `gson.internal` → `gson.reflect` → `gson`). Priority: Medium; review.
+ * - Three or more packages otherwise: a large multi-package cycle. Priority: High refactor.
+ * - Two sibling packages: a small cycle. Priority: Medium; review.
+ */
+export function classifyPackageCycle(cycle) {
+  const nodes = cycle.path.length > 1 && cycle.path[0] === cycle.path[cycle.path.length - 1] ? cycle.path.slice(0, -1) : cycle.path;
+  const names = [...new Set(nodes.map((node) => String(node).replace(/ \(.*\)$/, "")))];
+  const unit = cycle.lang === "csharp" ? "namespace" : "package";
+  const base = { path: cycle.path, links: cycle.links };
+  const contains = (parent, child) => parent === child || child.startsWith(`${parent}.`);
+  const parent = names.find((candidate) => names.every((child) => contains(candidate, child)));
+  if (parent && names.length === 2) {
+    const label = `parent/child ${unit} cycle, common in ${cycle.lang === "csharp" ? "C#" : "Java"}; verify`;
+    return { ...base, priority: "low", kind: "package-parent-child", label, priorityLine: priorityLine("low", label) };
+  }
+  if (parent) {
+    const label = `cycle through parent ${unit} \`${parent}\`; review`;
+    return { ...base, priority: "medium", kind: "package-parent", label, priorityLine: priorityLine("medium", label) };
+  }
+  if (new Set(nodes).size >= 3) {
+    return { ...base, priority: "high", kind: "multi-package", label: `large multi-${unit} cycle`, priorityLine: priorityLine("high") };
+  }
+  const label = `small ${unit} cycle; review`;
+  return { ...base, priority: "medium", kind: "package", label, priorityLine: priorityLine("medium", label) };
 }
 
 /**
