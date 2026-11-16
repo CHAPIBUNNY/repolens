@@ -1,15 +1,17 @@
 // Which scanned source files the import graph and code health can read.
 // RepoLens detects and scans many languages, but it builds import graphs and scores code
-// health only for JavaScript/TypeScript, Python, and Go. A C# or Java repository must not
-// get "no circular dependencies" or "health 100/100" from one incidental docs script.
+// health only for JavaScript/TypeScript, Python, Go, Java, and C#. A Kotlin or Rust
+// repository must not get "no circular dependencies" or "health 100/100" from one
+// incidental docs script.
 
 import path from "node:path";
 import { LANGUAGE_PROFILES } from "../core/languages.js";
 import { isNonProductPath } from "../utils/path-roles.js";
 
-export const ANALYZED_LANGUAGES_TEXT = "JavaScript/TypeScript, Python, and Go";
+export const ANALYZED_LANGUAGES_TEXT = "JavaScript/TypeScript, Python, Go, Java, and C#";
+export const ANALYZED_LANGUAGES_OR_TEXT = "JavaScript/TypeScript, Python, Go, Java, or C#";
 
-const ANALYZED_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py", ".pyw", ".go"]);
+const ANALYZED_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py", ".pyw", ".go", ".java", ".cs"]);
 
 // A code-health badge is one number for the whole repository. Below this share of
 // product source files in analyzed languages, `repolens badge` refuses to print it.
@@ -26,8 +28,12 @@ const LABEL_BY_EXTENSION = new Map();
 LABEL_BY_EXTENSION.set(".vue", "Vue");
 LABEL_BY_EXTENSION.set(".svelte", "Svelte");
 const COMPANION_LABELS_LIST = ["Vue", "Svelte"];
+// Java is analyzed; the other JVM languages in the Java profile are not.
+LABEL_BY_EXTENSION.set(".kt", "Kotlin");
+LABEL_BY_EXTENSION.set(".kts", "Kotlin");
+LABEL_BY_EXTENSION.set(".scala", "Scala");
 for (const profile of LANGUAGE_PROFILES) {
-  const label = profile.id === "java" ? "Java/Kotlin" : profile.id === "cpp" ? "C/C++" : profile.label;
+  const label = profile.id === "cpp" ? "C/C++" : profile.label;
   for (const ext of profile.extensions) {
     if (!LABEL_BY_EXTENSION.has(ext)) LABEL_BY_EXTENSION.set(ext, label);
   }
@@ -35,6 +41,15 @@ for (const profile of LANGUAGE_PROFILES) {
 
 function isDeclarationFile(file) {
   return /\.d\.[cm]?ts$/.test(file);
+}
+
+// Build scripts and metadata, not source: Gradle Kotlin DSL, Java package/module
+// descriptors, and generated C# (obj/, *.g.cs, *.Designer.cs).
+function isBuildOrMetadataFile(file) {
+  return /\.gradle\.kts$/.test(file)
+    || /(^|\/)(package|module)-info\.java$/.test(file)
+    || /(^|\/)(obj|bin)\/.*\.cs$/.test(file)
+    || /\.(g|g\.i|designer|generated)\.cs$/i.test(file);
 }
 
 export function isVendoredPath(file) {
@@ -67,7 +82,7 @@ export function computeLanguageCoverage(files) {
 
   for (const raw of files || []) {
     const file = String(raw).replace(/\\/g, "/");
-    if (isDeclarationFile(file)) continue;
+    if (isDeclarationFile(file) || isBuildOrMetadataFile(file)) continue;
     const ext = path.posix.extname(file).toLowerCase();
     const analyzed = ANALYZED_EXTENSIONS.has(ext);
     const label = analyzed ? null : LABEL_BY_EXTENSION.get(ext);
@@ -151,7 +166,7 @@ export function coverageScope(coverage) {
   return ` (analyzed files only: ${coverage.analyzedBase} of ${coverage.totalBase} ${coverage.productBased ? "product " : ""}source files; ${unanalyzedLanguageNames(coverage)} not analyzed)`;
 }
 
-/** "C# (780 files)" / "Java/Kotlin (247 files) and C (3 files)". */
+/** "Kotlin (780 files)" / "Rust (247 files) and C/C++ (3 files)". */
 export function describeUnanalyzedLanguages(coverage, limit = 3) {
   const list = (coverage?.unanalyzedLanguages || []).slice(0, limit)
     .map(({ label, files }) => `${label} (${files} ${coverage?.productBased ? "product " : ""}file${files === 1 ? "" : "s"})`);
@@ -160,7 +175,7 @@ export function describeUnanalyzedLanguages(coverage, limit = 3) {
   return `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
 }
 
-/** Short language names only: "C#", "Java/Kotlin and Scala". */
+/** Short language names only: "Kotlin", "Kotlin and Scala". */
 export function unanalyzedLanguageNames(coverage, limit = 3) {
   const list = (coverage?.unanalyzedLanguages || []).slice(0, limit).map(({ label }) => label);
   if (list.length <= 1) return list[0] || "";

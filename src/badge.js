@@ -2,20 +2,20 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { analyzeComplexity, computeCodeHealth } from "./analyzers/complexity-analyzer.js";
 import { analyzeDependencyGraph } from "./analyzers/dependency-graph.js";
-import { badgeCoverageOk, coverageLine } from "./analyzers/language-coverage.js";
+import { ANALYZED_LANGUAGES_OR_TEXT, ANALYZED_LANGUAGES_TEXT, badgeCoverageOk, coverageLine } from "./analyzers/language-coverage.js";
 import { analyzeJSDoc } from "./analyzers/jsdoc-analyzer.js";
 import { analyzeSecurityPatterns } from "./analyzers/security-patterns.js";
 import { GALLERY_URL, REPO_URL } from "./delivery/comment-constants.js";
 
-const SOURCE_EXT = new Set([".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".pyw", ".go"]);
+const SOURCE_EXT = new Set([".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".pyw", ".go", ".java", ".cs"]);
 const OTHER_SOURCE_EXT = new Set([
-  ".rs", ".java", ".kt", ".kts", ".scala", ".rb", ".php", ".cs", ".swift",
+  ".rs", ".kt", ".kts", ".scala", ".rb", ".php", ".swift",
   ".c", ".cc", ".cpp", ".h", ".hpp", ".vue", ".svelte",
 ]);
 const MAX_SOURCE_FILES = 20000;
 const SKIP_DIR = new Set([
   "node_modules", ".git", "dist", "build", "vendor", "target", "coverage",
-  ".repolens", "__pycache__", ".cache",
+  ".repolens", "__pycache__", ".cache", "obj",
   "__snapshots__", "samples", "sample", "examples", "example",
   "fixtures", "fixture", "__fixtures__", "e2e-fixtures", "e2e-fixture", "generated",
 ]);
@@ -261,7 +261,7 @@ export async function runBadgeCli({
       console.error(`Not scored: ${coverageLine(coverage, "code health")}`);
     } else {
       const pct = Math.round((coverage.share || 0) * 100);
-      console.error(`Not scored: only ${coverage.analyzedBase} of ${coverage.totalBase} product source files (${pct}%) are ${"JavaScript/TypeScript, Python, or Go"}; ${coverageLine(coverage, "code health")}`);
+      console.error(`Not scored: only ${coverage.analyzedBase} of ${coverage.totalBase} product source files (${pct}%) are ${ANALYZED_LANGUAGES_OR_TEXT}; ${coverageLine(coverage, "code health")}`);
     }
     console.error("No badge was printed: one score would not stand for this repository.");
     return 2;
@@ -271,7 +271,7 @@ export async function runBadgeCli({
   }
   if (!total) {
     console.error("No source files analyzed.");
-    console.error("Code health covers JavaScript, TypeScript, Python, and Go. Empty documentation was not scored.");
+    console.error(`Code health covers ${ANALYZED_LANGUAGES_TEXT}. Empty documentation was not scored.`);
     return 2;
   }
   const endpoint = shieldsEndpoint({ score: scored.health.stats.avgScore, label });

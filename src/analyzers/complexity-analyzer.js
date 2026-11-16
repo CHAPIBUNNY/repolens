@@ -6,6 +6,8 @@ import fs from "node:fs/promises";
 import { computeLanguageCoverage, coverageLine, filesForAnalysis, unanalyzedLanguageNames } from "./language-coverage.js";
 import path from "node:path";
 import { info } from "../utils/logger.js";
+import { isTestPath } from "../utils/path-roles.js";
+import { stripCLike, isJavaMetadataFile, isGeneratedCSharpFile } from "./java-csharp.js";
 
 const LANGUAGE_BY_EXTENSION = {
   ".js": "javascript",
@@ -17,6 +19,8 @@ const LANGUAGE_BY_EXTENSION = {
   ".py": "python",
   ".pyw": "python",
   ".go": "go",
+  ".java": "java",
+  ".cs": "csharp",
 };
 
 // Skip test files, build outputs, etc.
@@ -37,7 +41,13 @@ const SKIP_PATTERNS = [
 ];
 
 function shouldSkip(filePath) {
-  return SKIP_PATTERNS.some(p => p.test(filePath));
+  if (SKIP_PATTERNS.some(p => p.test(filePath))) return true;
+  // Java and C#: test source sets and projects (`src/test/java`, `Foo.Tests/`, `BarTest.java`),
+  // package/module descriptors, and generated C#.
+  const language = languageForFile(filePath);
+  if (language === "java") return isTestPath(filePath) || isJavaMetadataFile(filePath);
+  if (language === "csharp") return isTestPath(filePath) || isGeneratedCSharpFile(filePath);
+  return false;
 }
 
 /**
@@ -147,6 +157,98 @@ export function computeGoComplexity(source) {
   return complexity;
 }
 
+/**
+ * Cyclomatic complexity for Java and C#. Regex approximation: if, for, foreach, while,
+ * case, catch, the conditional operator, &&, ||, and ?? (C#). Comments, strings, and C#
+ * preprocessor lines are ignored. Generic wildcards (`List<?>`, `? extends T`) and
+ * nullable types (`int?`, `a?.b`) are not conditionals.
+ */
+export function computeCLikeComplexity(source, lang = "java") {
+  const stripped = stripCLike(source, lang);
+  let complexity = 1;
+  const patterns = [
+    /\bif\s*\(/g,
+    /\bfor\s*\(/g,
+    /\bforeach\s*\(/g,
+    /\bwhile\s*\(/g,
+    /\bcase\b/g,
+    /\bcatch\b/g,
+    /&&/g,
+    /\|\|/g,
+    // Conditional operator: whitespace before `?`, not `?.`, `??`, or `?[`, and not a
+    // generic wildcard (`<?`, `, ?`).
+    /(?<=[\w)\]])\s+\?(?![?.[>,)])\s/g,
+  ];
+  if (lang === "csharp") patterns.push(/\?\?/g);
+  for (const pattern of patterns) {
+    const matches = stripped.match(pattern);
+    if (matches) complexity += matches.length;
+  }
+  return complexity;
+}
+
+// Names that look like `name(` but are statements or operators, not methods.
+const CLIKE_NOT_METHODS = new Set([
+  "if", "for", "while", "switch", "catch", "return", "new", "throw", "else", "try", "do", "case",
+  "this", "super", "base", "default",
+]);
+const NOT_METHODS_BY_LANGUAGE = {
+  java: new Set(["synchronized", "assert"]),
+  csharp: new Set(["foreach", "using", "lock", "fixed", "checked", "unchecked", "nameof", "typeof", "sizeof", "await", "yield", "when"]),
+};
+
+// A word before the name that makes the line a statement (`return foo(`, `new Foo(`), not
+// a declaration. Modifiers such as `default` (Java interface methods) and `synchronized`
+// are declarations.
+const CLIKE_STATEMENT_WORDS = new Set([
+  "return", "new", "throw", "else", "await", "yield", "case", "in", "is", "as", "when", "goto",
+  "if", "while", "for", "foreach", "using", "lock",
+]);
+
+/**
+ * Java and C# methods and constructors: a declaration (`[modifiers] [type] Name(...)`)
+ * followed by a body `{` or an expression body `=>`, not a call or a control statement.
+ */
+export function extractCLikeFunctions(source, lang = "java") {
+  const stripped = stripCLike(source, lang);
+  const re = /^[ \t]*((?:[@\w<>[\],.?]+[ \t]+)+)([A-Za-z_$][\w$]*)[ \t]*(?:<[^()\n]*>)?[ \t]*\(/gm;
+  const found = [];
+  let match;
+  let lineCursor = 0;
+  let lineNumber = 1;
+  while ((match = re.exec(stripped)) !== null) {
+    const name = match[2];
+    let prefix = match[1];
+    for (let k = 0; k < 5 && /<[^<>]*>/.test(prefix); k += 1) prefix = prefix.replace(/<[^<>]*>/g, "");
+    const prefixTokens = prefix.trim().split(/\s+/).filter(Boolean);
+    if (CLIKE_NOT_METHODS.has(name) || NOT_METHODS_BY_LANGUAGE[lang]?.has(name)) continue;
+    if (prefixTokens.some((t) => CLIKE_STATEMENT_WORDS.has(t))) continue;
+    if (prefixTokens.some((t) => /^(class|interface|enum|record|struct|namespace|delegate|event)$/.test(t))) continue;
+    // Find the matching `)` and look at what follows.
+    let depth = 0;
+    let i = match.index + match[0].length - 1;
+    for (; i < stripped.length; i += 1) {
+      const ch = stripped[i];
+      if (ch === "(") depth += 1;
+      else if (ch === ")") {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    const rest = stripped.slice(i + 1, i + 400);
+    const tail = rest.match(/^\s*(?:throws\s+[\w.,\s<>]+?|where\s+[^{;]+?|:\s*(?:base|this)\s*\([^)]*\))?\s*(\{|=>)/);
+    if (!tail) continue;
+    // Line number, counted incrementally (a slice per method is quadratic on big files).
+    for (; lineCursor < match.index; lineCursor += 1) if (stripped.charCodeAt(lineCursor) === 10) lineNumber += 1;
+    found.push({ name, line: lineNumber, index: match.index });
+  }
+  found.sort((a, b) => a.index - b.index);
+  return found.map((fn, idx) => {
+    const end = idx + 1 < found.length ? found[idx + 1].index : source.length;
+    return { name: fn.name, line: fn.line, complexity: computeCLikeComplexity(source.slice(fn.index, end), lang) };
+  });
+}
+
 function languageForFile(file) {
   return LANGUAGE_BY_EXTENSION[path.extname(file).toLowerCase()] || null;
 }
@@ -154,6 +256,7 @@ function languageForFile(file) {
 function complexityForLanguage(language, source) {
   if (language === "python") return computePythonComplexity(source);
   if (language === "go") return computeGoComplexity(source);
+  if (language === "java" || language === "csharp") return computeCLikeComplexity(source, language);
   return computeComplexity(source);
 }
 
@@ -242,11 +345,12 @@ export function extractGoFunctions(source) {
 function functionsForLanguage(language, source) {
   if (language === "python") return extractPythonFunctions(source);
   if (language === "go") return extractGoFunctions(source);
+  if (language === "java" || language === "csharp") return extractCLikeFunctions(source, language);
   return extractFunctions(source);
 }
 
 /**
- * Analyze complexity for JavaScript/TypeScript, Python, and Go files.
+ * Analyze complexity for JavaScript/TypeScript, Python, Go, Java, and C# files.
  * @param {string[]} files - File paths relative to repoRoot
  * @param {string} repoRoot - Absolute path to repo root
  * @returns {Promise<Object>} Complexity analysis results

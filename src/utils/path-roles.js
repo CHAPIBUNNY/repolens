@@ -5,15 +5,25 @@
 const TEST_DIRECTORIES = new Set([
   "test", "tests", "spec", "specs", "__tests__", "__mocks__", "fixtures", "fixture", "__fixtures__",
   "testdata", "e2e", "e2e-fixture", "e2e-fixtures", "cypress", "__snapshots__",
+  // Gradle / Android source sets for tests.
+  "testfixtures", "integrationtest", "androidtest", "testintegration",
 ]);
+
+// .NET test projects are directories named like `Polly.Core.Tests` or `App.UnitTests`.
+const DOTNET_TEST_PROJECT = /\.(tests?|unittests?|integrationtests?|functionaltests?|specs?|testing\.tests)$/;
+// Java/Kotlin/C# test classes: `GsonTest.java`, `ParserTests.cs`, `FooIT.java`, `BarTestCase.java`.
+const JVM_DOTNET_TEST_FILE = /(?:[A-Za-z0-9](?:Tests?|TestCase)|[a-z0-9]IT)\.(java|kt|cs)$/;
 
 // Directories holding tooling, samples, and docs. Code in here describes a build script
 // or an example, not how the product works.
 export const TOOLING_DIRECTORIES = new Set([
   "doc", "docs", "doc-gen", "docgen", "scripts", "script", "tools", "tooling",
   "example", "examples", "demo", "demos", "sample", "samples",
-  "benchmark", "benchmarks", "bench", "fixtures", "tasks",
+  "benchmark", "benchmarks", "bench", "fixtures", "tasks", "jmh",
 ]);
+
+// .NET benchmark projects: `Polly.Core.Benchmarks`.
+const DOTNET_BENCHMARK_PROJECT = /\.(benchmarks?|perf|performance)$/;
 
 function segments(filePath) {
   return String(filePath || "").replace(/\\/g, "/").toLowerCase().split("/");
@@ -30,7 +40,9 @@ function directorySegments(filePath) {
 /** True for files in a test directory or named like a test (`a.test.js`, `a_test.go`, `test_a.py`). */
 export function isTestPath(filePath) {
   const parts = segments(filePath);
-  if (directorySegments(filePath).some((segment) => TEST_DIRECTORIES.has(segment))) return true;
+  if (directorySegments(filePath).some((segment) => TEST_DIRECTORIES.has(segment) || DOTNET_TEST_PROJECT.test(segment))) return true;
+  const rawBase = String(filePath || "").replace(/\\/g, "/").split("/").pop() || "";
+  if (JVM_DOTNET_TEST_FILE.test(rawBase)) return true;
   const base = parts[parts.length - 1] || "";
   if (base.endsWith(".snap") || base.includes(".snap.")) return true;
   if (/^(test_|spec_)/.test(base)) return true;
@@ -67,7 +79,7 @@ export function isDevArtifactPath(filePath) {
 
 /** True when a directory above the file is a tooling, example, or docs directory. */
 export function isToolingPath(filePath) {
-  return directorySegments(filePath).some((segment) => TOOLING_DIRECTORIES.has(segment));
+  return directorySegments(filePath).some((segment) => TOOLING_DIRECTORIES.has(segment) || DOTNET_BENCHMARK_PROJECT.test(segment));
 }
 
 /**

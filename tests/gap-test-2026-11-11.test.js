@@ -104,42 +104,34 @@ async function writeCSharpRepo() {
   return files;
 }
 
-describe("2. a C# repository is not scored from one docs script (App-vNext/Polly)", () => {
-  it("marks coverage unsupported and builds no graph", async () => {
+async function writeKotlinRepo() {
+  const files = [];
+  for (let i = 0; i < 40; i++) files.push(await write(`app/src/main/kotlin/File${i}.kt`, `package app\nclass C${i}\n`));
+  files.push(await write("docs/template/public/main.js", "export default { start() {} };\n"));
+  await write("settings.gradle.kts", "");
+  return files;
+}
+
+describe("2. a C# repository is scored from its C#, not from one docs script (App-vNext/Polly)", () => {
+  it("builds the graph from the C# files (1.17.0: C# is analyzed)", async () => {
     const files = await writeCSharpRepo();
     const coverage = computeLanguageCoverage(files);
-    expect(coverage.status).toBe("unsupported");
-    expect(coverage.unanalyzedLanguages[0]).toEqual({ label: "C#", files: 40 });
+    expect(coverage.status).toBe("full");
     const graph = await analyzeDependencyGraph(files, tempDir);
-    expect(graph.nodes).toEqual([]);
-    expect(graph.stats).toBeNull();
+    expect(graph.nodes.filter((n) => n.file.endsWith(".cs")).length).toBe(40);
     const md = renderDependencyGraph(graph);
-    expect(md).toContain("C# (40 product files) is not supported for import analysis yet");
-    expect(md).not.toContain("no circular dependencies");
+    expect(md).not.toContain("not supported for import analysis yet");
     expect(md).not.toContain("Ensure your `scan.include`");
   });
 
-  it("does not report health 100/100 and the badge refuses to score", async () => {
+  it("scores the C# files, not just the docs script", async () => {
     const files = await writeCSharpRepo();
     const complexity = await analyzeComplexity(files, tempDir);
-    expect(complexity.files).toEqual([]);
+    expect(complexity.files.filter((f) => f.file.endsWith(".cs")).length).toBe(40);
     const graph = await analyzeDependencyGraph(files, tempDir);
     const health = computeCodeHealth(complexity, graph, null, null);
-    expect(health.stats.totalFiles).toBe(0);
-    expect(health.summary).toMatch(/^Not scored: C# \(40 product files\)/);
-    const md = renderCodeHealth(health);
-    expect(md).not.toContain("100/100");
-    expect(md).toContain("not supported for code health yet");
-
-    const errors = [];
-    const original = console.error;
-    console.error = (...args) => errors.push(args.join(" "));
-    try {
-      expect(await runBadgeCli({ target: tempDir, format: "json" })).toBe(2);
-    } finally {
-      console.error = original;
-    }
-    expect(errors.join("\n")).toMatch(/C# \(40 product files\) is not supported for code health yet/);
+    expect(health.stats.totalFiles).toBeGreaterThanOrEqual(40);
+    expect(health.summary).not.toMatch(/^Not scored/);
   });
 
   it("lists the primary language first", async () => {
@@ -154,25 +146,65 @@ describe("2. a C# repository is not scored from one docs script (App-vNext/Polly
   });
 });
 
-describe("3. Java is explained as a language limit, not a config problem (google/gson)", () => {
-  it("names Java and does not blame scan.include", async () => {
-    const files = [];
-    for (let i = 0; i < 12; i++) files.push(await write(`gson/src/main/java/com/google/gson/T${i}.java`, `package com.google.gson; class T${i} {}\n`));
+describe("2b. a Kotlin repository is still not scored from one docs script", () => {
+  it("marks coverage unsupported and builds no graph", async () => {
+    const files = await writeKotlinRepo();
+    const coverage = computeLanguageCoverage(files);
+    expect(coverage.status).toBe("unsupported");
+    expect(coverage.unanalyzedLanguages[0]).toEqual({ label: "Kotlin", files: 40 });
     const graph = await analyzeDependencyGraph(files, tempDir);
+    expect(graph.nodes).toEqual([]);
+    expect(graph.stats).toBeNull();
     const md = renderDependencyGraph(graph);
-    expect(md).toContain("Java/Kotlin (12 product files) is not supported for import analysis yet");
+    expect(md).toContain("Kotlin (40 product files) is not supported for import analysis yet");
     expect(md).toContain("not a problem with your `scan.include` patterns");
-    const health = computeCodeHealth(await analyzeComplexity(files, tempDir), graph, null, null);
-    expect(renderCodeHealth(health)).toContain("Java/Kotlin (12 product files) is not supported for code health yet");
+    expect(md).not.toContain("no circular dependencies");
   });
 
-  it("demo help says the graph and health cover JavaScript/TypeScript, Python, and Go only", () => {
+  it("does not report health 100/100 and the badge refuses to score", async () => {
+    const files = await writeKotlinRepo();
+    const complexity = await analyzeComplexity(files, tempDir);
+    expect(complexity.files).toEqual([]);
+    const graph = await analyzeDependencyGraph(files, tempDir);
+    const health = computeCodeHealth(complexity, graph, null, null);
+    expect(health.stats.totalFiles).toBe(0);
+    expect(health.summary).toMatch(/^Not scored: Kotlin \(40 product files\)/);
+    const md = renderCodeHealth(health);
+    expect(md).not.toContain("100/100");
+    expect(md).toContain("not supported for code health yet");
+
+    const errors = [];
+    const original = console.error;
+    console.error = (...args) => errors.push(args.join(" "));
+    try {
+      expect(await runBadgeCli({ target: tempDir, format: "json" })).toBe(2);
+    } finally {
+      console.error = original;
+    }
+    expect(errors.join("\n")).toMatch(/Kotlin \(40 product files\) is not supported for code health yet/);
+  });
+});
+
+describe("3. Java is analyzed (google/gson)", () => {
+  it("builds the graph and health from Java files", async () => {
+    const files = [];
+    for (let i = 0; i < 12; i++) files.push(await write(`gson/src/main/java/com/google/gson/T${i}.java`, `package com.google.gson; class T${i} { ${i > 0 ? `T${i - 1} prev;` : ""} }\n`));
+    const graph = await analyzeDependencyGraph(files, tempDir);
+    expect(graph.nodes.length).toBe(12);
+    expect(graph.stats.totalEdges).toBe(11);
+    const md = renderDependencyGraph(graph);
+    expect(md).not.toContain("not supported");
+    const health = computeCodeHealth(await analyzeComplexity(files, tempDir), graph, null, null);
+    expect(health.stats.totalFiles).toBe(12);
+  });
+
+  it("demo help says the graph and health cover JavaScript/TypeScript, Python, Go, Java, and C#", () => {
     const out = [];
     const original = console.log;
     console.log = (...args) => out.push(args.join(" "));
     try { printHelp("demo"); } finally { console.log = original; }
     const help = out.join("\n");
-    expect(help).toMatch(/dependency graph and code health cover JavaScript\/TypeScript,\s+Python, and Go only/);
+    expect(help).toMatch(/dependency graph and code health cover JavaScript\/TypeScript,\s+Python, Go, Java, and C#/);
     expect(help).toMatch(/not supported yet/);
   });
 
@@ -186,14 +218,14 @@ describe("coverage edge cases", () => {
   it("reports partial coverage for a mixed repository", async () => {
     const files = [];
     for (let i = 0; i < 20; i++) files.push(await write(`web/src/f${i}.ts`, `export const f${i} = () => ${i};\n`));
-    for (let i = 0; i < 30; i++) files.push(await write(`api/src/main/java/A${i}.java`, `class A${i} {}\n`));
+    for (let i = 0; i < 30; i++) files.push(await write(`api/src/main/kotlin/A${i}.kt`, `class A${i}\n`));
     const coverage = computeLanguageCoverage(files);
     expect(coverage.status).toBe("partial");
     const graph = await analyzeDependencyGraph(files, tempDir);
     expect(graph.nodes.length).toBe(20);
     expect(renderDependencyGraph(graph)).toContain("**Partial coverage:**");
     const health = computeCodeHealth(await analyzeComplexity(files, tempDir), graph, null, null);
-    expect(health.summary).toContain("Java/Kotlin not scored");
+    expect(health.summary).toContain("Kotlin not scored");
   });
 
   it("does not treat Vue components as a reason to drop TypeScript analysis", () => {

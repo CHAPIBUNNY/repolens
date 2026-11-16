@@ -155,10 +155,10 @@ describe("coverage does not hide real supported code", () => {
   });
 
   it("only suppresses analysis when no supported product code exists", () => {
-    expect(computeLanguageCoverage(["docs/site/main.js", "src/A.cs"]).status).toBe("unsupported");
+    expect(computeLanguageCoverage(["docs/site/main.js", "src/A.kt"]).status).toBe("unsupported");
     expect(computeLanguageCoverage(["tests/helper.py", "src/lib.rs"]).status).toBe("unsupported");
-    expect(computeLanguageCoverage(["third_party/x/a.js", "src/A.java"]).status).toBe("unsupported");
-    expect(computeLanguageCoverage(["src/wwwroot/site.js", "src/A.cs", "src/B.cs"]).status).toBe("partial");
+    expect(computeLanguageCoverage(["third_party/x/a.js", "src/A.swift"]).status).toBe("unsupported");
+    expect(computeLanguageCoverage(["src/wwwroot/site.js", "src/A.kt", "src/B.kt"]).status).toBe("partial");
   });
 
   it("puts the badge boundary at 10% of product source files", () => {
@@ -213,7 +213,7 @@ describe("comment stripping keeps strings, templates, and regexes", () => {
 describe("badge coverage comes from one consistent walk", () => {
   it("counts scored files past the analysis cap when judging coverage", async () => {
     for (let i = 0; i < 20; i++) await write(`src/js/m${i}.js`, "export const m = 1;\n");
-    for (let i = 0; i < 150; i++) await write(`src/cs/C${i}.cs`, "class C {}\n");
+    for (let i = 0; i < 150; i++) await write(`src/kt/C${i}.kt`, "class C\n");
     const scored = await scoreRepository(tempDir, { maxFiles: 5 });
     expect(scored.files.length).toBe(5);
     expect(scored.capped).toBe(true);
@@ -225,7 +225,7 @@ describe("badge coverage comes from one consistent walk", () => {
 
   it("refuses a badge when supported code is under 10% of product source", async () => {
     await write("src/site.js", "export const s = 1;\n");
-    for (let i = 0; i < 30; i++) await write(`src/C${i}.cs`, "class C {}\n");
+    for (let i = 0; i < 30; i++) await write(`src/C${i}.kt`, "class C\n");
     const { value, errors } = await quiet(() => runBadgeCli({ target: tempDir, format: "json" }));
     expect(value).toBe(2);
     expect(errors).toMatch(/only 1 of 31 product source files \(3%\)/);
@@ -251,9 +251,9 @@ describe("Vue and Svelte component libraries keep their badge", () => {
     });
   }
 
-  it("still refuses C# or Java with incidental docs JS, and Python next to many Rust files", async () => {
-    expect(badgeCoverageOk(computeLanguageCoverage(["docs/site/main.js", "src/A.cs"]))).toBe(false);
-    expect(badgeCoverageOk(computeLanguageCoverage(["docs/main.js", ...Array.from({ length: 20 }, (_, i) => `src/main/java/A${i}.java`)]))).toBe(false);
+  it("still refuses Kotlin or Swift with incidental docs JS, and Python next to many Rust files", async () => {
+    expect(badgeCoverageOk(computeLanguageCoverage(["docs/site/main.js", "src/A.kt"]))).toBe(false);
+    expect(badgeCoverageOk(computeLanguageCoverage(["docs/main.js", ...Array.from({ length: 20 }, (_, i) => `Sources/App/A${i}.swift`)]))).toBe(false);
     const hybrid = computeLanguageCoverage(["a.py", ...Array.from({ length: 10 }, (_, i) => `r${i}.rs`)]);
     expect(hybrid.status).toBe("partial");
     expect(badgeCoverageOk(hybrid)).toBe(false);
