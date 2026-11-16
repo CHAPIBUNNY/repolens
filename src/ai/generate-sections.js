@@ -26,6 +26,8 @@ import { scoreMaturity } from "../analyzers/maturity.js";
 import { isNonProductPath, isTestPath } from "../utils/path-roles.js";
 import { cycleConcern, cycleHealthPenalty, cycleInsight, cycleStatusCell } from "../analyzers/cycle-priority.js";
 import { info, warn } from "../utils/logger.js";
+import { jvmModuleShortLabel } from "../core/jvm-modules.js";
+import { stripContainerSegments } from "../analyzers/domain-inference.js";
 
 // Strip conversational patterns that LLMs sometimes inject into documentation
 const CONVERSATIONAL_PATTERNS = [
@@ -1223,7 +1225,20 @@ ${context.repoRoots.map(root => {
       output += `1. **\`${ep}\`** — ${purpose}\n`;
     }
   } else {
-    output += `Start by exploring the main \`src/\` directory or look for entry point files like \`index.js\`, \`main.js\`, or \`app.js\`.\n`;
+    // No src/lib/app folder: point at the largest product modules this scan found,
+    // not at a generic `src/` that may not exist.
+    const productModules = (context.topModules || [])
+      .filter((mod) => mod.type !== "test" && !/(^|\/)(tests?|spec|__tests__|docs?|examples?|benchmarks?)(\/|$)/i.test(mod.key) && !/\/src\/(test|it|jmh)\//.test(`${mod.key}/`))
+      .slice(0, 3);
+    if (productModules.length > 0) {
+      output += `Start with the largest source modules:\n\n`;
+      productModules.forEach((mod, index) => {
+        output += `${index + 1}. **\`${mod.key}\`** — ${mod.fileCount} file${mod.fileCount === 1 ? "" : "s"}\n`;
+      });
+      output += `\n${entryPointHint(context.techStack.languages)}\n`;
+    } else {
+      output += `Start by exploring the main \`src/\` directory or look for entry point files like \`index.js\`, \`main.js\`, or \`app.js\`.\n`;
+    }
   }
 
   // Monorepo navigation
@@ -1490,7 +1505,7 @@ function describeRoot(root) {
   const lastSeg = lower.split("/").pop();
   if (/^src$|^lib$/.test(lower)) return "Application source code";
   if (/^test|^__test|^spec/.test(lastSeg)) return "Test suites";
-  if (/^doc/.test(lastSeg)) return "Documentation";
+  if (/^docs?$|^documentation$|^docs?[-_]/.test(lastSeg)) return "Documentation";
   if (/^bin$|^scripts?$/.test(lastSeg)) return "CLI entry points and scripts";
   if (/^config/.test(lastSeg)) return "Configuration files";
   if (/^public$|^static$|^assets$/.test(lastSeg)) return "Static assets";
@@ -1532,6 +1547,7 @@ const MODULE_DESCRIPTION_RULES = [
   [/store|state|redux/, "State management"],
   [/middleware/, "Request/response middleware"],
   [/database|^db$|migration/, "Database layer"],
+  [/^repositor(y|ies)$|^dao$/, "Data access layer"],
   [/render/, "Rendering and template logic"],
   [/publish/, "Publishing and output delivery"],
   [/scan/, "File and repository scanning"],
@@ -1562,6 +1578,11 @@ function titleizeSegment(segment) {
 }
 
 export function describeOnboardingModule(key) {
+  // JVM package modules are described by their package, test source sets by the set name.
+  if (jvmModuleShortLabel(key)) {
+    const typed = stripContainerSegments(key);
+    if (typed) key = typed;
+  }
   const segments = String(key).replace(/\\/g, "/").toLowerCase().split("/").filter(Boolean);
   let last = (segments[segments.length - 1] || "").replace(/\.[a-z0-9]+$/i, "");
   const parents = segments.slice(0, -1).filter((segment) => !GENERIC_CONTAINER_SEGMENTS.has(segment));
@@ -1905,6 +1926,19 @@ function inferStepPurpose(step) {
 }
 
 // Helper: determine if a directory is a good starting point
+// Where a program starts, by language, for the "Where to Begin" fallback.
+function entryPointHint(languages = []) {
+  const langs = (languages || []).map((lang) => String(lang).toLowerCase());
+  const hints = [];
+  if (langs.includes("java") || langs.includes("kotlin")) hints.push("the class with `public static void main` (each Maven or Gradle module that runs has one)");
+  if (langs.includes("c#")) hints.push("`Program.cs` in each runnable project");
+  if (langs.includes("go")) hints.push("`main.go` under `cmd/`");
+  if (langs.includes("python")) hints.push("`__main__.py` or the `[project.scripts]` entry in `pyproject.toml`");
+  if (langs.some((lang) => ["javascript", "typescript", "node.js"].includes(lang))) hints.push("`main.tsx` / `index.ts` or the `main` / `bin` field of each `package.json`");
+  if (hints.length === 0) return "Look for the program's entry point in those folders.";
+  return `Entry points to look for: ${hints.join("; ")}.`;
+}
+
 function shouldStartHere(root) {
   const lower = (root || "").toLowerCase().replace(/\/$/, "");
   const lastSeg = lower.split("/").pop();

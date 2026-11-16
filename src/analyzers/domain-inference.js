@@ -195,8 +195,14 @@ export const GENERIC_CONTAINER_SEGMENTS = new Set(["src", "lib", "libs", "source
  * domain on their own. Returns "" when nothing else is left (`lib`, `src/lib`).
  */
 export function stripContainerSegments(modulePath) {
-  return String(modulePath)
-    .replace(/\\/g, "/")
+  const normalized = String(modulePath).replace(/\\/g, "/");
+  // A JVM package module (`api/src/main/java/io/acme/api/repository`) is typed by its
+  // package (`repository`), not by the Maven module or reverse-domain prefix, which
+  // would make every package of an `api` service an "API" module. A whole source set
+  // (`api/src/test/java`) is typed by the set name (`test`).
+  const jvm = normalized.match(/^(?:.+\/)?src\/([^/]+)\/(?:java|kotlin|scala|groovy)(?:\/(.+))?$/);
+  if (jvm) return jvm[2] ? jvm[2].split("/").filter(Boolean).pop() : (jvm[1] === "main" ? "" : jvm[1]);
+  return normalized
     .split("/")
     .filter((segment) => segment && !GENERIC_CONTAINER_SEGMENTS.has(segment.toLowerCase()))
     .join("/");

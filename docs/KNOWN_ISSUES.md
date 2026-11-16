@@ -3,7 +3,7 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** November 2026  
-**Version:** 1.17.0
+**Version:** 1.17.1
 
 ## Java and C# analysis (new in 1.17.0)
 
@@ -15,10 +15,21 @@ This document tracks known issues, limitations, and edge cases in RepoLens. We'r
 - Two `using` directives on one line after other code (`namespace A; using B;`) can be missed; one per line (the normal layout) is read.
 - `<Compile Include>` linked files in a `.csproj` are treated as outside any project.
 - External library names are a heuristic: Maven/Gradle `groupId`s or NuGet `PackageReference` names when they match, otherwise the first package / namespace segments.
-- Cycles are listed between packages / namespaces (classes of one package referring to each other are not counted). The list is capped at 50 cycles; mockito reaches the cap.
-- The module map, Spring / ASP.NET pattern detection, and architecture patterns are unchanged: modules still follow folders, not Maven/Gradle modules or `.csproj` projects.
+- Cycles are listed between packages / namespaces (classes of one package referring to each other are not counted). Since 1.17.1 each entry is a strongly connected group with its shortest loop and two-way pairs, so the 50-entry cap no longer applies in practice (mockito: 2 groups). File-level cycles in JavaScript, TypeScript, Python, and Go are still listed one loop at a time and capped at 50.
+- Java modules follow packages since 1.17.1 (one module per top-level package below the shared prefix of a `src/main/java` source set; each test source set is one module). C# modules still follow folders, which usually match `.csproj` projects; a large project is one module.
+- Frameworks are not detected for Java or C#, and only from the root `package.json` for JavaScript: terrakube (Spring Boot + Elide services, a React UI in `ui/`) is described as a "general-purpose" project. Spring / ASP.NET route and pattern detection is not built.
 - Kotlin (`.kt`, `.kts`), Scala, Groovy, Rust, and Swift are still not analyzed. A Java repository with Kotlin sources shows partial coverage.
 - Java and C# code tends to score higher on code health than JavaScript, because methods are short. Tests are left out of the score; benchmarks and samples are scored, as for JavaScript.
+
+## terrakube: Java modules, path aliases, project name, cycle lists (fixed in 1.17.1)
+
+A gap test of 1.17.0 on terrakube-io/terrakube (Java Spring Boot services `api`, `executor`, `registry` plus a Vite + React UI) found 5,971 import edges but labelled all 9 modules "Isolated (no imports or importers)", because `api/src/main/java` was one module and nothing crossed modules. The UI's `@/components`, `@/config`, … aliases were listed as six external npm packages, the project was named after the clone folder (`tk`), the onboarding structure table left out `api`, `executor`, and `registry` (their sources were deeper than the folder walk), and the cycle list hit the 50 cap with overlapping loops of one package knot. 1.17.1 splits Java source sets by package (22 modules, 11 with cross-module coupling, `ui/src` "Self-contained"), resolves tsconfig `paths` / `references` and Vite `resolve.alias` (6,433 edges, no alias externals), names the project from `package.json`, Gradle, the git remote, Maven, or a `.sln`, adds top-level folders with a build file as module roots, and groups package cycles into 7 strongly connected groups covering 112 packages.
+
+Remaining limits:
+
+- Vite aliases are read from the config text, not by running it: an alias computed in a function, read from another file, or a regular-expression `find` is not resolved. webpack `resolve.alias` and babel `module-resolver` aliases are not read; their imports stay external unless they start with `@/` or `~/`.
+- A top-level folder with a build file (`pom.xml`, `build.gradle`, `*.csproj`, `go.mod`, `Cargo.toml`, `pyproject.toml`, `setup.py`) becomes a module root only for a language detected from files in the first four folder levels or from a build file at the repository root. Nested build folders (`services/api/pom.xml`) are not added.
+- Small Java root packages (one `Application.java` file next to the package folders) show as "Isolated" when nothing imports the main class.
 
 ## Python deferred imports, submodule resolution, and test labels (fixed in 1.16.5)
 
@@ -370,7 +381,8 @@ A shallow checkout (`fetch-depth: 1`) does not contain the base commit. The comm
 - [x] Registry name `io.github.CHAPIBUNNY/repolens` (1.14.1)
 
 ### Future
-- [ ] Java and C# language support
+- [x] Java and C# import graphs and code health (1.17.0); Java package modules (1.17.1)
+- [ ] Java and C# framework detection (Spring Boot, ASP.NET) and Kotlin
 - [ ] Grounded AI explanations and Q&A (layered on the always-published map)
 - [ ] Cross-repository architecture analysis
 - [ ] Slack notifications

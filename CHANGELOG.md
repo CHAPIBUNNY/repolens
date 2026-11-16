@@ -2,6 +2,46 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.17.1 (2026-11-16)
+
+Fixes found by mapping terrakube-io/terrakube (d6a5d89: Java Spring Boot services `api`, `executor`, `registry` and a Vite + React UI) with 1.17.0. Re-checked on google/gson, App-vNext/Polly, mockito/mockito, google/guava, and jbogard/MediatR.
+
+### Upgrade notes
+
+- **Java modules follow packages, so module counts, roles, the system map, and architecture drift change once.** A Maven/Gradle main source set (`api/src/main/java`) is split into one module per top-level package below the package prefix its files share (`api/src/main/java/io/terrakube/api/plugin`, `.../rs`, `.../repository`); test-like source sets (`src/test/java`, `testFixtures`, `jmh`, …) stay one module each. terrakube: 9 modules, all "Isolated (no imports or importers)" → 22 modules with real coupling (`api/plugin` imported by 4 modules, `api/rs` by 3, …). gson: 7 → 18 modules. A drift report lists the new modules once; it is a measurement change, not a code change. A `module_roots` entry inside a source set (`src/main/java/com/acme`) still wins.
+- **Java and C# cycles are counted per strongly connected group, not per loop.** Packages that all reach each other are one entry, so cycle counts drop: terrakube 50 (the cap; 39 High) → 7 groups (3 High) covering 112 packages; gson 10 → 1 group of 7 packages (High); Polly 29 → 4 (0 High); mockito 50 (cap) → 2; MediatR 6 → 3. Architecture health weighs a group by its size (one loop per 4 packages, at most 3), so a large knot still costs as much as before: terrakube Overall Health stays 55, mockito 70; gson 70 → 80, Polly 70 → 75, MediatR 75 → 85. guava 100 → 90: its two `collect.testing` groups contain a three-package loop through the parent package (Medium) that 1.17.0's loop search missed.
+- **JS/TS path aliases are internal edges.** terrakube's UI: the six `@/components`, `@/config`, … "external packages" are gone and 462 more import edges are found (5,971 → 6,433); shadcn-ui/taxonomy: 1 → 256 edges.
+- **`demo` and `init` name the project from repository or build metadata** instead of the clone folder: terrakube cloned into `tk/` is "terrakube".
+
+### Module map (Java)
+
+- Module keys for `.java`/`.kt`/`.scala`/`.groovy` files in `<module>/src/<set>/<java|kotlin|scala|groovy>/` come from the package path (`src/core/jvm-modules.js`). `module-info.java` belongs to the source root.
+- A module whose files import each other but nothing in other modules is "Self-contained (N imports between its own files, none across modules)", not "Isolated". terrakube's `ui/src` has 1,057 internal imports.
+- Package modules are typed and described by their package (`repository`, `service`, `plugin`) in the module catalog, architecture overview, and system map, not by the Maven module name, so every package of an `api` service is no longer "API route handlers" and `api/src/test/java` is test code. `repository`/`dao` packages and folders are "Data access layer". The system map shows `api/plugin`, `executor/plugin`, `registry/plugin` instead of three `plugin` rows, and `src/main/java` no longer files modules under "AI / ML" (the "ai" in "main").
+
+### Repository structure and onboarding
+
+- `demo` and `init --quick` add a top-level folder with its own build file (`pom.xml`, `build.gradle(.kts)`, `build.sbt`, `*.csproj`, `go.mod`, `Cargo.toml`, `pyproject.toml`, `setup.py`) for a detected language as a module root, even when its sources are deeper than the folder walk (terrakube's `api`, `executor`, `registry`).
+- The onboarding "Repository Structure" table also lists top-level folders that hold scanned modules no `module_roots` entry covers.
+- "Where to Begin" without a `src`/`lib`/`app` folder lists the three largest product modules and the language's entry points (`public static void main`, `Program.cs`, `main.tsx`, …) instead of "explore the main `src/` directory".
+- `docker-compose` is no longer described as "Documentation" (the `doc` prefix matched).
+
+### Dependency graph — path aliases
+
+- tsconfig/jsconfig `compilerOptions.paths` and `baseUrl` resolve to local files, following `extends` and, for a solution-style `tsconfig.json` (`"files": []` + `references`, as in Vite templates), the referenced configs such as `tsconfig.app.json`. Longest-prefix match, as TypeScript does (`src/analyzers/path-aliases.js`).
+- Vite `resolve.alias` (object or `[{ find, replacement }]` form, `path.resolve(__dirname, "src")`, `fileURLToPath(new URL("./src", import.meta.url))`, `"/src"`) resolves the same way when no tsconfig declares the alias.
+- An alias to a file that is not scanned (`@/styles/app.css`) is neither an edge nor an external package. `@/x` and `~/x` are never npm packages, even without a config. A catch-all `"*"` pattern, a target inside `node_modules`, and a Vite package alias (`react: "preact/compat"`) do not hide real npm packages.
+
+### Cycles
+
+- Each Java/C# cycle entry lists the group's packages, its shortest loop, and its two-way pairs with the import count each way, so one knot is not repeated as up to 50 overlapping loops. Groups are listed High first, then by size.
+- Priority of a group: two packages, one inside the other, Low (as before); a parent package with sub-packages that each loop only with the parent and do not import each other, Low ("parent/child package pairs around `Polly`"); a loop through a parent package, Medium, unless the sub-packages form a High loop without the parent; three or more otherwise unrelated packages, High.
+- New `stats.packagesInCycles`, `stats.highCycleWeight`, `stats.mediumCycleWeight`; cycle reports carry `members`, `pairs`, and `lang`. Existing fields are unchanged in shape.
+
+### Project name
+
+- Order: `package.json` `name`, Gradle `rootProject.name`, the git remote's repository name (only when the folder is the repository root; worktrees and submodules are followed to their config), Maven `artifactId` without `-parent`/`-platform`/`-root`/… (not the `<parent>` one), a single `.sln`/`.slnx` name, then the folder name.
+
 ## 1.17.0 (2026-11-16)
 
 Java and C# support (roadmap item #1). Validated on google/gson, google/guava, mockito/mockito, App-vNext/Polly, and jbogard/MediatR.

@@ -1,4 +1,6 @@
 import { replaceLeadingAppGroup, replaceSlashGroups } from "../utils/route-params.js";
+import { jvmModuleShortLabel } from "../core/jvm-modules.js";
+import { stripContainerSegments } from "../analyzers/domain-inference.js";
 
 function sanitizeNodeId(value) {
   return value.replace(/[^a-zA-Z0-9_]/g, "_");
@@ -15,6 +17,9 @@ function buildModuleGraph(modules, depGraph) {
     id: sanitizeNodeId(mod.key),
     key: mod.key,
     label: normalizeLabel(mod.key),
+    // `api/src/main/java/io/acme/api/plugin` shows as `api/plugin`, so the plugin
+    // packages of three Maven modules are not all just "plugin".
+    shortLabel: jvmModuleShortLabel(mod.key),
     fileCount: mod.fileCount,
     category: categorizeModule(mod.key)
   }));
@@ -116,7 +121,11 @@ function findModuleForFile(fileKey, modules) {
 }
 
 function categorizeModule(key) {
-  const normalized = key.toLowerCase();
+  // A JVM package module is categorized by its package, not by `src/main/java`
+  // (`main` contains "ai") or the reverse-domain prefix.
+  const jvmTyped = jvmModuleShortLabel(key) ? stripContainerSegments(key) || "main" : null;
+  if (jvmTyped !== null && /^(test|tests|it|jmh|testFixtures|integrationTest)$/i.test(jvmTyped)) return "test";
+  const normalized = (jvmTyped ?? key).toLowerCase();
   if (normalized.includes("test") || normalized.includes("spec")) return "test";
   if (normalized.includes("core") || normalized.includes("kernel")) return "core";
   if (normalized.includes("analyz") || normalized.includes("detect") || normalized.includes("inspect")) return "analyzer";
@@ -196,7 +205,7 @@ function generateUnicodeArchitectureDiagram(nodes, relationships) {
     category.nodes.forEach((node, idx) => {
       const isLast = idx === category.nodes.length - 1;
       const prefix = isLast ? "└──" : "├──";
-      const shortLabel = node.label.split('/').pop() || node.label;
+      const shortLabel = node.shortLabel || node.label.split('/').pop() || node.label;
       const fileInfo = `(${node.fileCount} file${node.fileCount !== 1 ? 's' : ''})`;
       
       lines.push(`${prefix} ${shortLabel} ${fileInfo}`);
@@ -208,7 +217,7 @@ function generateUnicodeArchitectureDiagram(nodes, relationships) {
         deps.slice(0, 3).forEach((dep, depIdx) => {
           const depNode = nodes.find(n => n.id === dep.to);
           if (depNode) {
-            const depLabel = depNode.label.split('/').pop() || depNode.label;
+            const depLabel = depNode.shortLabel || depNode.label.split('/').pop() || depNode.label;
             const arrow = dep.type === "tests" ? "╌→" : "→";
             lines.push(`${connector}   ${arrow} ${depLabel}`);
           }

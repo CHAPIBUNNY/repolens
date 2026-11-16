@@ -771,7 +771,7 @@ export function declaredKinds(source) {
 
 // ---- tsconfig -----------------------------------------------------------
 
-function parseJsonc(text) {
+export function parseJsonc(text) {
   let out = "";
   let i = 0;
   const n = text.length;
@@ -800,7 +800,7 @@ function parseJsonc(text) {
   return JSON.parse(out);
 }
 
-async function readJsonc(repoRoot, rel) {
+export async function readJsonc(repoRoot, rel) {
   try {
     return parseJsonc(await fs.readFile(path.join(repoRoot, rel), "utf8"));
   } catch {
@@ -811,7 +811,7 @@ async function readJsonc(repoRoot, rel) {
 // Candidate repo-relative paths for a package `extends` ("@tsconfig/node18",
 // "@tsconfig/node18/tsconfig.json", "pkg/base"), looked up in every
 // node_modules from the config's folder up to the repository root.
-async function resolvePackageExtends(repoRoot, configRel, parent) {
+export async function resolvePackageExtends(repoRoot, configRel, parent) {
   const dirs = [];
   let dir = path.posix.dirname(configRel);
   for (;;) {

@@ -1,5 +1,6 @@
 import { computeModuleLevelMetrics, describeModuleDepRole, isCliProject, isLibraryProject } from "../analyzers/context-builder.js";
-import { moduleEvidence, pathHasKeyword } from "../analyzers/domain-inference.js";
+import { moduleEvidence, pathHasKeyword, stripContainerSegments } from "../analyzers/domain-inference.js";
+import { jvmModuleShortLabel } from "../core/jvm-modules.js";
 
 export function renderSystemOverview(cfg, scan, depGraph = null) {
   const projectName = cfg.project?.name || "Project";
@@ -111,7 +112,10 @@ export function renderSystemOverview(cfg, scan, depGraph = null) {
 }
 
 function describeModule(key, depRole = null, evidence = {}) {
-  const has = (keyword) => pathHasKeyword(key, keyword);
+  // A JVM package module is typed by its package (`repository`), not by the Maven module
+  // (`api/...`), which would make every package of an `api` service "API route handlers".
+  const typedKey = jvmModuleShortLabel(key) ? stripContainerSegments(key) || "main" : key;
+  const has = (keyword) => pathHasKeyword(typedKey, keyword);
   let base;
   if (has("test") || has("spec")) base = "Test suites and fixtures";
   else if (has("core")) base = "Core business logic and shared foundations";
@@ -123,6 +127,7 @@ function describeModule(key, depRole = null, evidence = {}) {
   else if (has("page")) base = "Application page components";
   else if (has("lib")) base = "Library code and third-party integrations";
   else if (has("service")) base = "Service layer and external integrations";
+  else if (has("repository") || has("repositories") || has("dao")) base = "Data access layer";
   else if (has("model")) base = "Data models and schema definitions";
   else if (has("store") || has("state")) base = "State management";
   else if (has("config")) base = "Configuration and settings";

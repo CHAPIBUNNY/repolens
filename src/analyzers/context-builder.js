@@ -59,7 +59,7 @@ function buildModuleLookup(modules) {
 
 /**
  * Build a module-level dep metrics map from file-level edges.
- * moduleKey → { fanIn, fanOut, isHub, isOrphan, isLeaf, isOrchestrator }
+ * moduleKey → { fanIn, fanOut, internalEdges, isHub, isOrphan, isLeaf, isOrchestrator }
  * fanIn and fanOut count distinct other modules, not file-to-file edges, so a folder
  * of 77 test files that imports one helper 77 times still has a fan-out of 1.
  */
@@ -75,13 +75,18 @@ export function computeModuleLevelMetrics(depGraph, modules) {
   const importedFrom = new Map(); // module -> Set of modules it imports
   const importersOf = new Map();  // module -> Set of modules importing it
   const fileCounts = new Map();
+  const internalEdges = new Map(); // module -> imports between its own files
   for (const node of depGraph.nodes) {
     const from = fileToModule.get(node.key);
     if (!from) continue;
     fileCounts.set(from, (fileCounts.get(from) || 0) + 1);
     for (const target of node.imports) {
       const to = fileToModule.get(target);
-      if (!to || to === from) continue;
+      if (!to) continue;
+      if (to === from) {
+        internalEdges.set(from, (internalEdges.get(from) || 0) + 1);
+        continue;
+      }
       if (!importedFrom.has(from)) importedFrom.set(from, new Set());
       if (!importersOf.has(to)) importersOf.set(to, new Set());
       importedFrom.get(from).add(to);
@@ -98,6 +103,7 @@ export function computeModuleLevelMetrics(depGraph, modules) {
     moduleLevelMap.set(mod.key, {
       fanIn,
       fanOut,
+      internalEdges: internalEdges.get(mod.key) || 0,
       isHub: fanIn >= hubThreshold,
       isOrphan: fanIn === 0 && fanOut === 0,
       isLeaf: fanOut === 0 && fanIn > 0,
@@ -121,6 +127,31 @@ export function isCliProject(context) {
 
 export function isLibraryProject(context) {
   return context?.project?.kind === "library";
+}
+
+/**
+ * Top-level folders for the onboarding "Repository Structure" table: the configured
+ * module roots, plus top-level folders whose modules no root covers (a Maven module
+ * `api/` when module_roots lists only `ui`). Configured order first, then the added
+ * folders, largest first.
+ */
+export function repositoryRoots(moduleRoots = [], modules = []) {
+  const roots = (moduleRoots || []).map((root) => String(root).replace(/\\/g, "/").replace(/\/+$/, "")).filter(Boolean);
+  if (!Array.isArray(modules) || modules.length === 0) return roots;
+  const covers = (root, key) => root === "." || key === root || key.startsWith(`${root}/`);
+  const extra = new Map();
+  for (const mod of modules) {
+    const key = String(mod.key || "");
+    // Files at the repository root (the flat module) are not a folder.
+    if (!key || mod.flat || key === "root") continue;
+    if (roots.some((root) => covers(root, key))) continue;
+    const top = key.split("/")[0];
+    extra.set(top, (extra.get(top) || 0) + (mod.fileCount || 0));
+  }
+  const added = [...extra.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([top]) => top);
+  return [...roots, ...added.filter((top) => !roots.includes(top))];
 }
 
 export function buildAIContext(scanResult, config, depGraph = null) {
@@ -208,7 +239,7 @@ export function buildAIContext(scanResult, config, depGraph = null) {
 
     findings: inferFindings(depGraph),
     
-    repoRoots: config.module_roots || [],
+    repoRoots: repositoryRoots(config.module_roots || [], modules),
 
     // Monorepo workspace metadata (if detected)
     monorepo: scanResult.monorepo?.isMonorepo ? {
@@ -435,6 +466,9 @@ function describeModuleDepRole(moduleKey, moduleMetrics) {
   const m = moduleMetrics.get(moduleKey);
   if (!m) return null;
 
+  // A module whose files import each other but nothing in other modules is
+  // self-contained, not isolated: a Maven module or app folder with 5,000 internal edges.
+  if (m.isOrphan && m.internalEdges > 0) return `Self-contained (${m.internalEdges} import${m.internalEdges === 1 ? "" : "s"} between its own files, none across modules)`;
   if (m.isOrphan) return "Isolated (no imports or importers)";
   if (m.isHub && m.fanIn >= 15) return `Critical shared infrastructure (imported by ${m.fanIn} modules)`;
   if (m.isHub) return `Shared infrastructure (imported by ${m.fanIn} modules)`;

@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.17.0  
+**Current Version:** 1.17.1  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** November 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.17.0)
+## What's Shipped (v0.1.0 → v1.17.1)
 
 Everything below is live, tested, and available on npm.
 
@@ -165,6 +165,14 @@ Everything below is live, tested, and available on npm.
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
 
+## v1.17.1 — Java and frontend accuracy (terrakube)
+
+- ✅ Java modules per package below the source set's shared prefix, test source sets as one module each; "Self-contained" role for modules with only internal imports; package-typed module descriptions and system map labels
+- ✅ Top-level folders with a Maven, Gradle, sbt, `.csproj`, Go, Cargo, or Python build file become module roots, and the onboarding table lists every top-level folder with scanned modules
+- ✅ tsconfig/jsconfig `paths`, `baseUrl`, `extends`, and `references`, and Vite `resolve.alias`, resolve to local files; `@/` and `~/` are never npm packages
+- ✅ Project name from `package.json`, Gradle `rootProject.name`, the git remote, Maven `artifactId`, or a single `.sln`
+- ✅ Java and C# package cycles as strongly connected groups with the shortest loop and two-way pairs, weighted by size in the health score
+
 ## v1.17.0 — Java and C#
 
 - ✅ Java import graph from type names: single-type, on-demand, static, and nested-type imports, same-package types, and qualified names; Maven/Gradle modules and source roots decide between duplicate types; imports used only in Javadoc are not edges
@@ -272,7 +280,7 @@ The [gallery](https://chapibunny.github.io/repolens/) is a static flat Material 
 
 Planned in this order:
 
-1. [x] Java and C# language support — analyzers for Java (Maven/Gradle modules, package/import graph, Spring conventions) and C# (`.sln`/`.csproj` projects, namespace/`using` graph), giving the same module map, dependency graph, cycles, hubs, patterns, and PR comment as JS/TS/Python/Go. Shipped in 1.17.0: dependency graph, package / namespace cycles, hubs, orphans, code health, badge, and PR comment. Not in 1.17.0: Spring and ASP.NET pattern detection, and a module map split by Maven/Gradle module or `.csproj` (modules still follow folders); see [KNOWN_ISSUES.md](KNOWN_ISSUES.md)
+1. [x] Java and C# language support — analyzers for Java (Maven/Gradle modules, package/import graph, Spring conventions) and C# (`.sln`/`.csproj` projects, namespace/`using` graph), giving the same module map, dependency graph, cycles, hubs, patterns, and PR comment as JS/TS/Python/Go. Shipped in 1.17.0: dependency graph, package / namespace cycles, hubs, orphans, code health, badge, and PR comment. 1.17.1 splits Java modules by package and groups package cycles. Not done: Spring and ASP.NET framework and pattern detection, and a C# module map split by `.csproj` (C# modules still follow folders); see [KNOWN_ISSUES.md](KNOWN_ISSUES.md)
 2. [ ] Grounded AI explanations and Q&A — builds on the existing optional AI layer (`REPOLENS_AI_ENABLED`): plain-English "why it matters + suggested fix" under the PR architecture-diff comment, `repolens ask "<question>"` CLI and an MCP `ask` tool answering from RepoLens's own graph with file citations, and VS Code hover explanations per module. Off by default, bring-your-own key, every claim backed by a real graph edge. This sits on top of the map RepoLens already pushes out unasked (every module, cycle and hub, regenerated on each PR), because a chat answer only covers what someone thought to ask. A new contributor does not know what to ask, so the full map is the baseline and Q&A is for follow-up
 3. [ ] Slack notifications
 4. [ ] Custom webhook support

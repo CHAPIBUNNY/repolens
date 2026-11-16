@@ -122,6 +122,18 @@ export const UNIVERSAL_INCLUDE = [
   "**/*.{js,jsx,mjs,cjs,ts,tsx,vue,svelte,py,go,rs,java,kt,kts,scala,rb,php,cs,swift,c,cc,cpp,h,hpp}",
 ];
 
+// Build files that make a top-level folder a module root even when its sources are
+// deeper than MAX_WALK_DEPTH. Only a language that was detected counts.
+const BUILD_MARKERS = [
+  [/^pom\.xml$/, "java"],
+  [/^build\.gradle(\.kts)?$/, "java"],
+  [/^build\.sbt$/, "java"],
+  [/\.csproj$/i, "csharp"],
+  [/^go\.mod$/, "go"],
+  [/^Cargo\.toml$/, "rust"],
+  [/^(pyproject\.toml|setup\.py)$/, "python"],
+];
+
 const MAX_WALK_ENTRIES = 8000;
 const MAX_WALK_DEPTH = 4;
 
@@ -159,6 +171,7 @@ async function walkSourceTree(repoRoot) {
   const extCounts = new Map();
   const topLevelExts = new Map();
   const rootNames = [];
+  const topLevelMarkers = new Map();
   let seen = 0;
 
   async function walk(dir, depth) {
@@ -182,6 +195,14 @@ async function walkSourceTree(repoRoot) {
       }
 
       if (!entry.isFile()) continue;
+      const relDirOfEntry = path.relative(repoRoot, dir);
+      if (relDirOfEntry && !relDirOfEntry.includes(path.sep)) {
+        const markerId = BUILD_MARKERS.find(([pattern]) => pattern.test(entry.name))?.[1];
+        if (markerId) {
+          if (!topLevelMarkers.has(relDirOfEntry)) topLevelMarkers.set(relDirOfEntry, new Set());
+          topLevelMarkers.get(relDirOfEntry).add(markerId);
+        }
+      }
       const ext = path.extname(entry.name).toLowerCase();
       if (EXT_TO_LANGUAGE.has(ext)) {
         extCounts.set(ext, (extCounts.get(ext) || 0) + 1);
@@ -200,7 +221,7 @@ async function walkSourceTree(repoRoot) {
   }
 
   await walk(repoRoot, 0);
-  return { extCounts, topLevelExts, rootNames };
+  return { extCounts, topLevelExts, rootNames, topLevelMarkers };
 }
 
 /**
@@ -209,7 +230,7 @@ async function walkSourceTree(repoRoot) {
  */
 export async function detectRepoLanguages(repoRoot) {
   const root = path.resolve(repoRoot);
-  const { extCounts, topLevelExts, rootNames } = await walkSourceTree(root);
+  const { extCounts, topLevelExts, rootNames, topLevelMarkers } = await walkSourceTree(root);
 
   const presentIds = new Set();
   for (const ext of extCounts.keys()) {
@@ -245,6 +266,15 @@ export async function detectRepoLanguages(repoRoot) {
   const moduleRoots = [];
   for (const [dir, exts] of topLevelExts) {
     if ([...exts].some((ext) => sourceExts.has(ext))) moduleRoots.push(dir);
+  }
+
+  // Java and C# sources sit deeper than the walk looks (`api/src/main/java/io/acme/...`).
+  // A top-level folder with its own build file for a detected language is a module root:
+  // a Maven module (`api/pom.xml`), a Gradle subproject, or a .NET project folder.
+  const detectedIds = new Set(detected.map((profile) => profile.id));
+  for (const [dir, markerIds] of topLevelMarkers) {
+    if (moduleRoots.includes(dir) || SKIP_DIRS.has(dir) || dir.startsWith(".")) continue;
+    if ([...markerIds].some((id) => detectedIds.has(id))) moduleRoots.push(dir);
   }
 
   if (moduleRoots.length === 0) {
