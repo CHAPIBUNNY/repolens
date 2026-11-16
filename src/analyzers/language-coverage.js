@@ -48,7 +48,7 @@ function isDeclarationFile(file) {
 function isBuildOrMetadataFile(file) {
   return /\.gradle\.kts$/.test(file)
     || /(^|\/)(package|module)-info\.java$/.test(file)
-    || /(^|\/)(obj|bin)\/.*\.cs$/.test(file)
+    || (/\.cs$/.test(file) && /(^|\/)(obj|bin)\//.test(file))
     || /\.(g|g\.i|designer|generated)\.cs$/i.test(file);
 }
 
