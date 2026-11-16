@@ -3,7 +3,22 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** November 2026  
-**Version:** 1.16.5
+**Version:** 1.17.0
+
+## Java and C# analysis (new in 1.17.0)
+
+1.17.0 builds the dependency graph and code health for `.java` and `.cs` files. Validated on google/gson, google/guava, mockito/mockito, App-vNext/Polly, and jbogard/MediatR. Edges come from type names, not a compiler, so they are close but not exact:
+
+- A local variable or field spelled like a type (`Builder Builder`) can add an edge to a same-package type of that name. A member call on an unimported type through `var` adds no edge.
+- C# extension methods are invisible: a static class used only through `x.WithRetry()` has no incoming edges and can be listed as an orphan.
+- Text inside C# interpolated strings and Java text blocks is skipped, so a type used only there is not an edge.
+- Two `using` directives on one line after other code (`namespace A; using B;`) can be missed; one per line (the normal layout) is read.
+- `<Compile Include>` linked files in a `.csproj` are treated as outside any project.
+- External library names are a heuristic: Maven/Gradle `groupId`s or NuGet `PackageReference` names when they match, otherwise the first package / namespace segments.
+- Cycles are listed between packages / namespaces (classes of one package referring to each other are not counted). The list is capped at 50 cycles; mockito reaches the cap.
+- The module map, Spring / ASP.NET pattern detection, and architecture patterns are unchanged: modules still follow folders, not Maven/Gradle modules or `.csproj` projects.
+- Kotlin (`.kt`, `.kts`), Scala, Groovy, Rust, and Swift are still not analyzed. A Java repository with Kotlin sources shows partial coverage.
+- Java and C# code tends to score higher on code health than JavaScript, because methods are short. Tests are left out of the score; benchmarks and samples are scored, as for JavaScript.
 
 ## Python deferred imports, submodule resolution, and test labels (fixed in 1.16.5)
 
@@ -21,7 +36,7 @@ Limits: inference is off under `verbatimModuleSyntax`, `preserveValueImports`, `
 
 ## Workspace edges, unsupported languages, and GraphQL false positives (fixed in 1.16.3)
 
-A gap test of 1.16.2 on trpc/trpc listed its own `@trpc/*` workspace packages as external dependencies and lost the cross-package edges. App-vNext/Polly (C#) got "no circular dependencies" and health 100/100 from one docs script, google/gson (Java) was told to fix `scan.include`, and comments mentioning Apollo or urql produced a GraphQL page on tRPC. 1.16.3 resolves declared workspace packages internally, reports unsupported or partial language coverage instead of a score, detects GraphQL from imports, and skips empty API Surface pages. Java and C# import graphs are still on the roadmap.
+A gap test of 1.16.2 on trpc/trpc listed its own `@trpc/*` workspace packages as external dependencies and lost the cross-package edges. App-vNext/Polly (C#) got "no circular dependencies" and health 100/100 from one docs script, google/gson (Java) was told to fix `scan.include`, and comments mentioning Apollo or urql produced a GraphQL page on tRPC. 1.16.3 resolves declared workspace packages internally, reports unsupported or partial language coverage instead of a score, detects GraphQL from imports, and skips empty API Surface pages. Java and C# import graphs shipped in 1.17.0.
 
 ## Orval's snapshots, samples, and cycles (fixed in 1.16.1)
 

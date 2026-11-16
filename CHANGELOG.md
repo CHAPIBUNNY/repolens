@@ -2,6 +2,47 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## 1.17.0 (2026-11-16)
+
+Java and C# support (roadmap item #1). Validated on google/gson, google/guava, mockito/mockito, App-vNext/Polly, and jbogard/MediatR.
+
+### Upgrade notes
+
+- **Java and C# repositories now get a dependency graph, cycles, hubs, orphans, code health, and an architecture health score.** Before, they read "not supported for import analysis yet" and the executive summary had no Overall Health. Expect a first-run jump in edges and findings, and a drift report that lists them once; it is new coverage, not a code change. On gson: 239 files, 1,234 edges, 10 package cycles (2 High), code health 86/100, Overall Health 70. On Polly: 784 files, 3,261 edges, 29 namespace cycles (0 High), code health 98/100, Overall Health 70.
+- **`repolens badge` now scores Java and C# product source** and no longer exits 2 for a Java-only or C#-only repository. Kotlin, Scala, Rust, Swift, and other languages are still unsupported and keep the 1.16.3 rules (exit 2 when they are most of the product source, partial-coverage warning otherwise).
+- **JUnit, TestNG, Spock, xUnit, NUnit, and MSTest count as test frameworks**, and Maven, Gradle, and MSBuild (.NET) as build tools, read from `pom.xml`, `build.gradle(.kts)`, `gradle/libs.versions.toml`, `*.csproj`, `Directory.Packages.props`, and `Directory.Build.props`. Java and C# repositories no longer lose 10 health points for "no test framework".
+
+### Dependency graph — Java
+
+- Edges come from type names: single-type imports, on-demand imports (`import a.b.*`), static imports (`import static a.b.Util.max`), nested-type imports, types of the same package, and fully qualified names in code (`com.example.util.Strings.trim(...)`). A single-type import shadows the same package, which shadows on-demand imports, as in the compiler.
+- An import whose type is used only in Javadoc (`{@link Foo}`) or not at all is not an edge. The dependency graph page counts them in a "Java imports used only in Javadoc or unused" overview row.
+- Source roots come from the `package` declaration (`core/src/main/java`, `src/test/java`, a flat `src/`). When two modules declare the same type, the importer's own Maven/Gradle module wins, then its source root. Product code never links to a test-only class of the same package.
+- External libraries are grouped by Maven/Gradle `groupId` when the build files declare one, otherwise by the first package segments. JDK packages (`java.*`, `javax.*`, `jdk.*`, `sun.*`, …) are not external dependencies.
+- `package-info.java` and `module-info.java` are metadata, not graph nodes.
+
+### Dependency graph — C#
+
+- Edges come from `using` directives (resolved relative to the enclosing namespace, so `using Internal;` inside `namespace MediatR.Pipeline` finds `MediatR.Internal`), file-scoped and block namespaces with parent-namespace lookup, `global using` in any file of the same project, `<Using Include>` in the `.csproj` or `Directory.Build.props`, `using static`, aliases (an edge only where the alias is used), attributes (`[Foo]` → `FooAttribute`), and qualified names in code. A project-wide `using static` or alias does not link every file.
+- Project boundaries come from `.csproj` files. A project sees its own types and those of its `<ProjectReference>`s, transitively, so two projects declaring the same type name do not cross-link. A `partial` type spread over several files resolves to the file named after it.
+- External libraries are grouped by `PackageReference` / `PackageVersion` names when they match, otherwise by namespace prefix. Base-library namespaces (`System.*`, `Microsoft.CSharp`, …) are not external dependencies unless a package reference names them.
+- Generated files (`obj/`, `bin/`, `*.g.cs`, `*.Designer.cs`) are skipped.
+
+### Cycles
+
+- Java and C# cycles are reported between packages / namespaces, not between classes. Classes of one package referring to each other is normal in both languages and is not counted (this matches ArchUnit and NDepend). A node is a package in one source root (Java) or project (C#); the root is shown in brackets only when the same package name appears in more than one.
+- Priority: a package and one of its own sub-packages depending on each other (`com.google.gson` ↔ `com.google.gson.internal`, `Polly` ↔ `Polly.Retry`) is Low — parent/child package cycle, common in Java; verify. A loop of three or more packages through a parent package is Medium. Two sibling packages is Medium. Three or more otherwise unrelated packages is High.
+- Package cycles are found in a fixed order, so repeated runs list the same cycles.
+- The executive summary and findings use the Low label of the cycles found (not always "mutual recursion") when every cycle is Low.
+
+### Code health
+
+- `.java` and `.cs` methods are scored for cyclomatic complexity (if, for, foreach, while, case, catch, `&&`, `||`, `?:`, and `??` in C#), size, and nesting, like the other languages. Generic wildcards (`List<?>`) and nullable types (`int?`) do not count as branches. Tests (`src/test`, `*Test.java`, `*Tests.cs`, `*.Tests` / `*.UnitTests` / `*.Specs` projects, `testFixtures`, `androidTest`, `*IT.java`), metadata, and generated files are not scored.
+
+### Output accuracy
+
+- Language coverage, badge, `init`, `demo`, and help text list "JavaScript/TypeScript, Python, Go, Java, and C#". Kotlin (`.kt`, `.kts`) and Scala are named in the unsupported-language note; `*.gradle.kts` build scripts do not count as Kotlin source.
+- .NET benchmark projects (`*.Benchmarks`) and JMH folders are tooling, not product modules.
+
 ## 1.16.5 (2026-11-13)
 
 Fix found by the 2026-11-13 gap test of 1.16.4 on litestar-org/litestar (6aa278b).
