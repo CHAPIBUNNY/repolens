@@ -135,12 +135,28 @@ function lowText(stats) {
   return stats?.lowCycleLabel || MUTUAL_RECURSION_LABEL;
 }
 
+/**
+ * Health-score weight of one reported cycle. A Java/C# strongly connected group stands
+ * for every loop among its packages, so a large group weighs more than one loop:
+ * one per 4 packages, at most 3 (the same cap a pile of overlapping loops hit before).
+ */
+export function cycleWeight(report) {
+  const members = Array.isArray(report?.members) ? report.members.length : 0;
+  if (members <= 2) return 1;
+  return Math.min(3, Math.max(1, Math.ceil(members / 4)));
+}
+
 export function priorityCounts(reports) {
-  const counts = { high: 0, medium: 0, low: 0 };
+  const counts = { high: 0, medium: 0, low: 0, highWeight: 0, mediumWeight: 0 };
   for (const item of reports || []) {
-    if (item.priority === "high") counts.high += 1;
-    else if (item.priority === "low") counts.low += 1;
-    else counts.medium += 1;
+    if (item.priority === "high") {
+      counts.high += 1;
+      counts.highWeight += cycleWeight(item);
+    } else if (item.priority === "low") counts.low += 1;
+    else {
+      counts.medium += 1;
+      counts.mediumWeight += cycleWeight(item);
+    }
   }
   return counts;
 }
@@ -155,8 +171,8 @@ export function cycleHealthPenalty(stats) {
   if (!hasCyclePriorities(stats)) {
     return stats.cycles > 0 ? Math.min(30, stats.cycles * 10) : 0;
   }
-  const high = stats.highCycles || 0;
-  const medium = stats.mediumCycles || 0;
+  const high = stats.highCycleWeight ?? stats.highCycles ?? 0;
+  const medium = stats.mediumCycleWeight ?? stats.mediumCycles ?? 0;
   return Math.min(30, high * 10 + medium * 5);
 }
 

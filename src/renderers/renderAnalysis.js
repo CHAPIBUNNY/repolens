@@ -386,7 +386,7 @@ export function renderDependencyGraph(depResult) {
     lines.push(`**${depResult.cycles.length}** circular dependency chain${depResult.cycles.length === 1 ? " was" : "s were"} detected. A large cycle across three or more folders is a high-priority refactor. A two-folder recursive-descent pair (many imports and calls both ways) is mutual recursion, probably intentional; verify. A cycle that exists only through type-only or deferred (function-local) imports is not a runtime cycle.`);
     lines.push("");
     if (s.packageCycles > 0) {
-      lines.push("Java and C# cycles are listed between packages / namespaces, not classes: classes of one package referring to each other is normal and not counted. A package and one of its own sub-packages depending on each other (API and implementation, or .NET extension methods in the root namespace) is Priority: Low; verify. A longer loop through a parent package is Medium. Three or more otherwise unrelated packages in one loop is a high-priority refactor.");
+      lines.push("Java and C# cycles are listed between packages / namespaces, not classes: classes of one package referring to each other is normal and not counted. Packages that all reach each other are one entry (a strongly connected group), listed with its shortest loop and its two-way pairs, so one knot is not repeated as many overlapping loops. A package and one of its own sub-packages depending on each other (API and implementation, or .NET extension methods in the root namespace) is Priority: Low; verify. A longer loop through a parent package is Medium. Three or more otherwise unrelated packages in one loop is a high-priority refactor.");
       lines.push("");
     }
     const limit = Math.min(depResult.cycles.length, 20);
@@ -394,8 +394,25 @@ export function renderDependencyGraph(depResult) {
       const cycle = depResult.cycles[i];
       const report = reports[i];
       const pathText = Array.isArray(cycle) ? cycle.join("` → `") : String(cycle);
-      lines.push(`${i + 1}. \`${pathText}\``);
-      if (report?.priorityLine) lines.push(`   ${report.priorityLine}`);
+      const members = Array.isArray(report?.members) ? report.members : [];
+      const loopSize = Array.isArray(cycle) && cycle.length > 1 && cycle[0] === cycle[cycle.length - 1] ? cycle.length - 1 : (Array.isArray(cycle) ? cycle.length : 0);
+      if (members.length > loopSize) {
+        const unit = report?.lang === "csharp" ? "namespaces" : "packages";
+        const shown = members.slice(0, 15).map((member) => `\`${member}\``).join(", ");
+        const more = members.length > 15 ? `, +${members.length - 15} more` : "";
+        lines.push(`${i + 1}. **${members.length} ${unit} in one cycle group:** ${shown}${more}`);
+        if (report?.priorityLine) lines.push(`   ${report.priorityLine}`);
+        lines.push(`   Shortest loop: \`${pathText}\``);
+        const pairs = Array.isArray(report?.pairs) ? report.pairs : [];
+        if (pairs.length > 0) {
+          const pairText = pairs.slice(0, 8).map((pair) => `\`${pair.a}\` ↔ \`${pair.b}\` (${pair.ab}/${pair.ba})`).join(", ");
+          const pairMore = pairs.length > 8 ? `, +${pairs.length - 8} more` : "";
+          lines.push(`   Two-way pairs (imports each way): ${pairText}${pairMore}`);
+        }
+      } else {
+        lines.push(`${i + 1}. \`${pathText}\``);
+        if (report?.priorityLine) lines.push(`   ${report.priorityLine}`);
+      }
     }
     if (depResult.cycles.length > 20) {
       lines.push(`\n*...and ${depResult.cycles.length - 20} more cycles*`);

@@ -7,6 +7,7 @@ import { detectMonorepo } from "../analyzers/monorepo-detector.js";
 import { isInsideRoot } from "../utils/safe-path.js";
 import { isNonProductPath, isTestPath } from "../utils/path-roles.js";
 import { resolveScanIgnore } from "./scan-defaults.js";
+import { buildJvmModuleKeyer } from "./jvm-modules.js";
 import { replaceBracketParams } from "../utils/route-params.js";
 
 const norm = (p) => p.replace(/\\/g, "/");
@@ -647,13 +648,14 @@ export async function scanRepo(cfg) {
   const moduleTestCounts = new Map();
   const flatKeys = new Set();
   const rootLabel = rootModuleLabel(repoRoot);
+  const jvmModuleKey = buildJvmModuleKeyer(files, cfg.module_roots || []);
 
   for (const file of files) {
     // Go test files belong to the package they exercise. Counting each
     // *_test.go as its own module (the filename under module_roots) splits
     // one package into a source module and a test module.
     if (/_test\.go$/.test(norm(file))) continue;
-    const key = moduleKeyForFile(file, cfg.module_roots || [], rootLabel);
+    const key = jvmModuleKey(file) || moduleKeyForFile(file, cfg.module_roots || [], rootLabel);
     if (!norm(file).includes("/")) flatKeys.add(key);
     moduleCounts.set(key, (moduleCounts.get(key) || 0) + 1);
     if (isTestPath(file)) moduleTestCounts.set(key, (moduleTestCounts.get(key) || 0) + 1);

@@ -1,5 +1,7 @@
 // Dependency graph analysis with cycle detection.
 // JavaScript, TypeScript, Python, Go, Java, and C# imports become edges.
+// JS/TS path aliases (tsconfig `paths`/`baseUrl`, Vite `resolve.alias`) resolve to
+// local files (path-aliases.js).
 // Java and C# edges come from type names (java-csharp.js). Their cycles are reported
 // between packages / namespaces, not between classes of one package.
 // Comments and strings are ignored. Type-only TypeScript imports are not runtime edges:
@@ -41,6 +43,7 @@ import {
 import { computeLanguageCoverage, coverageLine } from "./language-coverage.js";
 import { listWorkspacePackages } from "./workspace-packages.js";
 import { usageByName, declaredKinds, createElisionSettings, isTypeScriptFile } from "./ts-elision.js";
+import { createAliasResolver } from "./path-aliases.js";
 import {
   classifyRuntimeCycles,
   priorityLine,
@@ -87,6 +90,12 @@ function resolveImportPath(importerFile, specifier) {
   resolved = resolved.replace(/\/index$/, "");
 
   return resolved;
+}
+
+// `@/x` and `~/x` are never npm packages (an npm scope needs a name); they are
+// project aliases even when no tsconfig or bundler config declaring them was found.
+function isUnresolvedLocalAlias(specifier) {
+  return /^[@~]\//.test(String(specifier || ""));
 }
 
 function normalizeFileKey(file) {
@@ -456,6 +465,7 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     });
   }
 
+  const resolveAlias = createAliasResolver(repoRoot);
   for (const file of jsFiles) {
     const content = await readFileSafe(path.join(repoRoot, file));
     if (!content) continue;
@@ -466,7 +476,16 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     const state = { settings: null, usage: null };
     for (const imported of extractJsImports(content)) {
       let toKey = null;
-      if (!isRelativeImport(imported.specifier)) {
+      // tsconfig `paths` / `baseUrl` and Vite `resolve.alias`: `@/components/Button`
+      // is a file in this repository, not an npm package.
+      const aliased = isRelativeImport(imported.specifier) ? null : await resolveAlias(file, imported.specifier);
+      const aliasKey = aliased ? aliased.candidates.map(normalizeFileKey).find((key) => allFileKeys.has(key)) : null;
+      if (aliasKey) {
+        toKey = aliasKey;
+      } else if (aliased?.matched || isUnresolvedLocalAlias(imported.specifier)) {
+        // An alias to a file that is not scanned (styles, images, generated code).
+        continue;
+      } else if (!isRelativeImport(imported.specifier)) {
         const name = externalPackageName(imported.specifier);
         if (name && name === selfName) continue;
         const workspace = resolveWorkspaceImport(imported.specifier, importer);
@@ -618,6 +637,7 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
 
   const packageCycles = detectPackageCycles(adjacency, packageOfKey);
   result.packageCycles = packageCycles.length;
+  result.packagesInCycles = packageCycles.reduce((sum, cycle) => sum + (cycle.members?.length || 0), 0);
   for (const cycle of packageCycles) {
     result.cycles.push(cycle.path);
     result.cycleReports.push(classifyPackageCycle(cycle));
@@ -701,8 +721,11 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     externalDev: externalDev.length,
     cycles: result.cycles.length,
     packageCycles: result.packageCycles,
+    packagesInCycles: result.packagesInCycles || 0,
     docOnlyImports,
     highCycles: priorities.high,
+    highCycleWeight: priorities.highWeight,
+    mediumCycleWeight: priorities.mediumWeight,
     mediumCycles: priorities.medium,
     lowCycles: priorities.low,
     lowCycleLabel: lowCycleLabel(result.cycleReports),
@@ -773,10 +796,13 @@ function isBuildScript(file) {
 }
 
 /**
- * Package-level (Java) and namespace-level (C#) cycles. A node is one package in one
- * source root or project. Each cycle path is a list of package names; when two nodes
- * share a name, the source root or project is added: `com.example (core/src/main/java)`.
- * `links` count the class-level imports behind each step.
+ * Package-level (Java) and namespace-level (C#) cycles, one entry per strongly connected
+ * group of packages (every package in the group reaches every other). Listing each
+ * elementary loop gave 50 overlapping variants of one knot (terrakube); a group is
+ * reported once with its members, its shortest loop (`path`), and the two-way pairs in
+ * it. A node is one package in one source root or project. When two nodes share a name,
+ * the source root or project is added: `com.example (core/src/main/java)`.
+ * `links` count the class-level imports behind each step of `path`.
  */
 export function detectPackageCycles(adjacency, packageOfKey) {
   if (!packageOfKey || packageOfKey.size === 0) return [];
@@ -813,24 +839,168 @@ export function detectPackageCycles(adjacency, packageOfKey) {
     if (productUse.get(info.label) === 1 && !isNonProductPath(`${info.scope}/x`)) return info.label;
     return `${info.label} (${info.scope})`;
   };
+  const nameOf = (id) => labels.get(id).label;
   const sortedAdj = new Map();
-  for (const id of [...pkgAdj.keys()].sort()) sortedAdj.set(id, new Set([...pkgAdj.get(id)].sort()));
-  return detectCycles(sortedAdj).map((ids) => {
+  for (const id of [...pkgAdj.keys()].sort()) sortedAdj.set(id, [...pkgAdj.get(id)].sort());
+
+  const groups = stronglyConnectedComponents(sortedAdj).filter((group) => group.length >= 2);
+  const out = groups.map((members) => {
+    const memberSet = new Set(members);
+    const ids = shortestCycleWithin(memberSet, sortedAdj);
     const links = [];
     for (let i = 0; i + 1 < ids.length; i += 1) links.push(linkCount.get(`${ids[i]}->${ids[i + 1]}`) || 0);
+    const pairs = [];
+    for (const a of members) {
+      for (const b of sortedAdj.get(a)) {
+        if (a < b && memberSet.has(b) && sortedAdj.get(b).includes(a)) {
+          pairs.push({ a: display(a), b: display(b), ab: linkCount.get(`${a}->${b}`) || 0, ba: linkCount.get(`${b}->${a}`) || 0 });
+        }
+      }
+    }
+    pairs.sort((x, y) => (y.ab + y.ba) - (x.ab + x.ba) || x.a.localeCompare(y.a) || x.b.localeCompare(y.b));
+    const lang = members[0].split(":")[0];
     return {
       path: ids.map(display),
-      lang: ids[0].split(":")[0],
+      lang,
       links,
+      members: members.map(display).sort(),
+      pairs,
+      shape: groupShape(members, sortedAdj, nameOf),
     };
   });
+  const rank = { high: 0, medium: 1, low: 2 };
+  out.sort((x, y) => rank[x.shape.priority] - rank[y.shape.priority]
+    || y.members.length - x.members.length
+    || x.members[0].localeCompare(y.members[0]));
+  return out;
+}
+
+/** Tarjan's strongly connected components, iterative. Members of each group are sorted. */
+function stronglyConnectedComponents(adj) {
+  let counter = 0;
+  const index = new Map();
+  const low = new Map();
+  const onStack = new Set();
+  const stack = [];
+  const groups = [];
+  for (const start of adj.keys()) {
+    if (index.has(start)) continue;
+    const work = [{ node: start, next: 0 }];
+    index.set(start, counter);
+    low.set(start, counter);
+    counter += 1;
+    stack.push(start);
+    onStack.add(start);
+    while (work.length > 0) {
+      const frame = work[work.length - 1];
+      const neighbors = adj.get(frame.node) || [];
+      if (frame.next < neighbors.length) {
+        const next = neighbors[frame.next++];
+        if (!adj.has(next)) continue;
+        if (!index.has(next)) {
+          index.set(next, counter);
+          low.set(next, counter);
+          counter += 1;
+          stack.push(next);
+          onStack.add(next);
+          work.push({ node: next, next: 0 });
+        } else if (onStack.has(next)) {
+          low.set(frame.node, Math.min(low.get(frame.node), index.get(next)));
+        }
+        continue;
+      }
+      work.pop();
+      if (work.length > 0) {
+        const parent = work[work.length - 1].node;
+        low.set(parent, Math.min(low.get(parent), low.get(frame.node)));
+      }
+      if (low.get(frame.node) === index.get(frame.node)) {
+        const group = [];
+        let member;
+        do {
+          member = stack.pop();
+          onStack.delete(member);
+          group.push(member);
+        } while (member !== frame.node);
+        groups.push(group.sort());
+      }
+    }
+  }
+  return groups;
+}
+
+/** The shortest loop inside a group (breadth-first from each member, first in sort order wins ties). */
+function shortestCycleWithin(memberSet, adj) {
+  let best = null;
+  for (const start of [...memberSet].sort()) {
+    const prev = new Map([[start, null]]);
+    const queue = [start];
+    let found = null;
+    for (let head = 0; head < queue.length && !found; head += 1) {
+      const node = queue[head];
+      for (const next of adj.get(node) || []) {
+        if (!memberSet.has(next)) continue;
+        if (next === start) {
+          found = node;
+          break;
+        }
+        if (!prev.has(next)) {
+          prev.set(next, node);
+          queue.push(next);
+        }
+      }
+    }
+    if (!found) continue;
+    const path = [];
+    for (let node = found; node !== null; node = prev.get(node)) path.push(node);
+    path.reverse();
+    path.push(start);
+    if (!best || path.length < best.length) best = path;
+    if (best.length === 3) break;
+  }
+  return best || [...memberSet];
+}
+
+const containsPackage = (parent, child) => parent === child || child.startsWith(`${parent}.`);
+
+/**
+ * Shape of a strongly connected group, for its priority:
+ * - two packages, one inside the other: parent/child (Low)
+ * - a parent package plus sub-packages that only loop through the parent, each one
+ *   directly with it and no imports between the sub-packages: parent/child pairs (Low)
+ * - a loop through a parent package that contains every member: Medium, unless the
+ *   sub-packages also form a large loop without the parent (then that decides)
+ * - three or more otherwise unrelated packages: High
+ * - two sibling packages: Medium
+ */
+function groupShape(members, adj, nameOf) {
+  const names = [...new Set(members.map(nameOf))];
+  const parent = names.find((candidate) => names.every((child) => containsPackage(candidate, child)));
+  if (parent && names.length <= 2) return { priority: "low", kind: "package-parent-child", parent, size: members.length };
+  if (parent) {
+    const rest = members.filter((id) => nameOf(id) !== parent);
+    const restSet = new Set(rest);
+    const restAdj = new Map(rest.map((id) => [id, (adj.get(id) || []).filter((to) => restSet.has(to))]));
+    const restEdges = [...restAdj.values()].some((list) => list.length > 0);
+    if (!restEdges) return { priority: "low", kind: "package-parent-star", parent, size: members.length, pairs: rest.length };
+    const inner = stronglyConnectedComponents(restAdj).filter((group) => group.length >= 2);
+    for (const group of inner) {
+      const shape = groupShape(group, adj, nameOf);
+      if (shape.priority === "high") return { ...shape, size: members.length, through: parent };
+    }
+    return { priority: "medium", kind: "package-parent", parent, size: members.length };
+  }
+  if (names.length >= 3) return { priority: "high", kind: "multi-package", size: members.length };
+  return { priority: "medium", kind: "package", size: members.length };
 }
 
 /**
- * Priority for a package / namespace cycle.
+ * Priority for a package / namespace cycle or strongly connected group.
  * - Parent/child: two packages, one inside the other (`com.example` ↔
  *   `com.example.internal`, `Polly` ↔ `Polly.Retry`). API ↔ implementation packages and
  *   .NET extension methods in the root namespace look like this. Priority: Low; verify.
+ * - Parent/child pairs: a parent package with several sub-packages, each looping only
+ *   with the parent. Priority: Low; verify.
  * - Through a parent: three or more packages, one of which contains all the others
  *   (`gson` → `gson.internal` → `gson.reflect` → `gson`). Priority: Medium; review.
  * - Three or more packages otherwise: a large multi-package cycle. Priority: High refactor.
@@ -838,20 +1008,35 @@ export function detectPackageCycles(adjacency, packageOfKey) {
  */
 export function classifyPackageCycle(cycle) {
   const nodes = cycle.path.length > 1 && cycle.path[0] === cycle.path[cycle.path.length - 1] ? cycle.path.slice(0, -1) : cycle.path;
-  const names = [...new Set(nodes.map((node) => String(node).replace(/ \(.*\)$/, "")))];
+  const memberList = Array.isArray(cycle.members) && cycle.members.length > 0 ? cycle.members : nodes;
+  const names = [...new Set(memberList.map((node) => String(node).replace(/ \(.*\)$/, "")))];
   const unit = cycle.lang === "csharp" ? "namespace" : "package";
-  const base = { path: cycle.path, links: cycle.links };
-  const contains = (parent, child) => parent === child || child.startsWith(`${parent}.`);
-  const parent = names.find((candidate) => names.every((child) => contains(candidate, child)));
-  if (parent && names.length === 2) {
-    const label = `parent/child ${unit} cycle, common in ${cycle.lang === "csharp" ? "C#" : "Java"}; verify`;
+  const language = cycle.lang === "csharp" ? "C#" : "Java";
+  const base = { path: cycle.path, links: cycle.links, lang: cycle.lang };
+  if (Array.isArray(cycle.members) && cycle.members.length > 0) {
+    base.members = cycle.members;
+    base.pairs = cycle.pairs || [];
+  }
+  const shape = cycle.shape || (() => {
+    const parent = names.find((candidate) => names.every((child) => containsPackage(candidate, child)));
+    if (parent && names.length === 2) return { priority: "low", kind: "package-parent-child", parent };
+    if (parent) return { priority: "medium", kind: "package-parent", parent };
+    if (new Set(memberList).size >= 3) return { priority: "high", kind: "multi-package" };
+    return { priority: "medium", kind: "package" };
+  })();
+  if (shape.kind === "package-parent-child") {
+    const label = `parent/child ${unit} cycle, common in ${language}; verify`;
     return { ...base, priority: "low", kind: "package-parent-child", label, priorityLine: priorityLine("low", label) };
   }
-  if (parent) {
-    const label = `cycle through parent ${unit} \`${parent}\`; review`;
+  if (shape.kind === "package-parent-star") {
+    const label = `parent/child ${unit} pairs around \`${shape.parent}\` (${shape.pairs} sub-${unit}s, no loop between them), common in ${language}; verify`;
+    return { ...base, priority: "low", kind: "package-parent-star", label, priorityLine: priorityLine("low", label) };
+  }
+  if (shape.kind === "package-parent") {
+    const label = `cycle through parent ${unit} \`${shape.parent}\`; review`;
     return { ...base, priority: "medium", kind: "package-parent", label, priorityLine: priorityLine("medium", label) };
   }
-  if (new Set(nodes).size >= 3) {
+  if (shape.kind === "multi-package") {
     return { ...base, priority: "high", kind: "multi-package", label: `large multi-${unit} cycle`, priorityLine: priorityLine("high") };
   }
   const label = `small ${unit} cycle; review`;
