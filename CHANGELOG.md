@@ -2,7 +2,7 @@
 
 All notable changes to RepoLens will be documented in this file.
 
-## Unreleased
+## 1.17.3 (2026-11-18)
 
 Fixes from mapping dorny/test-reporter (79b4b44: a TypeScript GitHub Action with .NET, Go, Dart, Jest, and Mocha fixture projects under `reports/`). Re-checked on gson, mockito, guava, Polly, MediatR, TanStack/query, and attrs: graph numbers unchanged; differences are listed under upgrade notes.
 

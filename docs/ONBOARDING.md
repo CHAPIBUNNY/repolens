@@ -1,6 +1,6 @@
 # RepoLens — Onboarding Guide
 
-Complete step-by-step setup for RepoLens 1.17.2: publishers (Notion, Confluence, GitHub Wiki, Obsidian, Markdown), AI enhancement, Discord notifications, the MCP server, and CI/CD automation.
+Complete step-by-step setup for RepoLens 1.17.3: publishers (Notion, Confluence, GitHub Wiki, Obsidian, Markdown), AI enhancement, Discord notifications, the MCP server, and CI/CD automation.
 
 > **Quick start:** For a 60-second setup, see the [Quick Start](README.md#-quick-start-60-seconds) in the README.
 
@@ -420,7 +420,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      - uses: CHAPIBUNNY/repolens@v1.17.2
+      - uses: CHAPIBUNNY/repolens@v1.17.3
         with:
           command: publish
           config: .repolens.yml
@@ -428,7 +428,7 @@ jobs:
           pr-comment: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
 ```
 
-`command` accepts `publish`, `demo`, `doctor`, `comment`, and `badge`. Architecture comments and the code-health badge run from the action checkout on `v1.17.2`. The `v1.15.1` tag only runs the first three, via the published npm package.
+`command` accepts `publish`, `demo`, `doctor`, `comment`, and `badge`. Architecture comments and the code-health badge run from the action checkout on `v1.17.3`. The `v1.15.1` tag only runs the first three, via the published npm package.
 
 ```yaml
 name: RepoLens architecture comment
@@ -444,7 +444,7 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
-      - uses: CHAPIBUNNY/repolens@v1.17.2
+      - uses: CHAPIBUNNY/repolens@v1.17.3
         with:
           command: comment
 ```

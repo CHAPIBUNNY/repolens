@@ -243,9 +243,9 @@ If `npx` reports `Unknown command: mcp`, an `.npmrc` with `min-release-age` (or 
 
 ## GitHub Action
 
-`action.yml` is a composite action named **RepoLens Architecture Docs**. `publish`, `demo`, and `doctor` run the published npm package (`npx --force --yes @chappibunny/repolens@1.17.2`). `comment` and `badge` run from the action checkout. Inputs are `command` (`publish`, `demo`, `doctor`, `comment`, or `badge`), `config`, `node-version`, `pr-comment`, `version`, `badge-out`, `badge-url`, and `badge-link`. The action passes `--force` so a repository `devEngines` pin does not stop `npx` on npm versions that enforce `devEngines` (newer npm). Node 20's bundled npm does not enforce that field. From a shell, use the same flag: `npx --force --yes @chappibunny/repolens demo`. `--ignore-engines` does not skip `devEngines`.
+`action.yml` is a composite action named **RepoLens Architecture Docs**. `publish`, `demo`, and `doctor` run the published npm package (`npx --force --yes @chappibunny/repolens@1.17.3`). `comment` and `badge` run from the action checkout. Inputs are `command` (`publish`, `demo`, `doctor`, `comment`, or `badge`), `config`, `node-version`, `pr-comment`, `version`, `badge-out`, `badge-url`, and `badge-link`. The action passes `--force` so a repository `devEngines` pin does not stop `npx` on npm versions that enforce `devEngines` (newer npm). Node 20's bundled npm does not enforce that field. From a shell, use the same flag: `npx --force --yes @chappibunny/repolens demo`. `--ignore-engines` does not skip `devEngines`.
 
-Publishing docs (the npm package at tag `v1.17.2`):
+Publishing docs (the npm package at tag `v1.17.3`):
 
 ```yaml
 name: Architecture docs
@@ -261,7 +261,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      - uses: CHAPIBUNNY/repolens@v1.17.2
+      - uses: CHAPIBUNNY/repolens@v1.17.3
         with:
           command: publish
           config: .repolens.yml
@@ -285,7 +285,7 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
-      - uses: CHAPIBUNNY/repolens@v1.17.2
+      - uses: CHAPIBUNNY/repolens@v1.17.3
         with:
           command: comment
 ```
@@ -294,7 +294,7 @@ jobs:
 
 `pr-comment: true` on `publish`, `demo`, or `doctor` (when the action ref contains this change) runs the same comment after the package and turns the package's older comment off, so the pull request still gets one comment.
 
-The action is listed on the GitHub Marketplace only after a release is published with **Publish this Action to the GitHub Marketplace** checked. Those steps are in [docs/RELEASE.md](docs/RELEASE.md). The tag `v1.17.2` has to exist before `uses: CHAPIBUNNY/repolens@v1.17.2` resolves, and `@chappibunny/repolens@1.17.2` has to be on npm before `publish` can install it. `command: comment` and `command: badge` do not install that package.
+The action is listed on the GitHub Marketplace only after a release is published with **Publish this Action to the GitHub Marketplace** checked. Those steps are in [docs/RELEASE.md](docs/RELEASE.md). The tag `v1.17.3` has to exist before `uses: CHAPIBUNNY/repolens@v1.17.3` resolves, and `@chappibunny/repolens@1.17.3` has to be on npm before `publish` can install it. `command: comment` and `command: badge` do not install that package.
 
 ## Add the badge to your repo
 
@@ -330,7 +330,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      - uses: CHAPIBUNNY/repolens@v1.17.2
+      - uses: CHAPIBUNNY/repolens@v1.17.3
         with:
           command: badge
           badge-url: https://USER.github.io/REPO/repolens-badge.json

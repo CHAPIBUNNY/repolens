@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.17.2  
+**Current Version:** 1.17.3  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** November 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.17.2)
+## What's Shipped (v0.1.0 → v1.17.3)
 
 Everything below is live, tested, and available on npm.
 
@@ -164,6 +164,12 @@ Everything below is live, tested, and available on npm.
 - ✅ `server.json` for the MCP Registry (`io.github.CHAPIBUNNY/repolens`) and `smithery.yaml`
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
+
+## v1.17.3 — Gap-test accuracy (dorny/test-reporter)
+
+- ✅ Root-files module named after the project, not the checkout folder, and not typed by keywords in that name
+- ✅ GitHub Action detection from a root `action.yml` (`node*`, `composite`, `docker`): "GitHub Action" interface instead of "Library (imported API)"
+- ✅ Fixture projects built by npm `*fixture*` scripts stay out of the tech stack and business domains; tech-stack languages come from product files; test-directory modules stay in Testing
 
 ## v1.17.2 — Gap-test accuracy (spring-petclinic, TanStack/query, attrs, CleanArchitecture, ripgrep)
 
