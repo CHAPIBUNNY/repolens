@@ -1,5 +1,5 @@
 // Resolve a human project name for a directory (never "." or "..").
-// Order: package.json name, Gradle rootProject.name, the git remote's repository
+// Order: package.json name (unless a placeholder such as `root`), Gradle rootProject.name, the git remote's repository
 // name (only when the directory is the repository root), the Maven artifactId,
 // a .NET solution name, then the folder name. A clone into `tk/` is still `terrakube`.
 
@@ -27,11 +27,18 @@ function clean(name) {
   return trimmed;
 }
 
+// Placeholder names monorepo roots give their private package.json (TanStack/query's is
+// `root`). They name the workspace tooling, not the project, so the next source decides.
+const PLACEHOLDER_PACKAGE_NAMES = new Set([
+  "root", "monorepo", "mono", "workspace", "workspaces", "repo", "repository", "project",
+]);
+
 function packageJsonName(dir) {
   const raw = readText(path.join(dir, "package.json"));
   if (!raw) return null;
   try {
-    return clean(JSON.parse(raw)?.name);
+    const name = clean(JSON.parse(raw)?.name);
+    return name && PLACEHOLDER_PACKAGE_NAMES.has(name.toLowerCase()) ? null : name;
   } catch {
     return null; // not valid JSON
   }

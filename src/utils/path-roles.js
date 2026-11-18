@@ -29,12 +29,30 @@ function segments(filePath) {
   return String(filePath || "").replace(/\\/g, "/").toLowerCase().split("/");
 }
 
+const JVM_LANG_DIRS = new Set(["java", "kotlin", "scala", "groovy"]);
+
+/**
+ * Index of the first Java/Kotlin package segment in `<prefix>/src/<set>/<java|kotlin|...>/<package...>`,
+ * or -1. Package folders mirror package names (`org/springframework/samples/petclinic`,
+ * Spring Initializr's `com/example/demo`), so they are not test, sample, or docs folders.
+ * Only the path down to the source root says that (`src/test/java`, `samples/x/src/main/java`).
+ */
+export function jvmPackageStart(parts) {
+  for (let i = 0; i + 3 < parts.length; i += 1) {
+    if (parts[i] === "src" && parts[i + 1] && JVM_LANG_DIRS.has(parts[i + 2])) return i + 3;
+  }
+  return -1;
+}
+
 // Directory part of a path. A last segment without an extension (`test`, `examples/amd`)
-// is a directory key such as a module, so it counts too.
+// is a directory key such as a module, so it counts too. Java/Kotlin package folders
+// below a source root are dropped: they name packages, not test or sample trees.
 function directorySegments(filePath) {
   const parts = segments(filePath);
   const last = parts[parts.length - 1] || "";
-  return /\.[a-z0-9]+$/.test(last) ? parts.slice(0, -1) : parts;
+  const dirs = /\.[a-z0-9]+$/.test(last) ? parts.slice(0, -1) : parts;
+  const packageStart = jvmPackageStart(dirs.concat(""));
+  return packageStart === -1 ? dirs : dirs.slice(0, packageStart);
 }
 
 /** True for files in a test directory or named like a test (`a.test.js`, `a_test.go`, `test_a.py`). */

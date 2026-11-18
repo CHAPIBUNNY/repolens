@@ -719,11 +719,26 @@ export function renderCodeHealth(healthResult) {
 }
 
 export function renderSecurityHotspots(secResult) {
-  if (!secResult?.detected) {
+  if (secResult && !secResult.detected && secResult.filesScanned === 0) {
+    // Nothing was scanned (no JavaScript/TypeScript product files): "no anti-patterns
+    // detected" would read as a clean bill for a Python, Java, C#, or Rust codebase.
     return [
       "# Security Hotspots",
       "",
-      "> No security anti-patterns were detected in the scanned source files.",
+      "> Not scanned: the security pattern scan reads JavaScript and TypeScript source files only, and this repository has none outside tests, configs, and build output.",
+      "",
+      "No security result is implied for the other languages in this repository.",
+      ""
+    ].join("\n");
+  }
+  if (!secResult?.detected) {
+    const scanned = secResult?.filesScanned > 0
+      ? `in the ${secResult.filesScanned} scanned JavaScript/TypeScript source file${secResult.filesScanned === 1 ? "" : "s"}`
+      : "in the scanned source files";
+    return [
+      "# Security Hotspots",
+      "",
+      `> No security anti-patterns were detected ${scanned}.`,
       "",
       "RepoLens scans JavaScript and TypeScript source files for common security risks including code injection (`eval`), XSS (`innerHTML`), SQL injection, command injection, prototype pollution, hardcoded credentials, and insecure randomness.",
       "",

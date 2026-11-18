@@ -21,9 +21,21 @@ function report(vulnerabilities) {
 
 describe("runtime audit waivers", () => {
   it("reads the documented braces waiver", () => {
-    expect(waivers.map((waiver) => waiver.id)).toEqual(["GHSA-vfj7-8cjw-p6xm"]);
+    expect(waivers[0].id).toBe("GHSA-vfj7-8cjw-p6xm");
     expect(waivers[0].package).toBe("braces");
     expect(waivers[0].reason).toMatch(/No patched braces release/);
+  });
+
+  it("reads the documented picomatch waiver (no patched release, config-only globs)", () => {
+    expect(waivers.map((waiver) => waiver.id)).toEqual(["GHSA-vfj7-8cjw-p6xm", "GHSA-fc5q-39xc-vjpf"]);
+    expect(waivers[1].package).toBe("picomatch");
+    expect(waivers[1].reason).toMatch(/No patched picomatch release/);
+    const result = partitionAudit(report({
+      picomatch: { severity: "high", via: [{ url: "https://github.com/advisories/GHSA-fc5q-39xc-vjpf" }] },
+      micromatch: { severity: "high", via: ["picomatch"] },
+      "fast-glob": { severity: "high", via: ["micromatch"] },
+    }), waivers);
+    expect(result.blocking).toEqual([]);
   });
 
   it("extracts a GHSA id from an advisory url", () => {

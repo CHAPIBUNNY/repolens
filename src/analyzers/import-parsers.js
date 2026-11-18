@@ -4,7 +4,9 @@
 // become runtime edges.
 
 const PYTHON_STDLIB = new Set([
-  "__future__", "abc", "aifc", "argparse", "array", "ast", "asynchat", "asyncio",
+  "__future__", "abc", "aifc", "annotationlib", "antigravity", "compression", "ensurepip",
+  "genericpath", "nturl2path", "opcode", "pydoc_data", "pyexpat", "sre_compile",
+  "sre_constants", "sre_parse", "this", "argparse", "array", "ast", "asynchat", "asyncio",
   "asyncore", "atexit", "base64", "bdb", "binascii", "binhex", "bisect", "builtins",
   "bz2", "calendar", "cgi", "cgitb", "chunk", "cmath", "cmd", "code", "codecs",
   "codeop", "collections", "colorsys", "compileall", "concurrent", "configparser",

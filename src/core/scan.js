@@ -6,9 +6,10 @@ import { trackScan } from "../utils/telemetry.js";
 import { detectMonorepo } from "../analyzers/monorepo-detector.js";
 import { isInsideRoot } from "../utils/safe-path.js";
 import { isNonProductPath, isTestPath } from "../utils/path-roles.js";
-import { resolveScanIgnore } from "./scan-defaults.js";
+import { isDefaultDevArtifact, resolveUserScanIgnore } from "./scan-defaults.js";
 import { buildJvmModuleKeyer } from "./jvm-modules.js";
 import { replaceBracketParams } from "../utils/route-params.js";
+import { detectSetupCommands } from "../utils/setup-commands.js";
 
 const norm = (p) => p.replace(/\\/g, "/");
 
@@ -16,12 +17,47 @@ const norm = (p) => p.replace(/\\/g, "/");
 const MAX_FILES_WARNING = 10000;
 const MAX_FILES_LIMIT = 50000;
 
+// Leading `/` so a Next.js `app/` or `pages/` folder at the repository root matches
+// the same `/app/` and `/pages/` tests as `src/app/` (a root `app/page.tsx` was missed).
+const rooted = (file) => `/${norm(file).replace(/^\/+/, "")}`;
+
 function isNextRoute(file) {
-  const f = norm(file);
+  const f = rooted(file);
   return (
     f.includes("/pages/api/") ||
     (f.includes("/app/") && (f.endsWith("/route.ts") || f.endsWith("/route.js")))
   );
+}
+
+const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
+const HTTP_METHOD_SET = new Set(HTTP_METHODS);
+
+/**
+ * HTTP methods a Next.js route handler exports: `export async function GET`,
+ * `export function POST`, `export const GET = ...`, `export { handler as GET }`, and
+ * `export const { GET, POST } = handlers`. Only `export async function` was read before,
+ * so `export const GET = () => ...` showed as UNKNOWN.
+ */
+export function nextRouteMethods(content) {
+  const text = String(content || "");
+  const found = new Set();
+  const declared = /\bexport\s+(?:async\s+)?(?:function|const|let|var)\s+([A-Z]+)\b/g;
+  let match;
+  while ((match = declared.exec(text)) !== null) {
+    if (HTTP_METHOD_SET.has(match[1])) found.add(match[1]);
+  }
+  // `export { a as GET, POST }` and `export const { GET, POST } = handlers`.
+  const listed = /\bexport\s+(?:const\s+)?\{([^{}]*)\}/g;
+  while ((match = listed.exec(text)) !== null) {
+    for (const part of match[1].split(",")) {
+      const words = part.trim().split(/\s+/);
+      const name = words[words.length - 1].replace(/:.*$/, "");
+      const alias = part.includes(":") ? part.split(":").pop().trim() : name;
+      if (HTTP_METHOD_SET.has(name)) found.add(name);
+      else if (HTTP_METHOD_SET.has(alias)) found.add(alias);
+    }
+  }
+  return HTTP_METHODS.filter((method) => found.has(method));
 }
 
 function isExpressRoute(content) {
@@ -53,7 +89,7 @@ function isVueRouterFile(content) {
 }
 
 function isNextPage(file) {
-  const f = norm(file);
+  const f = rooted(file);
 
   if (f.includes("/app/")) {
     return (
@@ -125,18 +161,22 @@ function moduleKeyForFile(file, moduleRoots, rootLabel = "root") {
   return parts.length > 1 ? parts[0] : rootLabel;
 }
 
+// App Router URL segments: `(group)` folders and `@slot` parallel routes are not in the URL.
+function appRouterUrlSegments(relative) {
+  return relative.split("/").filter((segment) => segment
+    && !(segment.startsWith("(") && segment.endsWith(")"))
+    && !segment.startsWith("@"));
+}
+
 function routePathFromFile(file) {
-  const f = norm(file);
+  const f = rooted(file);
 
   if (f.includes("/app/")) {
     const appIndex = f.indexOf("/app/");
-    const relative = f.slice(appIndex + 5);
-
-    const cleaned = replaceBracketParams(relative
-      .replace(/\/page\.(ts|tsx|js|jsx)$/, "")
-      .replace(/\/route\.(ts|tsx|js|jsx)$/, ""))
-      .replace(/\/$/, "");
-
+    // `/page.tsx` for `app/page.tsx`, so the file-name strip below also matches at the app root.
+    const relative = f.slice(appIndex + 4)
+      .replace(/\/(page|route)\.(ts|tsx|js|jsx)$/, "");
+    const cleaned = replaceBracketParams(appRouterUrlSegments(relative).join("/"));
     return cleaned ? `/${cleaned}` : "/";
   }
 
@@ -470,6 +510,7 @@ async function extractRepoMetadata(repoRoot, files = []) {
   metadata.frameworks = [...new Set(metadata.frameworks)];
   metadata.testFrameworks = [...new Set(metadata.testFrameworks)];
   metadata.buildTools = [...new Set(metadata.buildTools)];
+  metadata.setup = detectSetupCommands(repoRoot, metadata);
 
   return metadata;
 }
@@ -614,14 +655,19 @@ function isValidRoutePath(p) {
 export async function listMatchedFiles(cfg) {
   const repoRoot = cfg.__repoRoot;
   const rootResolved = path.resolve(repoRoot);
+  // The default dev-artifact list (samples/, examples/, fixtures/, ...) is applied here,
+  // not as globs: a glob cannot tell `samples/` from the Java package folder
+  // `org/springframework/samples/` (spring-petclinic scanned 0 files).
   const files = await fg(cfg.scan.include, {
     cwd: rootResolved,
-    ignore: resolveScanIgnore(cfg.scan),
+    ignore: resolveUserScanIgnore(cfg.scan),
     onlyFiles: true,
     followSymbolicLinks: false,
     absolute: false
   });
-  return files.filter((file) => isInsideRoot(rootResolved, path.resolve(rootResolved, file)));
+  const keepDevArtifacts = cfg.scan?.include_dev_artifacts === true;
+  return files.filter((file) => (keepDevArtifacts || !isDefaultDevArtifact(file))
+    && isInsideRoot(rootResolved, path.resolve(rootResolved, file)));
 }
 
 export async function scanRepo(cfg) {
@@ -677,13 +723,7 @@ export async function scanRepo(cfg) {
   for (const file of apiFiles) {
     const absoluteFile = path.join(repoRoot, file);
     const content = await readFileSafe(absoluteFile);
-    const methods = [];
-
-    if (content.includes("export async function GET")) methods.push("GET");
-    if (content.includes("export async function POST")) methods.push("POST");
-    if (content.includes("export async function PUT")) methods.push("PUT");
-    if (content.includes("export async function PATCH")) methods.push("PATCH");
-    if (content.includes("export async function DELETE")) methods.push("DELETE");
+    const methods = nextRouteMethods(content);
 
     api.push({
       file,

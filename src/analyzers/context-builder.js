@@ -201,7 +201,8 @@ export function buildAIContext(scanResult, config, depGraph = null) {
     frameworks: metadata?.frameworks || [],
     languages: metadata?.languages ? [...metadata.languages] : [],
     buildTools: metadata?.buildTools || [],
-    testFrameworks: metadata?.testFrameworks || []
+    testFrameworks: metadata?.testFrameworks || [],
+    setup: metadata?.setup || { install: [], test: [], manifests: [] },
   };
   
   // Identify key architectural patterns (verified against dep graph when available)
