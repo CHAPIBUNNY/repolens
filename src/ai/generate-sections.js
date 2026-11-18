@@ -21,7 +21,7 @@ import {
   renderStructuredToMarkdown,
 } from "./prompts.js";
 import { identifyFlowDependencies, filterNoiseFlows } from "../analyzers/flow-inference.js";
-import { isCliProject, isLibraryProject } from "../analyzers/context-builder.js";
+import { describeAction, isActionProject, isCliProject, isLibraryProject } from "../analyzers/context-builder.js";
 import { scoreMaturity } from "../analyzers/maturity.js";
 import { isNonProductPath, isTestPath } from "../utils/path-roles.js";
 import { cycleConcern, cycleHealthPenalty, cycleInsight, cycleStatusCell } from "../analyzers/cycle-priority.js";
@@ -192,7 +192,8 @@ function getFallbackExecutiveSummary(context, enrichment = {}) {
   const maturityMax = maturity.max;
 
   // Determine project type for better descriptions
-  const projectType = isCLI ? "command-line tool" :
+  const isAction = isActionProject(context);
+  const projectType = isAction ? "GitHub Action" : isCLI ? "command-line tool" :
     isLibrary ? "library" :
     (context.project.apiRoutesDetected > 0 && context.project.pagesDetected > 0) ? "full-stack application" :
     context.project.apiRoutesDetected > 0 ? "API service" :
@@ -215,7 +216,9 @@ function getFallbackExecutiveSummary(context, enrichment = {}) {
 
 **${projectName}** is a ${frameworkList} ${projectType} built with ${languageList}. `;
 
-  if (isCLI) {
+  if (isAction) {
+    output += `It is a **GitHub Action**: workflows run it with \`uses:\` (${describeAction(context).replace(/^GitHub Action \(|\)$/g, "")}), and its inputs and outputs are declared in \`${context.project.githubAction?.file || "action.yml"}\`. It is not imported as a library.`;
+  } else if (isCLI) {
     output += `It operates as a **command-line interface**, enabling users to interact with the system through terminal commands. This architecture is optimized for automation, scripting, and integration into CI/CD pipelines.`;
   } else if (isLibrary) {
     output += `It is a **library**: other programs import it as a dependency and call its public API. It serves no routes or pages of its own.`;
@@ -350,7 +353,9 @@ The system is organized around **${context.domains.length} functional domains**,
   if (hasTests && hasCleanDeps) {
     observations.push(`Strong engineering practices are in place: automated testing and clean dependency boundaries support ongoing development.`);
   }
-  if (isCLI) {
+  if (isAction) {
+    observations.push(`As a GitHub Action, its \`action.yml\` inputs and outputs are the contract: renaming or removing one breaks every workflow that uses it.`);
+  } else if (isCLI) {
     observations.push(`As a CLI tool, this system is automation-friendly and can integrate into existing workflows and pipelines.`);
   } else if (isLibrary) {
     observations.push(`As a library, its public API is the contract: changes to exported functions affect every project that depends on it.`);
@@ -403,7 +408,9 @@ function getFallbackSystemOverview(context, enrichment = {}) {
   if (context.project.apiRoutesDetected > 0) {
     output += `\n| **API Endpoints** | ${context.project.apiRoutesDetected} |`;
   }
-  if (isCLI) {
+  if (isActionProject(context)) {
+    output += `\n| **Interface Type** | ${describeAction(context)} |`;
+  } else if (isCLI) {
     output += `\n| **Interface Type** | Command-Line Tool |`;
   } else if (isLibrary) {
     output += `\n| **Interface Type** | Library (imported API) |`;
@@ -825,7 +832,9 @@ function getFallbackArchitectureOverview(context, enrichment = {}) {
   if (context.project.pagesDetected > 0) {
     output += `| **UI Surface** | ${context.project.pagesDetected} pages | ${context.project.pagesDetected > 30 ? "Feature-rich UI" : context.project.pagesDetected > 10 ? "Moderate UI" : "Focused UI"} |\n`;
   }
-  if (isCLI) {
+  if (isActionProject(context)) {
+    output += `| **Interface** | GitHub Action | Run from workflows with \`uses:\` |\n`;
+  } else if (isCLI) {
     output += `| **Interface** | CLI | Terminal-driven interaction |\n`;
   } else if (isLibrary) {
     output += `| **Interface** | Library | Imported by other programs through its public API |\n`;
@@ -1197,7 +1206,7 @@ This guide will help you get up to speed quickly. **${projectName}** is a ${fram
 | **Build Tools** | ${context.techStack.buildTools.join(", ") || "Standard toolchain"} |
 ${testFrameworks.length > 0 ? `| **Testing** | ${testFrameworks.join(", ")} |\n` : ""}| **Size** | ${context.project.modulesDetected} modules, ${context.project.filesScanned} files |
 | **Domains** | ${context.domains.length} functional areas |
-${isCLI ? "| **Type** | Command-line interface |\n" : isLibraryProject(context) ? "| **Type** | Library |\n" : ""}${context.project.apiRoutesDetected > 0 ? `| **API** | ${context.project.apiRoutesDetected} endpoints |\n` : ""}${context.project.pagesDetected > 0 ? `| **UI** | ${context.project.pagesDetected} pages |\n` : ""}
+${isActionProject(context) ? "| **Type** | GitHub Action |\n" : isCLI ? "| **Type** | Command-line interface |\n" : isLibraryProject(context) ? "| **Type** | Library |\n" : ""}${context.project.apiRoutesDetected > 0 ? `| **API** | ${context.project.apiRoutesDetected} endpoints |\n` : ""}${context.project.pagesDetected > 0 ? `| **UI** | ${context.project.pagesDetected} pages |\n` : ""}
 
 ---
 
