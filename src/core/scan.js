@@ -5,11 +5,14 @@ import { info, warn } from "../utils/logger.js";
 import { trackScan } from "../utils/telemetry.js";
 import { detectMonorepo } from "../analyzers/monorepo-detector.js";
 import { isInsideRoot } from "../utils/safe-path.js";
-import { isNonProductPath, isTestPath } from "../utils/path-roles.js";
+import { isNonProductPath, isTestPath, isToolingPath } from "../utils/path-roles.js";
 import { isDefaultDevArtifact, resolveUserScanIgnore } from "./scan-defaults.js";
 import { buildJvmModuleKeyer } from "./jvm-modules.js";
 import { replaceBracketParams } from "../utils/route-params.js";
 import { detectSetupCommands } from "../utils/setup-commands.js";
+import { detectScriptFixtureDirs, fixtureDirOf } from "../utils/fixture-dirs.js";
+import { detectProjectName } from "../utils/project-name.js";
+import { detectGitHubAction } from "../utils/github-action-detect.js";
 
 const norm = (p) => p.replace(/\\/g, "/");
 
@@ -132,10 +135,16 @@ async function readFileSafe(file) {
   }
 }
 
-function rootModuleLabel(repoRoot) {
-  const base = path.basename(path.resolve(repoRoot || ""));
-  if (!base || base === "." || base === "..") return "root";
-  return base;
+// Files at the repository root form one module named for the project (package.json,
+// Gradle, git remote, Maven, .sln, then folder), not the checkout folder: a scan of a copy
+// in `/tmp/trscan` showed a `trscan` module for dorny/test-reporter. A name that is also a
+// top-level folder, or one with path characters, falls back to "root".
+function rootModuleLabel(repoRoot, files = []) {
+  const resolved = path.resolve(repoRoot || ".");
+  const detected = String(detectProjectName(resolved, "root")).split("/").pop() || "";
+  const label = /^[A-Za-z0-9._-]+$/.test(detected) && detected !== "." && detected !== ".." ? detected : "root";
+  const topDirs = new Set(files.map((file) => norm(file)).filter((file) => file.includes("/")).map((file) => file.split("/")[0]));
+  return topDirs.has(label) ? "root" : label;
 }
 
 function moduleKeyForFile(file, moduleRoots, rootLabel = "root") {
@@ -311,7 +320,7 @@ const JVM_DOTNET_TEST_FRAMEWORKS = [
   [/Include="MSTest(\.TestFramework)?"/i, "MSTest"],
 ];
 
-export async function detectJvmDotnetTooling(repoRoot, metadata) {
+export async function detectJvmDotnetTooling(repoRoot, metadata, { skip = null } = {}) {
   let buildFiles = [];
   try {
     buildFiles = await fg(JVM_DOTNET_BUILD_GLOBS, {
@@ -325,6 +334,7 @@ export async function detectJvmDotnetTooling(repoRoot, metadata) {
     return;
   }
   buildFiles.sort();
+  if (skip) buildFiles = buildFiles.filter((file) => !skip(file));
   for (const file of buildFiles.slice(0, 80)) {
     const base = path.posix.basename(file);
     if (base === "pom.xml") metadata.buildTools.push("Maven");
@@ -419,6 +429,7 @@ async function extractRepoMetadata(repoRoot, files = []) {
     const hasLibraryEntry = Boolean(pkg.main || pkg.module || pkg.exports || pkg.types || pkg.typings || pkg.browser);
     const isShippedApp = Boolean(allDeps["electron"] || allDeps["next"]);
     metadata.packageEntryFiles = packageEntryFiles(pkg);
+    metadata.publishedPackage = pkg.private !== true && Boolean(hasLibraryEntry || hasBin);
     const description = String(pkg.description || "");
     const keywords = Array.isArray(pkg.keywords) ? pkg.keywords.join(" ") : "";
     const saysLibrary = /\b(library|sdk|parser|toolkit|framework)\b/i.test(`${description} ${keywords}`);
@@ -432,6 +443,15 @@ async function extractRepoMetadata(repoRoot, files = []) {
     }
   } catch {
     // No package.json or invalid JSON
+  }
+
+  // A GitHub Action (root action.yml with runs.using node*/composite/docker) is used from
+  // workflows, not imported. A published npm package with a composite or Docker action
+  // (a CLI that also ships an action) keeps its package kind.
+  const action = detectGitHubAction(repoRoot);
+  if (action) {
+    metadata.githubAction = action;
+    if (!metadata.publishedPackage || action.using.startsWith("node")) metadata.projectKind = "action";
   }
 
   // Detect Python frameworks and tools
@@ -499,10 +519,16 @@ async function extractRepoMetadata(repoRoot, files = []) {
     // No Cargo.toml
   }
 
-  await detectJvmDotnetTooling(repoRoot, metadata);
+  // Test fixtures, samples, examples, docs, and fixture projects built by `*-fixture`
+  // npm scripts do not define the tech stack (dorny/test-reporter's `reports/` sample
+  // projects listed C#, Go, and MSBuild).
+  const fixtureDirs = detectScriptFixtureDirs(repoRoot);
+  const isFixtureOrSample = (file) => Boolean(fixtureDirOf(file, fixtureDirs)) || isToolingPath(file);
+  await detectJvmDotnetTooling(repoRoot, metadata, { skip: isFixtureOrSample });
 
-  // Merge languages detected from file extensions
-  const fileLanguages = detectLanguagesFromFiles(files);
+  // Merge languages detected from file extensions (product files; all files when there are none)
+  const productFiles = files.filter((file) => !isNonProductPath(file) && !fixtureDirOf(file, fixtureDirs));
+  const fileLanguages = detectLanguagesFromFiles(productFiles.length > 0 ? productFiles : files);
   const manifestLanguages = [...metadata.languages];
   metadata.languages = new Set([...fileLanguages, ...manifestLanguages]);
 
@@ -693,7 +719,12 @@ export async function scanRepo(cfg) {
   const moduleCounts = new Map();
   const moduleTestCounts = new Map();
   const flatKeys = new Set();
-  const rootLabel = rootModuleLabel(repoRoot);
+  // Fixture scripts per module; a module is a fixture project only when every one of its
+  // files sits in a dir an npm `*-fixture` script builds.
+  const moduleFixtureScripts = new Map();
+  const nonFixtureModules = new Set();
+  const rootLabel = rootModuleLabel(repoRoot, files);
+  const fixtureDirs = detectScriptFixtureDirs(repoRoot);
   const jvmModuleKey = buildJvmModuleKeyer(files, cfg.module_roots || []);
 
   for (const file of files) {
@@ -705,7 +736,14 @@ export async function scanRepo(cfg) {
     if (!norm(file).includes("/")) flatKeys.add(key);
     moduleCounts.set(key, (moduleCounts.get(key) || 0) + 1);
     if (isTestPath(file)) moduleTestCounts.set(key, (moduleTestCounts.get(key) || 0) + 1);
+    const fixture = fixtureDirOf(norm(file), fixtureDirs);
+    if (!fixture) nonFixtureModules.add(key);
+    else if (!moduleFixtureScripts.has(key)) moduleFixtureScripts.set(key, new Set([fixture.script]));
+    else moduleFixtureScripts.get(key).add(fixture.script);
   }
+  const fixtureOf = (key) => (nonFixtureModules.has(key) || !moduleFixtureScripts.has(key)
+    ? null
+    : [...moduleFixtureScripts.get(key)].sort().join(", "));
 
   const modules = [...moduleCounts.entries()]
     .map(([key, fileCount]) => ({
@@ -713,6 +751,7 @@ export async function scanRepo(cfg) {
       fileCount,
       ...(moduleTestCounts.get(key) ? { testFileCount: moduleTestCounts.get(key) } : {}),
       ...(flatKeys.has(key) ? { flat: true } : {}),
+      ...(fixtureOf(key) ? { fixture: fixtureOf(key) } : {}),
     }))
     .sort((a, b) => b.fileCount - a.fileCount);
 

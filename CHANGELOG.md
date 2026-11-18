@@ -2,6 +2,21 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## Unreleased
+
+Fixes from mapping dorny/test-reporter (79b4b44: a TypeScript GitHub Action with .NET, Go, Dart, Jest, and Mocha fixture projects under `reports/`). Re-checked on gson, mockito, guava, Polly, MediatR, TanStack/query, and attrs: graph numbers unchanged; differences are listed under upgrade notes.
+
+### Upgrade notes
+
+- **The root-files module is named after the project, not the checkout folder.** A clone in `trscan` gave a module `trscan`; it is now `test-reporter` (the same name detection as the title: `package.json`, Gradle `rootProject.name`, the git remote, Maven `artifactId`, a .NET solution; a scoped npm name uses its last part). It falls back to `root` when the name would collide with a top-level folder. The module is described as "Repository root files" and is no longer typed or put in a domain by keywords in its name (`test-reporter` was "Test suites and fixtures" and "Analytics & Reporting").
+- **Languages in the tech stack come from product files.** Docs, tests, samples, tooling, and fixture projects no longer add languages when product code exists: MediatR and Polly were "C#, Python" / "C#, JavaScript" (from `docs/conf.py` and doc scripts) and are now "C#".
+- **Test modules stay in Testing.** A module under a test directory (`__tests__/report`, `test/Shared`, `src/testFixtures/java`, `src/androidTest/java`) was put in a business domain when a later folder name matched one ("report" → Analytics & Reporting, "shared" → Shared Utilities). Custom domain hints still win.
+
+### Fixes
+
+- GitHub Actions: a root `action.yml`/`action.yaml` with `runs.using` `node*`, `composite`, or `docker` is detected. A repository that is not a published npm package (or whose action runs on Node) is described as a GitHub Action ("Interface Type: GitHub Action (node24, runs `dist/index.js`)", executive summary, architecture, onboarding) instead of "Library (imported API)". Published packages that also ship a composite action (RepoLens itself) keep their CLI/library description.
+- Fixture projects: directories built by root `package.json` scripts named `*fixture*` (`dotnet test reports/dotnet/...`, `go test ./reports/go`, `cd reports/jest && npm test`) are test fixtures. They no longer add languages (C#, Go) or build tools (MSBuild) to the tech stack, their modules are "Test fixture project (built by the `dotnet-fixture` npm script)" in the Testing domain, and `reports/` no longer creates an "Analytics & Reporting" domain. Paths that no longer exist and product folders (`src`, `lib`, `scripts`, …) are ignored.
+
 ## 1.17.2 (2026-11-18)
 
 Fixes from the 2026-11-18 weekly gap test (spring-projects/spring-petclinic 500158f, TanStack/query 7ed5ea9, python-attrs/attrs 2a1fb86, jasontaylordev/CleanArchitecture 9e1042b, BurntSushi/ripgrep 178cc02). Re-checked on gson, mockito, guava, Polly, and MediatR: graph edges, cycles, and orphans unchanged.

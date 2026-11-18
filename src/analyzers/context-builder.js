@@ -121,8 +121,21 @@ export function computeModuleLevelMetrics(depGraph, modules) {
 export function isCliProject(context) {
   const kind = context?.project?.kind;
   if (kind === "cli") return true;
-  if (kind === "library") return false;
+  if (kind === "library" || kind === "action") return false;
   return (context?.patterns || []).some((p) => String(p).toLowerCase().startsWith("cli tool"));
+}
+
+/** A GitHub Action: used from workflows (`uses:`), not imported or run from a terminal. */
+export function isActionProject(context) {
+  return context?.project?.kind === "action";
+}
+
+/** "GitHub Action (node24, runs `dist/index.js`)" for the overview tables. */
+export function describeAction(context) {
+  const action = context?.project?.githubAction;
+  if (!action) return "GitHub Action";
+  const runs = action.using?.startsWith("node") && action.main ? `, runs \`${action.main}\`` : "";
+  return `GitHub Action (${action.using}${runs})`;
 }
 
 export function isLibraryProject(context) {
@@ -178,7 +191,7 @@ export function buildAIContext(scanResult, config, depGraph = null) {
     .map(m => ({
       key: m.key,
       fileCount: m.fileCount,
-      type: inferModuleType(m.key),
+      type: m.fixture ? "test" : inferModuleType(m.flat ? "" : m.key), // root files are not typed by the project name
       depRole: describeModuleDepRole(m.key, moduleMetrics),
     }));
   
@@ -213,6 +226,7 @@ export function buildAIContext(scanResult, config, depGraph = null) {
     project: {
       name: config.project.name,
       kind: metadata?.projectKind || "unknown",
+      ...(metadata?.githubAction ? { githubAction: metadata.githubAction } : {}),
       filesScanned: filesCount,
       modulesDetected: modules.length,
       pagesDetected: pages?.length || 0,
@@ -501,7 +515,7 @@ export function buildModuleContext(modules, config, depGraph = null) {
     return {
       key: module.key,
       fileCount: module.fileCount,
-      type: inferModuleType(module.key),
+      type: module.fixture ? "test" : inferModuleType(module.flat ? "" : module.key),
       depRole: describeModuleDepRole(module.key, moduleMetrics),
       domain: domain?.name || "Other",
       domainDescription: domain?.description || "Uncategorized"

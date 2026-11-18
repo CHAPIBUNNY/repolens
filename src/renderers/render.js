@@ -1,4 +1,5 @@
-import { computeModuleLevelMetrics, describeModuleDepRole, isCliProject, isLibraryProject } from "../analyzers/context-builder.js";
+import { describeFixtureScripts } from "../utils/fixture-dirs.js";
+import { computeModuleLevelMetrics, describeModuleDepRole, isActionProject, isCliProject, isLibraryProject } from "../analyzers/context-builder.js";
 import { moduleEvidence, pathHasKeyword, stripContainerSegments } from "../analyzers/domain-inference.js";
 import { jvmModuleShortLabel } from "../core/jvm-modules.js";
 
@@ -76,7 +77,7 @@ export function renderSystemOverview(cfg, scan, depGraph = null) {
     );
     for (const m of topModules) {
       const depRole = describeModuleDepRole(m.key, moduleMetrics);
-      const desc = describeModule(m.key, depRole);
+      const desc = describeModule(m.flat ? "" : m.key, depRole);
       lines.push(`| \`${m.key}\` | ${m.fileCount} | ${desc} |`);
     }
     lines.push(``);
@@ -117,7 +118,8 @@ function describeModule(key, depRole = null, evidence = {}) {
   const typedKey = jvmModuleShortLabel(key) ? stripContainerSegments(key) || "main" : key;
   const has = (keyword) => pathHasKeyword(typedKey, keyword);
   let base;
-  if (has("test") || has("spec")) base = "Test suites and fixtures";
+  if (key === "") base = "Repository root files";
+  else if (has("test") || has("spec")) base = "Test suites and fixtures";
   else if (has("core")) base = "Core business logic and shared foundations";
   else if (has("util")) base = "Shared utilities and helper functions";
   else if (has("api")) base = "API route handlers and endpoint definitions";
@@ -159,6 +161,12 @@ function describeModule(key, depRole = null, evidence = {}) {
 // A module whose files are mostly tests and fixtures is not "Application module".
 // The file count stays the same; the role says how much of it is test code.
 export function describeModuleWithTests(module, desc) {
+  // A fixture project built by an npm `*-fixture` script (dorny/test-reporter `reports/dotnet`).
+  if (module?.fixture) {
+    const role = desc.replace(/^[^·]*(· )?/, "");
+    const base = `Test fixture project (built by ${describeFixtureScripts(module.fixture)})`;
+    return role ? `${base} · ${role}` : base;
+  }
   const total = Number(module?.fileCount) || 0;
   const tests = Number(module?.testFileCount) || 0;
   if (!total || tests * 2 < total) return desc;
@@ -209,7 +217,8 @@ export function renderModuleCatalog(cfg, scan, ownershipMap = {}, depGraph = nul
 
   for (const module of scan.modules.slice(0, 100)) {
     const depRole = describeModuleDepRole(module.key, moduleMetrics);
-    const desc = describeModuleWithTests(module, describeModule(module.key, depRole, moduleEvidence(module.key, depGraph)));
+    // Root files are keyed by the project name; `test-reporter` is not a test module.
+    const desc = describeModuleWithTests(module, describeModule(module.flat ? "" : module.key, depRole, moduleEvidence(module.key, depGraph)));
     const owners = ownershipMap[module.key];
     if (hasOwnership) {
       lines.push(`| \`${module.key}\` | ${module.fileCount} | ${desc} | ${owners ? owners.join(", ") : "—"} |`);
@@ -476,7 +485,12 @@ export function renderRouteMap(cfg, scan, aiContext = null) {
       ``
     );
 
-    if (isCLI) {
+    if (isActionProject(aiContext)) {
+      lines.push(
+        `This project is a **GitHub Action** — workflows run it with \`uses:\`; it does not expose HTTP routes or serve web pages. This is expected behavior, not a detection failure.`,
+        ``
+      );
+    } else if (isCLI) {
       lines.push(
         `This project is a **CLI tool** — it does not expose HTTP routes or serve web pages. This is expected behavior, not a detection failure.`,
         ``,

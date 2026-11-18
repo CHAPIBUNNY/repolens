@@ -1,3 +1,5 @@
+import { describeFixtureScripts } from "../utils/fixture-dirs.js";
+import { isTestPath } from "../utils/path-roles.js";
 // Domain inference - map folder/file names to business domains
 import { splitJvmSourcePath } from "../core/jvm-modules.js";
 
@@ -258,11 +260,34 @@ export function inferDomain(modulePath, customHints = [], evidence = {}) {
   };
 }
 
+// A test module (`__tests__/report`) is Testing even when a later folder name matches a
+// business keyword ("report" → Analytics & Reporting). User-defined hints still win.
+function testModuleInference(key, customHints = []) {
+  if (!isTestPath(key)) return null;
+  const inferred = inferDomain(key, customHints);
+  if (inferred.domain === "Testing") return inferred;
+  if (customHints.some((hint) => hint.domain === inferred.domain)) return null;
+  return {
+    domain: "Testing",
+    description: `path \`${key}\` is a test directory`,
+    confidence: "test_path",
+    matchedKeyword: null,
+  };
+}
+
 export function groupModulesByDomain(modules, customHints = [], depGraph = null) {
   const domainGroups = {};
   
   for (const module of modules) {
-    const inference = inferDomain(module.key, customHints, moduleEvidence(module.key, depGraph));
+    // A fixture project built by an npm `*-fixture` script is test input: `reports/dotnet`
+    // in dorny/test-reporter is not an "Analytics & Reporting" domain.
+    // Files at the repository root are keyed by the project name (`test-reporter`); the
+    // name is not a domain keyword.
+    const inference = module.flat
+      ? { ...inferDomain("", customHints), description: "Files at the repository root" }
+      : module.fixture
+      ? { domain: "Testing", description: `test fixture project built by ${describeFixtureScripts(module.fixture)}`, confidence: "fixture_script", matchedKeyword: null }
+      : testModuleInference(module.key, customHints) || inferDomain(module.key, customHints, moduleEvidence(module.key, depGraph));
     const domainName = inference.domain;
     
     if (!domainGroups[domainName]) {
