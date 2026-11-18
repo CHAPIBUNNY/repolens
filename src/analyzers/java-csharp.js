@@ -600,8 +600,19 @@ const CSHARP_STDLIB = /^(System|Microsoft\.CSharp|Microsoft\.VisualBasic|Microso
 
 export function isCSharpStdlib(ns, packages = []) {
   if (!CSHARP_STDLIB.test(ns)) return false;
-  // `System.Threading.RateLimiting` is a NuGet package, not the base library.
-  return !packages.some((pkg) => ns === pkg || ns.startsWith(`${pkg}.`) || pkg.startsWith(`${ns}.`));
+  // `System.Threading.RateLimiting` is a NuGet package, not the base library. A longer
+  // package (`System.Threading.Tasks.Extensions`) does not take over the base namespace
+  // `System.Threading` unless it is the contract half (`...Abstractions`) of that namespace.
+  return !packages.some((pkg) => ns === pkg || ns.startsWith(`${pkg}.`)
+    || (pkg.startsWith(`${ns}.`) && isSplitPackageSuffix(pkg.slice(ns.length + 1).split("."))));
+}
+
+// Package-name endings that keep the namespace: contract/implementation splits and
+// strong-name-signed variants (`Flurl.Http.Signed` ships `Flurl.Http`).
+const SPLIT_PACKAGE_SUFFIXES = new Set(["abstractions", "core", "contracts", "primitives", "common", "runtime", "signed", "strongname", "strongnamed"]);
+
+function isSplitPackageSuffix(rest) {
+  return rest.length > 0 && rest.every((segment) => SPLIT_PACKAGE_SUFFIXES.has(segment.toLowerCase()));
 }
 
 /** External dependency label for an unresolved `using`: the matching PackageReference when there is one. */
@@ -618,7 +629,11 @@ export function csharpExternalName(ns, packages = []) {
     while (n < ps.length && n < segs.length && ps[n].toLowerCase() === segs[n].toLowerCase()) n += 1;
     if (n === 0) continue;
     const pkgPrefix = n === ps.length;
-    const nsPrefix = n === segs.length && (n >= 2 || segs.length === 1);
+    // The namespace is a prefix of the package name. For a multi-part namespace that is
+    // only the contract/implementation split (`Microsoft.Extensions.Logging` lives in
+    // `Microsoft.Extensions.Logging.Abstractions`). `Microsoft.AspNetCore.Mvc` is not in
+    // `Microsoft.AspNetCore.Mvc.Testing`: that package adds its own namespace.
+    const nsPrefix = n === segs.length && (segs.length === 1 || (n >= 2 && isSplitPackageSuffix(ps.slice(n))));
     if (!pkgPrefix && !nsPrefix) continue;
     const rank = [n, pkgPrefix ? 1 : 0, -pkg.length];
     if (!bestRank || rank[0] > bestRank[0] || (rank[0] === bestRank[0] && (rank[1] > bestRank[1] || (rank[1] === bestRank[1] && rank[2] > bestRank[2])))) {
@@ -627,6 +642,11 @@ export function csharpExternalName(ns, packages = []) {
     }
   }
   if (best) return best;
+  // A declared package extends this namespace with its own (`...HealthChecks.EntityFrameworkCore`
+  // for `Microsoft.Extensions.Diagnostics.HealthChecks`): name the namespace itself rather
+  // than a shortened prefix of it.
+  const lowerNs = `${ns.toLowerCase()}.`;
+  if (packages.some((pkg) => pkg.toLowerCase().startsWith(lowerNs))) return ns;
   const take = /^(Microsoft|System)$/.test(segs[0]) ? 3 : 2;
   return segs.slice(0, Math.min(segs.length, take)).join(".");
 }

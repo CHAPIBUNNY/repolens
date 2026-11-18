@@ -9,6 +9,16 @@
       "reason": "No patched braces release exists. The advisory covers every published version (<=3.0.3), and 3.0.3 (2024-05-21) is still the latest tag. fast-glob 3.3.3, the latest release, depends on micromatch 4.0.8, which depends on braces ^3.0.3. micromatch/braces#72 was closed without a release.",
       "exposure": "Scan globs from the repository's own .repolens.yml are passed to fast-glob. A deeply nested brace pattern can crash the Node process (availability only). The pattern is chosen by whoever writes that config, not by a remote caller.",
       "review": "Delete this waiver when braces publishes a version outside <=3.0.3, or when the runtime dependency path no longer reaches braces."
+    },
+    {
+      "id": "GHSA-fc5q-39xc-vjpf",
+      "package": "picomatch",
+      "cve": "CVE-2026-112366",
+      "severity": "high",
+      "scope": "runtime",
+      "reason": "No patched picomatch release exists. The advisory (updated 2026-11-17) covers every published version (<=4.0.7), and 4.0.7 is the latest tag. fast-glob 3.3.3, the latest release, depends on micromatch 4.0.8, which depends on picomatch ^2.3.1 (2.3.2 installed).",
+      "exposure": "Same path as the braces waiver: only scan globs from the repository's own .repolens.yml (and RepoLens's built-in defaults) are compiled by picomatch. A single-branch repeated extglob such as +(*) in that config can stall the scan (availability only). The pattern is chosen by whoever writes that config, not by a remote caller; the MCP tools take no glob input.",
+      "review": "Delete this waiver when picomatch publishes a version outside <=4.0.7 that micromatch can use, or when the runtime dependency path no longer reaches picomatch."
     }
   ]
 }

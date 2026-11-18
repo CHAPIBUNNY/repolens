@@ -2,6 +2,27 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## Unreleased
+
+Fixes from the 2026-11-18 weekly gap test (spring-projects/spring-petclinic 500158f, TanStack/query 7ed5ea9, python-attrs/attrs 2a1fb86, jasontaylordev/CleanArchitecture 9e1042b, BurntSushi/ripgrep 178cc02). Re-checked on gson, mockito, guava, Polly, and MediatR: graph edges, cycles, and orphans unchanged.
+
+### Upgrade notes
+
+- **Java/Kotlin package folders are no longer read as sample, example, test, docs, or tooling folders.** Only the path down to the source root (`src/test/java`, `samples/x/src/main/java`) decides. spring-petclinic (`org/springframework/samples/petclinic`) scanned 0 files and `demo` exited 2; it now maps 50 files, 6 modules, 91 import edges. Any Spring Initializr project (`com/example/demo`) was affected the same way. The default dev-artifact ignore list is applied after the glob, so file order among equal scores can change once.
+- **Onboarding install and test commands follow the root build files** (`pnpm install`/`npm test`, `uv sync`/`pip install -e .` + `pytest`, `./mvnw package`, `./gradlew build`, `dotnet build`/`dotnet test`, `cargo build`, `go mod download`) instead of `npm install` and `npm test  # or: npx pytest run` for every repository. "Additional Resources" lists the real manifest instead of `package.json`.
+
+### Fixes
+
+- Next.js: an `app/` or `pages/` folder at the repository root is detected; `app/page.tsx` is `/` (was `/page.tsx`); `(group)` and `@slot` folders are left out of URLs; route-handler methods are read from `export const GET =`, `export function POST`, `export { handler as GET }`, and `export const { GET, POST } = handlers` (were `UNKNOWN`).
+- Project name: a placeholder root `package.json` name (`root`, `monorepo`, `workspace`, …) falls through to the git remote or folder. TanStack/query was "root".
+- C#: `using Microsoft.AspNetCore.Mvc;` is no longer labelled as the package `Microsoft.AspNetCore.Mvc.Testing` (and counted as runtime). A namespace maps to a longer package name only for contract/implementation splits (`.Abstractions`, `.Core`, …) and signed variants; base-library namespaces stay standard library next to polyfill packages (`System.Threading.Tasks.Extensions`).
+- Python: 3.14 standard-library modules (`annotationlib`, `compression`) and a few internal ones are not external packages. attrs listed `annotationlib` as its one runtime dependency.
+- Unsupported languages: the system map no longer says "run full publish for import-based analysis" (demo and publish build the same graph); it names the unsupported languages. The security page says "Not scanned" when there are no JavaScript/TypeScript files instead of "No security anti-patterns were detected", and otherwise states how many JS/TS files were scanned.
+
+### Security
+
+- Runtime audit waiver for GHSA-fc5q-39xc-vjpf (picomatch ReDoS, every published version, no patched release; reached through fast-glob → micromatch). Same exposure as the braces waiver: only the repository's own scan globs are compiled.
+
 ## 1.17.1 (2026-11-16)
 
 Fixes found by mapping terrakube-io/terrakube (d6a5d89: Java Spring Boot services `api`, `executor`, `registry` and a Vite + React UI) with 1.17.0. Re-checked on google/gson, App-vNext/Polly, mockito/mockito, google/guava, and jbogard/MediatR.

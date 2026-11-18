@@ -1,3 +1,4 @@
+import { coverageLine } from "../analyzers/language-coverage.js";
 import { replaceLeadingAppGroup, replaceSlashGroups } from "../utils/route-params.js";
 import { jvmModuleShortLabel } from "../core/jvm-modules.js";
 import { stripContainerSegments } from "../analyzers/domain-inference.js";
@@ -257,9 +258,13 @@ export function renderSystemMap(scan, config, depGraph) {
   const { nodes, relationships } = buildModuleGraph(modules, depGraph);
   const architectureDiagram = generateUnicodeArchitectureDiagram(nodes, relationships);
 
+  // Demo and publish build the same import graph, so "run full publish" was never the
+  // fix. Say why there are no import edges instead.
   const sourceLabel = depGraph && depGraph.edges && depGraph.edges.length > 0
     ? "**Source:** Real import analysis"
-    : "**Source:** Heuristic inference (run full publish for import-based analysis)";
+    : depGraph?.coverage?.status === "unsupported"
+      ? `**Source:** Heuristic inference from folder layout. ${coverageLine(depGraph.coverage, "import analysis")}`
+      : "**Source:** Heuristic inference from folder layout. No import edges were found between modules.";
 
   // Build markdown output
   const lines = [

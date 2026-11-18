@@ -1228,7 +1228,7 @@ ${context.repoRoots.map(root => {
     // No src/lib/app folder: point at the largest product modules this scan found,
     // not at a generic `src/` that may not exist.
     const productModules = (context.topModules || [])
-      .filter((mod) => mod.type !== "test" && !/(^|\/)(tests?|spec|__tests__|docs?|examples?|benchmarks?)(\/|$)/i.test(mod.key) && !/\/src\/(test|it|jmh)\//.test(`${mod.key}/`))
+      .filter((mod) => mod.type !== "test" && !isNonProductPath(mod.key) && !/\/src\/(test|it|jmh)\//.test(`${mod.key}/`))
       .slice(0, 3);
     if (productModules.length > 0) {
       output += `Start with the largest source modules:\n\n`;
@@ -1357,8 +1357,13 @@ ${context.repoRoots.map(root => {
   output += `### ${stepNum++}. Clone and Install\n\n`;
   output += "```bash\n";
   output += `git clone <repository-url>\n`;
-  output += `cd ${projectName.replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase()}\n`;
-  output += `npm install  # or yarn, pnpm\n`;
+  output += `cd ${String(projectName).split("/").pop().replace(/[^a-zA-Z0-9-_.]/g, '-')}\n`;
+  const setup = context.techStack.setup || { install: [], test: [], manifests: [] };
+  if (setup.install.length > 0) {
+    for (const command of setup.install) output += `${command}\n`;
+  } else {
+    output += `# No root build file found: follow the setup steps in README.md\n`;
+  }
   output += "```\n\n";
 
   output += `### ${stepNum++}. Explore the Structure\n\n`;
@@ -1375,7 +1380,11 @@ ${context.repoRoots.map(root => {
   if (testFrameworks.length > 0) {
     output += `### ${stepNum++}. Run the Tests\n\n`;
     output += "```bash\n";
-    output += `npm test  # or: npx ${testFrameworks[0].toLowerCase()} run\n`;
+    if (setup.test.length > 0) {
+      for (const command of setup.test) output += `${command}\n`;
+    } else {
+      output += `# ${testFrameworks.join(", ")}: see README.md or CONTRIBUTING.md for the test command\n`;
+    }
     output += "```\n\n";
     output += `Running tests helps you:\n`;
     output += `- Verify your setup is correct\n`;
@@ -1418,7 +1427,9 @@ ${context.repoRoots.map(root => {
   output += `| \`README.md\` | Project overview and quick start |\n`;
   output += `| \`CONTRIBUTING.md\` | Contribution guidelines (if exists) |\n`;
   output += `| \`CHANGELOG.md\` | Recent changes and release history |\n`;
-  output += `| \`package.json\` | Available scripts and dependencies |\n`;
+  for (const manifest of setup.manifests) {
+    output += `| \`${manifest.file}\` | ${manifest.purpose} |\n`;
+  }
   if (context.monorepo) {
     output += `| Root \`package.json\` | Monorepo workspace configuration |\n`;
   }
