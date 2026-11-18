@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.17.1  
+**Current Version:** 1.17.2  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** November 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.17.1)
+## What's Shipped (v0.1.0 → v1.17.2)
 
 Everything below is live, tested, and available on npm.
 
@@ -164,6 +164,14 @@ Everything below is live, tested, and available on npm.
 - ✅ `server.json` for the MCP Registry (`io.github.CHAPIBUNNY/repolens`) and `smithery.yaml`
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
+
+## v1.17.2 — Gap-test accuracy (spring-petclinic, TanStack/query, attrs, CleanArchitecture, ripgrep)
+
+- ✅ Java/Kotlin package folders (`org/springframework/samples`, `com/example/demo`) are not sample, test, or tooling folders
+- ✅ Next.js `app/` and `pages/` at the repository root, `/` for `app/page.tsx`, route groups and slots left out of URLs, route-handler methods from every export form
+- ✅ Onboarding install and test commands from the root build files; placeholder root `package.json` names skipped
+- ✅ C# namespace → package labels and base-library namespaces; Python 3.14 standard library
+- ✅ System map and security page say what was not analyzed for unsupported languages
 
 ## v1.17.1 — Java and frontend accuracy (terrakube)
 

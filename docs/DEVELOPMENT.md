@@ -40,7 +40,7 @@ npm test
 Simulates the full user installation experience:
 
 ```bash
-# Pack the tarball. The filename follows package.json (1.17.1 → chappibunny-repolens-1.17.1.tgz).
+# Pack the tarball. The filename follows package.json (1.17.2 → chappibunny-repolens-1.17.2.tgz).
 npm pack
 
 # Install globally from that tarball

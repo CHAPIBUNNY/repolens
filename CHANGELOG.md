@@ -2,7 +2,7 @@
 
 All notable changes to RepoLens will be documented in this file.
 
-## Unreleased
+## 1.17.2 (2026-11-18)
 
 Fixes from the 2026-11-18 weekly gap test (spring-projects/spring-petclinic 500158f, TanStack/query 7ed5ea9, python-attrs/attrs 2a1fb86, jasontaylordev/CleanArchitecture 9e1042b, BurntSushi/ripgrep 178cc02). Re-checked on gson, mockito, guava, Polly, and MediatR: graph edges, cycles, and orphans unchanged.
 
