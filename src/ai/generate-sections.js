@@ -220,6 +220,7 @@ function getFallbackExecutiveSummary(context, enrichment = {}) {
     output += `It is a **GitHub Action**: workflows run it with \`uses:\` (${describeAction(context).replace(/^GitHub Action \(|\)$/g, "")}), and its inputs and outputs are declared in \`${context.project.githubAction?.file || "action.yml"}\`. It is not imported as a library.`;
   } else if (isCLI) {
     output += `It operates as a **command-line interface**, enabling users to interact with the system through terminal commands. This architecture is optimized for automation, scripting, and integration into CI/CD pipelines.`;
+    if (context.project.lsp) output += ` It also exposes a **language server (LSP)** as a second interface.`;
   } else if (isLibrary) {
     output += `It is a **library**: other programs import it as a dependency and call its public API. It serves no routes or pages of its own.`;
   } else if (context.project.apiRoutesDetected > 0 && context.project.pagesDetected > 0) {
@@ -410,8 +411,12 @@ function getFallbackSystemOverview(context, enrichment = {}) {
   }
   if (isActionProject(context)) {
     output += `\n| **Interface Type** | ${describeAction(context)} |`;
+  } else if (isCLI && context.project.lsp) {
+    output += `\n| **Interface Type** | Command-Line Tool and Language Server (LSP) |`;
   } else if (isCLI) {
     output += `\n| **Interface Type** | Command-Line Tool |`;
+  } else if (isLibrary && context.project.lsp) {
+    output += `\n| **Interface Type** | Library (imported API) and Language Server (LSP) |`;
   } else if (isLibrary) {
     output += `\n| **Interface Type** | Library (imported API) |`;
   }
@@ -1139,15 +1144,22 @@ Even without identified flows, we can understand data movement through the impor
 
   // Import network analysis
   if (depGraph?.stats) {
+    const goPackagesOnly = depGraph.stats.goPackageEdges > 0 && depGraph.stats.goPackageEdges === depGraph.stats.totalEdges;
+    const edgeNoun = goPackagesOnly ? "Go package import edges" : "internal import edges";
+    const edgeScope = goPackagesOnly
+      ? `${depGraph.stats.goPackages || depGraph.stats.totalFiles} packages (one edge per package import, not per file in that package)`
+      : `${depGraph.stats.totalFiles} source files`;
+    const perUnit = goPackagesOnly ? "package" : "file";
+    const unitCount = goPackagesOnly ? (depGraph.stats.goPackages || depGraph.stats.totalFiles) : depGraph.stats.totalFiles;
     output += `## Import Network\n\n`;
-    output += `The system has **${depGraph.stats.totalEdges} internal import edges** connecting ${depGraph.stats.totalFiles} source files.\n\n`;
+    output += `The system has **${depGraph.stats.totalEdges} ${edgeNoun}** connecting ${edgeScope}.\n\n`;
     
     output += `### Network Topology\n\n`;
     output += `| Metric | Value | Meaning |\n`;
     output += `|--------|-------|----------|\n`;
-    output += `| Total Edges | ${depGraph.stats.totalEdges} | Direct import relationships |\n`;
+    output += `| Total Edges | ${depGraph.stats.totalEdges} | ${goPackagesOnly ? "Go package imports" : "Direct import relationships"} |\n`;
     output += `| Hub Count | ${depGraph.stats.hubs?.length || 0} | Central integration points |\n`;
-    output += `| Avg Connections | ~${Math.round(depGraph.stats.totalEdges / Math.max(depGraph.stats.totalFiles, 1) * 10) / 10} per file | Coupling density |\n`;
+    output += `| Avg Connections | ~${Math.round(depGraph.stats.totalEdges / Math.max(unitCount, 1) * 10) / 10} per ${perUnit} | Coupling density |\n`;
     
     if (depGraph.stats.hubs && depGraph.stats.hubs.length > 0) {
       output += `\n### Key Integration Points\n\n`;
@@ -1237,14 +1249,14 @@ ${context.repoRoots.map(root => {
     // No src/lib/app folder: point at the largest product modules this scan found,
     // not at a generic `src/` that may not exist.
     const productModules = (context.topModules || [])
-      .filter((mod) => mod.type !== "test" && !isNonProductPath(mod.key) && !/\/src\/(test|it|jmh)\//.test(`${mod.key}/`))
+      .filter((mod) => mod.type !== "test" && !mod.docsSite && !isNonProductPath(mod.key) && !/\/src\/(test|it|jmh)\//.test(`${mod.key}/`))
       .slice(0, 3);
     if (productModules.length > 0) {
       output += `Start with the largest source modules:\n\n`;
       productModules.forEach((mod, index) => {
         output += `${index + 1}. **\`${mod.key}\`** — ${mod.fileCount} file${mod.fileCount === 1 ? "" : "s"}\n`;
       });
-      output += `\n${entryPointHint(context.techStack.languages)}\n`;
+      output += `\n${entryPointHint(context.techStack.languages, context.project)}\n`;
     } else {
       output += `Start by exploring the main \`src/\` directory or look for entry point files like \`index.js\`, \`main.js\`, or \`app.js\`.\n`;
     }
@@ -1290,8 +1302,11 @@ ${context.repoRoots.map(root => {
   output += `| Priority | Module | Files | Type | Why It Matters |\n`;
   output += `|----------|--------|-------|------|----------------|\n`;
   
-  const priorityModules = context.topModules.slice(0, 10);
-  for (const [i, m] of priorityModules.entries()) {
+  const priorityModules = context.topModules
+    .filter((mod) => mod.type !== "test" && !mod.docsSite && !isTestPath(mod.key))
+    .slice(0, 10);
+  const shownModules = priorityModules.length > 0 ? priorityModules : context.topModules.slice(0, 10);
+  for (const [i, m] of shownModules.entries()) {
     const priority = i < 3 ? "⭐ High" : i < 6 ? "Medium" : "Low";
     const whyMatters = getModuleImportance(m.key, m.type, m.fileCount);
     output += `| ${priority} | \`${m.key}\` | ${m.fileCount} | ${formatModuleType(m.type)} | ${whyMatters} |\n`;
@@ -1795,6 +1810,7 @@ const PATTERN_COPY = [
   [/^ai\/llm/i, "The code calls an AI or LLM provider or SDK.", "Intelligent features behind a provider boundary"],
   [/^delivery pipeline/i, "Dispatch and delivery modules move finished content to its destination.", "Delivery channels are isolated from content creation"],
   [/^dedicated test/i, "Tests live in their own folders, apart from production code.", "Safe refactoring, regression protection"],
+  [/^language server/i, "A language server speaks LSP beside the program's other interface, so editors can use the same codebase.", "Editor integration without a second product"],
   [/^acyclic dependency/i, "No circular imports were found: modules depend on each other in one direction only, so each layer can be read, tested, and changed on its own.", "Safe refactoring, predictable build order, simple testing"],
 ];
 
@@ -1947,14 +1963,20 @@ function inferStepPurpose(step) {
 
 // Helper: determine if a directory is a good starting point
 // Where a program starts, by language, for the "Where to Begin" fallback.
-function entryPointHint(languages = []) {
+function entryPointHint(languages = [], project = {}) {
   const langs = (languages || []).map((lang) => String(lang).toLowerCase());
   const hints = [];
+  const goMains = Array.isArray(project?.goMainFiles) ? project.goMainFiles.filter(Boolean) : [];
   if (langs.includes("java") || langs.includes("kotlin")) hints.push("the class with `public static void main` (each Maven or Gradle module that runs has one)");
   if (langs.includes("c#")) hints.push("`Program.cs` in each runnable project");
-  if (langs.includes("go")) hints.push("`main.go` under `cmd/`");
+  if (langs.includes("go") && goMains.length > 0) {
+    hints.push(`${goMains.slice(0, 4).map((file) => `\`${file}\``).join(", ")} (\`package main\`)`);
+  }
   if (langs.includes("python")) hints.push("`__main__.py` or the `[project.scripts]` entry in `pyproject.toml`");
   if (langs.some((lang) => ["javascript", "typescript", "node.js"].includes(lang))) hints.push("`main.tsx` / `index.ts` or the `main` / `bin` field of each `package.json`");
+  if (hints.length === 0 && langs.includes("go") && goMains.length === 0) {
+    return "This module has no `package main`. Callers import the package.";
+  }
   if (hints.length === 0) return "Look for the program's entry point in those folders.";
   return `Entry points to look for: ${hints.join("; ")}.`;
 }
@@ -1996,6 +2018,7 @@ function getLanguageLearningTip(languages) {
 
 // Helper: explain why a module matters for onboarding
 function getModuleImportance(key, type, fileCount) {
+  if (type === "test" || isTestPath(key)) return "Test suite — not the product";
   if (type === "api") return "External interface — understand inputs/outputs";
   if (type === "app" || type === "state") return "Central logic — understand data flow";
   if (type === "ui") return "User experience — see visible behavior";

@@ -2,6 +2,31 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## Unreleased
+
+Accuracy fixes from the 24 Nov 2026 gap review (catch-up for the missed 23 Nov review). Not published and not tagged. The package version stays 1.17.3 until a maintainer releases it.
+
+Confirmed again on zk-org/zk `20fc540`, charmbracelet/bubbletea `585149e`, reduxjs/redux `ce8d836`, and pallets/click `08b803c`.
+
+### Upgrade notes
+
+- **Go modules are package directories.** `internal/adapter/sqlite` and `internal/adapter/lsp` are separate modules. A module root no longer stops one folder down and hides the packages under `adapter/`, `util/`, or `cli/`.
+- **Go import edges are one per package.** Importing a 36-file package is one edge. The next step in a data flow is that package, not its alphabetically first file. Counts in the dependency graph and the data-flow page say so.
+- **`tutorials/` is a dev artifact**, same as `examples/`, `samples/`, and `fixtures/`. It stays out of the file count, onboarding priority, and entry-point flows unless `scan.include_dev_artifacts: true`.
+- **A documentation website is not the product.** In a library, Docusaurus `website/` (and VitePress or `docs-site` apps) does not outrank `src/` in onboarding, and its pages are not the Route Map. `@theme/*`, `@theme-original/*`, `@site/*`, and `@docusaurus/*` are not runtime packages.
+- **Test trees are not core modules.** A `tests/` folder with more files than the product does not take the onboarding "high priority" rows, and it is not a shared library on a product data flow. "used by N" on those flows counts product files.
+- **A root Go library package** is "Go library package", not "Repository root files" or "Leaf (consumed only)".
+- **Where to begin** names the real `package main` file. A library with no `package main` is not told to look under `cmd/`.
+
+### Fixes
+
+- A tutorial or example folder named `commands` does not make a library a CLI. A real LSP package (`lsp`, glsp, `protocol_3_16`, or an `lsp` command) is reported as a second interface.
+- `Makefile` (including `CGO_ENABLED` and `-tags`), `Taskfile.yaml`, and `tests/*.tesh` are build and test tooling. Onboarding does not say "Standard toolchain" when they exist.
+- A single `docs/conf.py` (Sphinx) does not create a Documentation module when the repository already has product source.
+- `SECURITY.md` "Last Updated" is November 2026. The known-issues list no longer says the sticky PR comment, code-health badge, and gallery pages are waiting on npm; those shipped in 1.15.2.
+
+Java and C# framework detection (Spring, ASP.NET) and C# modules split by `.csproj` stay backlog. See [KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md).
+
 ## 1.17.3 (2026-11-18)
 
 Fixes from mapping dorny/test-reporter (79b4b44: a TypeScript GitHub Action with .NET, Go, Dart, Jest, and Mocha fixture projects under `reports/`). Re-checked on gson, mockito, guava, Polly, MediatR, TanStack/query, and attrs: graph numbers unchanged; differences are listed under upgrade notes.

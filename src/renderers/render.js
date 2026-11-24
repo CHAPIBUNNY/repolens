@@ -1,5 +1,5 @@
 import { describeFixtureScripts } from "../utils/fixture-dirs.js";
-import { computeModuleLevelMetrics, describeModuleDepRole, isActionProject, isCliProject, isLibraryProject } from "../analyzers/context-builder.js";
+import { computeModuleLevelMetrics, describeModuleRole, isActionProject, isCliProject, isLibraryProject } from "../analyzers/context-builder.js";
 import { moduleEvidence, pathHasKeyword, stripContainerSegments } from "../analyzers/domain-inference.js";
 import { jvmModuleShortLabel } from "../core/jvm-modules.js";
 
@@ -76,8 +76,8 @@ export function renderSystemOverview(cfg, scan, depGraph = null) {
       `|--------|-------|-------------|`
     );
     for (const m of topModules) {
-      const depRole = describeModuleDepRole(m.key, moduleMetrics);
-      const desc = describeModule(m.flat ? "" : m.key, depRole);
+      const depRole = describeModuleRole(m, moduleMetrics);
+      const desc = catalogDescription(m, depRole);
       lines.push(`| \`${m.key}\` | ${m.fileCount} | ${desc} |`);
     }
     lines.push(``);
@@ -110,6 +110,16 @@ export function renderSystemOverview(cfg, scan, depGraph = null) {
   );
 
   return lines.join("\n");
+}
+
+function catalogDescription(module, depRole, evidence = {}) {
+  if (module?.goPackage && module.flat) {
+    const base = module.goMain ? "Go command (package main)" : "Go library package";
+    const role = depRole && depRole !== base ? depRole : "";
+    return role ? `${base} · ${role}` : base;
+  }
+  const key = module?.flat ? "" : module?.key;
+  return describeModuleWithTests(module, describeModule(key, depRole, evidence));
 }
 
 function describeModule(key, depRole = null, evidence = {}) {
@@ -216,9 +226,10 @@ export function renderModuleCatalog(cfg, scan, ownershipMap = {}, depGraph = nul
   }
 
   for (const module of scan.modules.slice(0, 100)) {
-    const depRole = describeModuleDepRole(module.key, moduleMetrics);
+    const depRole = describeModuleRole(module, moduleMetrics);
     // Root files are keyed by the project name; `test-reporter` is not a test module.
-    const desc = describeModuleWithTests(module, describeModule(module.flat ? "" : module.key, depRole, moduleEvidence(module.key, depGraph)));
+    // A Go package at the root is that package, not "Repository root files".
+    const desc = catalogDescription(module, depRole, moduleEvidence(module.key, depGraph));
     const owners = ownershipMap[module.key];
     if (hasOwnership) {
       lines.push(`| \`${module.key}\` | ${module.fileCount} | ${desc} | ${owners ? owners.join(", ") : "—"} |`);

@@ -1,7 +1,7 @@
 // Build structured AI context from deterministic scan results
 
 import { groupModulesByDomain, pathHasKeyword, stripContainerSegments, hasContainerSegment } from "./domain-inference.js";
-import { isTestPath, trimTrailingSlashes } from "../utils/path-roles.js";
+import { isDevArtifactPath, isTestPath, isToolingPath, trimTrailingSlashes } from "../utils/path-roles.js";
 
 /**
  * Compute per-module dependency metrics from the dep graph.
@@ -185,14 +185,19 @@ export function buildAIContext(scanResult, config, depGraph = null) {
   // Compute module-level dependency metrics
   const moduleMetrics = computeModuleLevelMetrics(depGraph, modules);
   
-  // Identify top modules with enriched types
-  const topModules = modules
+  // Identify top modules with enriched types. Product source outranks a docs
+  // site and a large test tree, which used to take the "high priority" slots
+  // only because they had more files.
+  const topModules = [...modules]
+    .sort((a, b) => onboardingRank(a) - onboardingRank(b) || b.fileCount - a.fileCount || String(a.key).localeCompare(String(b.key)))
     .slice(0, 15)
     .map(m => ({
       key: m.key,
       fileCount: m.fileCount,
-      type: m.fixture ? "test" : inferModuleType(m.flat ? "" : m.key), // root files are not typed by the project name
-      depRole: describeModuleDepRole(m.key, moduleMetrics),
+      docsSite: Boolean(m.docsSite),
+      type: m.fixture ? "test"
+        : (m.goPackage && m.flat ? (m.goMain ? "cli" : "library") : inferModuleType(m.flat ? "" : m.key)),
+      depRole: describeModuleRole(m, moduleMetrics),
     }));
   
   // Categorize routes
@@ -219,13 +224,17 @@ export function buildAIContext(scanResult, config, depGraph = null) {
   };
   
   // Identify key architectural patterns (verified against dep graph when available)
-  const patterns = inferArchitecturalPatterns(modules, depGraph, metadata?.projectKind);
+  const patterns = inferArchitecturalPatterns(modules, depGraph, metadata?.projectKind, {
+    lsp: metadata?.lsp || null,
+  });
   
   // Build compact context object
   return {
     project: {
       name: config.project.name,
       kind: metadata?.projectKind || "unknown",
+      goMainFiles: metadata?.goMainFiles || [],
+      ...(metadata?.lsp ? { lsp: metadata.lsp } : {}),
       ...(metadata?.githubAction ? { githubAction: metadata.githubAction } : {}),
       filesScanned: filesCount,
       modulesDetected: modules.length,
@@ -326,9 +335,18 @@ function directoryPath(modulePath) {
   return parts.join("/");
 }
 
-function inferArchitecturalPatterns(modules, depGraph = null, projectKind = null) {
+function onboardingRank(mod) {
+  if (mod?.docsSite) return 2;
+  if (mod?.fixture || isTestPath(mod?.key || "")) return 2;
+  return 0;
+}
+
+function inferArchitecturalPatterns(modules, depGraph = null, projectKind = null, signals = {}) {
   const patterns = [];
-  const production = modules.filter((module) => !isTestEvidence(module.key));
+  // Tutorials, examples, and tests are not evidence that the product is a CLI.
+  const production = modules.filter((module) => !isTestEvidence(module.key)
+    && !isToolingPath(module.key)
+    && !isDevArtifactPath(module.key));
   const tests = modules.filter((module) => isTestEvidence(module.key));
   const keys = production.map(m => m.key.toLowerCase());
 
@@ -450,6 +468,11 @@ function inferArchitecturalPatterns(modules, depGraph = null, projectKind = null
   if (has("deliver") || has("dispatch")) cite("Delivery pipeline", ["deliver", "dispatch"]);
   if (tests.length) cite("Dedicated test infrastructure", ["test", "spec"], "", tests);
 
+  if (signals.lsp) {
+    const where = (signals.lsp.evidence || []).slice(0, 3).map((item) => `\`${item}\``).join(", ");
+    patterns.push(where ? `Language server (LSP) — ${where}` : "Language server (LSP)");
+  }
+
   // Structural patterns from dep graph (not keyword-based)
   if (depGraph?.stats) {
     // Only a fully analyzed codebase can be called acyclic.
@@ -477,6 +500,21 @@ export function inferFindings(depGraph = null) {
 /**
  * Generate a dependency-aware role description for a module.
  */
+/**
+ * Role shown on a module. A Go library package at the repository root is the
+ * package callers import. Tutorials importing it do not make it a leaf, and it
+ * is not "files that happen to sit at the root".
+ */
+export function describeModuleRole(module, moduleMetrics) {
+  const role = describeModuleDepRole(module?.key, moduleMetrics);
+  if (module?.goPackage && module.flat && !module.goMain) {
+    if (!role || /^(Leaf module|Isolated )/.test(role)) {
+      return "Public library package (the package other code imports)";
+    }
+  }
+  return role;
+}
+
 function describeModuleDepRole(moduleKey, moduleMetrics) {
   const m = moduleMetrics.get(moduleKey);
   if (!m) return null;
@@ -515,8 +553,9 @@ export function buildModuleContext(modules, config, depGraph = null) {
     return {
       key: module.key,
       fileCount: module.fileCount,
-      type: module.fixture ? "test" : inferModuleType(module.flat ? "" : module.key),
-      depRole: describeModuleDepRole(module.key, moduleMetrics),
+      type: module.fixture ? "test"
+        : (module.goPackage && module.flat ? (module.goMain ? "cli" : "library") : inferModuleType(module.flat ? "" : module.key)),
+      depRole: describeModuleRole(module, moduleMetrics),
       domain: domain?.name || "Other",
       domainDescription: domain?.description || "Uncategorized"
     };

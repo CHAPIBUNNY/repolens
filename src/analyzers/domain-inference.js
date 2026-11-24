@@ -283,7 +283,11 @@ export function groupModulesByDomain(modules, customHints = [], depGraph = null)
     // in dorny/test-reporter is not an "Analytics & Reporting" domain.
     // Files at the repository root are keyed by the project name (`test-reporter`); the
     // name is not a domain keyword.
-    const inference = module.flat
+    const inference = module.flat && module.goPackage
+      ? (module.goMain
+        ? { domain: "CLI & Commands", description: "Go command (package main)", confidence: "go_package", matchedKeyword: null }
+        : { domain: "Core Source", description: "The Go module's root package, which other code imports", confidence: "go_package", matchedKeyword: null })
+      : module.flat
       ? { ...inferDomain("", customHints), description: "Files at the repository root" }
       : module.fixture
       ? { domain: "Testing", description: `test fixture project built by ${describeFixtureScripts(module.fixture)}`, confidence: "fixture_script", matchedKeyword: null }

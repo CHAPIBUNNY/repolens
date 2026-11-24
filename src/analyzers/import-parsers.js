@@ -451,6 +451,8 @@ export function externalPackageName(specifier) {
   if (trimmed.includes("://") || trimmed.startsWith("#")) return null;
   // `@/x` and `~/x` are project path aliases: an npm scope needs a name.
   if (/^[@~]\//.test(trimmed) || trimmed === "@" || trimmed === "~") return null;
+  // Docusaurus theme aliases, not packages the product depends on.
+  if (/^@(theme|theme-original|site|docusaurus)(\/|$)/.test(trimmed)) return null;
   const parts = trimmed.startsWith("@")
     ? trimmed.split("/").slice(0, 2)
     : trimmed.split("/").slice(0, 1);

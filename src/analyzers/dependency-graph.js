@@ -1,5 +1,7 @@
 // Dependency graph analysis with cycle detection.
 // JavaScript, TypeScript, Python, Go, Java, and C# imports become edges.
+// A Go import names a package. The edge is that package, once, not one edge per
+// file in the package and not an edge between files of the same package.
 // JS/TS path aliases (tsconfig `paths`/`baseUrl`, Vite `resolve.alias`) resolve to
 // local files (path-aliases.js).
 // Java and C# edges come from type names (java-csharp.js). Their cycles are reported
@@ -231,6 +233,20 @@ function goPackageImportPath(file, modulePath) {
 function aggregateHubs(nodes, fileKeyToFile, modulePath, hubThreshold) {
   const groups = new Map();
   for (const node of nodes) {
+    if (node.goPackage) {
+      const key = node.goImportPath || node.label;
+      if (!key) continue;
+      const importers = new Set();
+      for (const importer of node.importedBy || []) {
+        const importerFile = fileKeyToFile.get(importer) || importer;
+        if (isNonProductPath(importerFile)) continue;
+        importers.add(importer);
+      }
+      if (importers.size > 0) groups.set(key, importers);
+      continue;
+    }
+    // Go file nodes are not hubs. The package node above counts importers once.
+    if (String(node.file || node.key).endsWith(".go")) continue;
     if (isNonProductPath(node.file || node.key)) continue;
     const pkg = goPackageImportPath(node.file, modulePath);
     const key = pkg || node.key;
@@ -246,17 +262,18 @@ function aggregateHubs(nodes, fileKeyToFile, modulePath, hubThreshold) {
   return [...groups.entries()]
     .map(([key, importers]) => ({ key, importedBy: importers.size }))
     .filter((hub) => hub.importedBy >= hubThreshold)
-    .sort((a, b) => b.importedBy - a.importedBy)
+    .sort((a, b) => b.importedBy - a.importedBy || String(a.key).localeCompare(String(b.key)))
     .slice(0, 10);
 }
 
-function goFilesInDir(goFiles, dir) {
-  const target = dir || "";
-  return goFiles.filter((file) => {
-    const fileDir = path.posix.dirname(file.replace(/\\/g, "/"));
-    const normalized = fileDir === "." ? "" : fileDir;
-    return normalized === target;
-  });
+function goDirOf(file) {
+  const dir = path.posix.dirname(String(file || "").replace(/\\/g, "/"));
+  return dir === "." ? "" : dir;
+}
+
+/** Graph key for a Go package directory. The root package is `.`, not its first file. */
+function goEdgeKey(dir) {
+  return dir ? dir : ".";
 }
 
 export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = files } = {}) {
@@ -550,19 +567,45 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     if (!record.typeOnly && !record.deferred) addEdge(record.from, record.to);
   }
 
+  // Package directory → packages it imports, and the files that import each package.
+  // One import of a 36-file package is one edge, not 36, and not an edge to the
+  // alphabetically first file.
+  const goPkgImports = new Map();
+  const goPkgImporters = new Map();
+  const goFileImports = new Map();
+  const goDirs = new Set();
   for (const file of goFiles) {
+    const fromDir = goDirOf(file);
+    goDirs.add(fromDir);
     const content = await readFileSafe(path.join(repoRoot, file));
     if (!content) continue;
     const fromKey = normalizeFileKey(file);
     for (const importPath of extractGoImports(content)) {
       const dir = goPackageDir(importPath, goModulePath, "");
       if (dir !== null) {
-        for (const target of goFilesInDir(goFiles, dir)) {
-          addEdge(fromKey, normalizeFileKey(target));
-        }
+        if (dir === fromDir) continue;
+        const edgeKey = goEdgeKey(dir);
+        if (!goFileImports.has(fromKey)) goFileImports.set(fromKey, new Set());
+        goFileImports.get(fromKey).add(edgeKey);
+        if (!goPkgImports.has(fromDir)) goPkgImports.set(fromDir, new Set());
+        goPkgImports.get(fromDir).add(dir);
+        if (!goPkgImporters.has(dir)) goPkgImporters.set(dir, new Set());
+        goPkgImporters.get(dir).add(fromKey);
         continue;
       }
       if (!isGoStdlib(importPath)) addExternal(fromKey, importPath);
+    }
+  }
+  const goPkgAdj = new Map();
+  for (const dir of goDirs) goPkgAdj.set(goEdgeKey(dir), new Set());
+  for (const [fromDir, tos] of goPkgImports) {
+    const fromEdge = goEdgeKey(fromDir);
+    if (!goPkgAdj.has(fromEdge)) goPkgAdj.set(fromEdge, new Set());
+    for (const toDir of tos) {
+      const toEdge = goEdgeKey(toDir);
+      if (toEdge === fromEdge) continue;
+      goPkgAdj.get(fromEdge).add(toEdge);
+      if (!goPkgAdj.has(toEdge)) goPkgAdj.set(toEdge, new Set());
     }
   }
 
@@ -610,12 +653,37 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
   }
 
   for (const key of allFileKeys) {
+    const packages = goFileImports.get(key);
     result.nodes.push({
       key,
       file: fileKeyToFile.get(key) || key,
-      imports: [...(adjacency.get(key) || [])],
+      imports: packages && packages.size > 0 ? [...packages].sort() : [...(adjacency.get(key) || [])],
       importedBy: importedByMap.get(key) || [],
       externalImports: [...(externalByKey.get(key) || [])].sort(),
+    });
+  }
+
+  let goPackageEdgeCount = 0;
+  for (const [fromEdge, tos] of goPkgAdj) {
+    for (const toEdge of [...tos].sort()) {
+      result.edges.push({ from: fromEdge, to: toEdge });
+      goPackageEdgeCount += 1;
+    }
+  }
+  for (const dir of [...goDirs].sort()) {
+    const key = goEdgeKey(dir);
+    const importPath = goModulePath
+      ? (dir ? `${goModulePath}/${dir}` : goModulePath)
+      : (dir || ".");
+    result.nodes.push({
+      key,
+      file: key,
+      goPackage: true,
+      goImportPath: importPath,
+      label: importPath,
+      imports: [...(goPkgImports.get(dir) || [])].map((to) => goEdgeKey(to)).sort(),
+      importedBy: [...(goPkgImporters.get(dir) || [])].sort(),
+      externalImports: [],
     });
   }
 
@@ -692,6 +760,12 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     reason: "deferred",
   }));
 
+  if (goPkgAdj.size > 0) {
+    const goCycles = detectCycles(goPkgAdj);
+    result.cycles.push(...goCycles);
+    result.cycleReports.push(...classifyRuntimeCycles(goCycles, [], (key) => key));
+  }
+
   const priorities = priorityCounts(result.cycleReports);
 
   // Stats
@@ -702,8 +776,20 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     softConnected.add(edge.from);
     softConnected.add(edge.to);
   }
-  const orphans = result.nodes.filter(n => n.imports.length === 0 && n.importedBy.length === 0 && !softConnected.has(n.key));
-  const sourceNodeCount = result.nodes.filter((n) => !isNonProductPath(n.file || n.key)).length;
+  const goConnected = new Set();
+  for (const [fromDir, tos] of goPkgImports) {
+    if (tos.size > 0) goConnected.add(fromDir);
+    for (const to of tos) goConnected.add(to);
+  }
+  // The module root package is the public API (or `package main`). Nothing inside
+  // the repo has to import it for those files to count as the product.
+  if (goModulePath && goDirs.has("")) goConnected.add("");
+  const orphans = result.nodes.filter((n) => {
+    if (n.goPackage) return false;
+    if (String(n.file || "").endsWith(".go")) return !goConnected.has(goDirOf(n.file));
+    return n.imports.length === 0 && n.importedBy.length === 0 && !softConnected.has(n.key);
+  });
+  const sourceNodeCount = result.nodes.filter((n) => !n.goPackage && !isNonProductPath(n.file || n.key)).length;
   const hubThreshold = Math.max(5, Math.round(sourceNodeCount * 0.07));
   const hubs = aggregateHubs(result.nodes, fileKeyToFile, goModulePath, hubThreshold);
 
@@ -716,6 +802,8 @@ export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = 
     totalFiles: codeFiles.length,
     sourceFiles: codeFiles.filter((file) => !isNonProductPath(file)).length,
     totalEdges: totalImports,
+    goPackageEdges: goPackageEdgeCount,
+    goPackages: goDirs.size,
     externalDeps: result.externalDeps.length,
     externalRuntime: externalRuntime.length,
     externalDev: externalDev.length,
