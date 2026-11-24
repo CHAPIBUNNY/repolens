@@ -122,10 +122,13 @@ describe("fixture directories from npm *-fixture scripts", () => {
   it("files fixture modules under Testing, not Analytics & Reporting", async () => {
     await testReporterLike();
     const { scan, byKey } = await docs();
-    // This small copy keeps all fixture projects in one `reports` module.
-    expect(scan.modules.find((m) => m.key === "reports")?.fixture).toBe("dotnet-fixture, golang-json-fixture, jest-fixture");
+    // C# and JavaScript fixture projects share the `reports` folder module.
+    // The Go fixture is its own package directory (`reports/go`).
+    expect(scan.modules.find((m) => m.key === "reports")?.fixture).toBe("dotnet-fixture, jest-fixture");
+    expect(scan.modules.find((m) => m.key === "reports/go")?.fixture).toBe("golang-json-fixture");
     expect(byKey.business_domains).not.toMatch(/path `reports[^`]*` matches `report`/);
-    expect(byKey.module_catalog).toMatch(/\| `reports` \| \d+ \| Test fixture project \(built by the `dotnet-fixture`, `golang-json-fixture` and `jest-fixture` npm scripts\)/);
+    expect(byKey.module_catalog).toMatch(/\| `reports` \| \d+ \| Test fixture project \(built by the `dotnet-fixture` and `jest-fixture` npm scripts\)/);
+    expect(byKey.module_catalog).toMatch(/\| `reports\/go` \| \d+ \| Test fixture project \(built by the `golang-json-fixture` npm script\)/);
     // A test module whose subfolder says "report" is still a test module.
     expect(byKey.business_domains).not.toContain("path `__tests__/report` matches `report`");
   });

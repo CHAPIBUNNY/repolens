@@ -208,10 +208,13 @@ describe("Go import accuracy", () => {
       "doc/man_docs.go",
       "doc/man_docs_test.go",
     ], tempDir);
-    expect(result.nodes.map((node) => node.file).sort()).toEqual(["command.go", "doc/man_docs.go"]);
+    const sourceFiles = result.nodes.filter((node) => !node.goPackage).map((node) => node.file).sort();
+    expect(sourceFiles).toEqual(["command.go", "doc/man_docs.go"]);
     const edges = result.edges.map((edge) => `${edge.from}->${edge.to}`).sort();
-    expect(edges).toContain("command.go->doc/man_docs.go");
-    expect(edges).toContain("doc/man_docs.go->command.go");
+    // One edge per package, not per file. The root package is `.`, not command.go.
+    expect(edges).toEqual([".->doc", "doc->."]);
+    expect(result.stats.goPackageEdges).toBe(2);
+    expect(result.stats.totalEdges).toBe(2);
     expect(result.externalDeps).toEqual(["github.com/spf13/pflag"]);
     expect(result.externalDeps).not.toContain("fmt");
   });

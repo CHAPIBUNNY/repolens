@@ -1,4 +1,4 @@
-import { isToolingPath, isTestPath } from "../utils/path-roles.js";
+import { isDevArtifactPath, isToolingPath, isTestPath, isNonProductPath } from "../utils/path-roles.js";
 
 // Infer data flows through the application using import graph analysis + heuristics
 
@@ -114,8 +114,9 @@ function inferFlowsFromEntryPoints(scanResult, depGraph) {
     // Classify each step in the chain
     const steps = chain.map((nodeKey, i) => {
       const node = depGraph.nodes.find(n => n.key === nodeKey);
-      const name = stepName(nodeKey);
-      const fanIn = node?.importedBy?.length || 0;
+      const name = stepName(nodeKey, node);
+      // "used by N" counts product importers. Test files are not part of that N.
+      const fanIn = productFanIn(node);
       const fanOut = node?.imports?.length || 0;
       
       if (i === 0) return `\`${name}\` (entry point, imports ${fanOut} modules)`;
@@ -308,15 +309,20 @@ function inferApiIntegrationFlow(scanResult) {
   };
 }
 
+function productFanIn(node) {
+  return (node?.importedBy || []).filter((key) => !isNonProductPath(key) && !isDevArtifactPath(key)).length;
+}
+
 export function identifyFlowDependencies(flow, scanResult) {
   // Simple heuristic: modules in flow likely depend on each other
-  // and on shared libraries
+  // and on shared libraries. Test helpers (`tests/test_utils`) are not those libraries.
   const { modules } = scanResult;
   
-  const libModules = modules.filter(m => 
-    m.key.toLowerCase().includes("lib") || 
-    m.key.toLowerCase().includes("util")
-  );
+  const libModules = (modules || []).filter((m) => {
+    if (isTestPath(m.key) || isToolingPath(m.key) || isDevArtifactPath(m.key)) return false;
+    const key = m.key.toLowerCase();
+    return key.includes("lib") || key.includes("util");
+  });
   
   return {
     internalDependencies: flow.modules,
@@ -345,7 +351,9 @@ function inferExternalDependencies(flow) {
 
 // A package entry is keyed by its folder (`packages/server/src` for src/index.ts), so
 // "src" or "lib" alone says nothing. Name it after the package folder instead.
-function stepName(nodeKey) {
+function stepName(nodeKey, node) {
+  // A Go edge lands on the package, not on clipboard.go (the first file in it).
+  if (node?.goPackage && node.label) return node.label;
   const parts = String(nodeKey).split("/");
   const last = parts.pop();
   if (/^(src|lib|source)$/i.test(last) && parts.length > 0) return `${parts[parts.length - 1]}/${last}`;

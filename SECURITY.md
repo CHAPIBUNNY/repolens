@@ -352,5 +352,5 @@ We appreciate responsible disclosure and will acknowledge security researchers:
 
 ---
 
-**Last Updated**: March 2026  
+**Last Updated**: November 2026  
 **Security Team**: RepoLens Maintainers
