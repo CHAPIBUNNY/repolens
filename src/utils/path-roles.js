@@ -78,6 +78,7 @@ export const DEV_ARTIFACT_DIRECTORIES = new Set([
   "__snapshots__",
   "sample", "samples",
   "example", "examples",
+  "tutorial", "tutorials",
   "fixture", "fixtures", "__fixtures__",
   "e2e-fixture", "e2e-fixtures",
   "generated",

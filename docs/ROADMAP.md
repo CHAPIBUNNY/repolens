@@ -290,6 +290,20 @@ The [gallery](https://chapibunny.github.io/repolens/) is a static flat Material 
 
 ---
 
+## On main, not yet published
+
+The 24 Nov 2026 gap review is fixed on main. It is not in the 1.17.3 npm package and it is not tagged. Spring / ASP.NET detection and C# modules split by `.csproj` are still open. Grounded AI explanations and Q&A is unchanged and still next below.
+
+- Go modules follow package directories, including packages nested under `adapter/`, `util/`, and `cli/`
+- Go import edges and data-flow steps are per package, not per file inside the package
+- Entry points use the real `package main` file; a library with none is not sent to `cmd/`
+- A `commands` folder under tutorials or examples is not a CLI; an LSP package or `lsp` command is a second interface
+- `Makefile` (`CGO_ENABLED`, `-tags`), `Taskfile.yaml`, and `tests/*.tesh` are detected
+- `tutorials/` joins the dev-artifact skip list unless `scan.include_dev_artifacts: true`
+- A docs site (Docusaurus `website/`, VitePress, `docs-site`) is not a library's route map or its top onboarding module; theme aliases are not runtime packages
+- A Sphinx `docs/conf.py` alone is not a Documentation module when product source exists
+- Test modules do not outrank product modules in onboarding, and product data flows do not count test importers as "used by"
+
 ## What's Next
 
 Planned in this order:

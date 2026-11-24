@@ -349,7 +349,10 @@ export function renderDependencyGraph(depResult) {
   lines.push(`| Metric | Value |`);
   lines.push(`|--------|-------|`);
   lines.push(`| Source files | ${s.totalFiles} |`);
-  lines.push(`| Import edges | ${s.totalEdges} |`);
+  const edgeValue = s.goPackageEdges > 0 && s.goPackageEdges === s.totalEdges
+    ? `${s.totalEdges} (one per Go package import, not per file)`
+    : (s.goPackageEdges > 0 ? `${s.totalEdges} (includes ${s.goPackageEdges} Go package imports)` : `${s.totalEdges}`);
+  lines.push(`| Import edges | ${edgeValue} |`);
   if (Array.isArray(depResult.externalDev) && depResult.externalDev.length > 0) {
     lines.push(`| External packages | ${s.externalDeps} (${depResult.externalRuntime.length} runtime, ${depResult.externalDev.length} dev/test tooling) |`);
   } else {
