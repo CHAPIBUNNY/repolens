@@ -107,5 +107,73 @@ export function detectSetupCommands(repoRoot, metadata = {}) {
     manifests.push({ file: "Gemfile", purpose: "Ruby dependencies" });
   }
 
-  return { install, test, manifests };
+  const buildTools = [];
+  const extraTestFrameworks = [];
+  const makefile = has("Makefile") ? "Makefile" : (has("makefile") ? "makefile" : null);
+  if (makefile) {
+    const text = readText(repoRoot, makefile);
+    const flags = [];
+    if (/CGO_ENABLED/.test(text)) flags.push("CGO_ENABLED");
+    if (/-tags\b/.test(text)) flags.push("-tags");
+    buildTools.push(flags.length ? `Make (${flags.join(", ")})` : "Make");
+    manifests.push({
+      file: makefile,
+      purpose: flags.length ? `Build targets (${flags.join(", ")})` : "Build targets",
+    });
+    if (/^test\s*:/m.test(text)) test.push("make test");
+  }
+
+  const taskfile = ["Taskfile.yml", "Taskfile.yaml"].find(has);
+  if (taskfile) {
+    buildTools.push("Task");
+    manifests.push({ file: taskfile, purpose: "Task runner targets" });
+    if (/^\s*test\s*:/m.test(readText(repoRoot, taskfile))) test.push("task test");
+  }
+
+  if (hasTeshFiles(repoRoot)) {
+    extraTestFrameworks.push("tesh");
+    // A tesh harness is real test tooling. Listing it here keeps onboarding from
+    // saying "Standard toolchain" when the repo has no Make or Task file.
+    buildTools.push("tesh");
+  }
+
+  return { install, test, manifests, buildTools, extraTestFrameworks };
+}
+
+function readText(dir, name, max = 200_000) {
+  try {
+    const file = path.join(dir, name);
+    const stat = fs.statSync(file);
+    if (!stat.isFile() || stat.size > max) return "";
+    return fs.readFileSync(file, "utf8");
+  } catch {
+    return "";
+  }
+}
+
+/** `tests/*.tesh` (and one directory deeper) is an end-to-end harness, not `go test`. */
+function hasTeshFiles(repoRoot) {
+  const roots = ["tests", "test"];
+  for (const root of roots) {
+    if (dirHasTesh(path.join(repoRoot, root), 0)) return true;
+  }
+  return false;
+}
+
+function dirHasTesh(dir, depth) {
+  let entries = [];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  for (const entry of entries) {
+    if (entry.name === "node_modules" || entry.name === ".git") continue;
+    if (entry.isDirectory()) {
+      if (depth < 2 && dirHasTesh(path.join(dir, entry.name), depth + 1)) return true;
+    } else if (entry.name.endsWith(".tesh")) {
+      return true;
+    }
+  }
+  return false;
 }

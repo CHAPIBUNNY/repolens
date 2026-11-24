@@ -5,6 +5,20 @@ This document tracks known issues, limitations, and edge cases in RepoLens. We'r
 **Last Updated:** November 2026  
 **Version:** 1.17.3
 
+## Go packages, docs sites, and onboarding rank (fixed after 1.17.3, not yet published)
+
+A gap review of 1.17.3 (zk-org/zk `20fc540`, charmbracelet/bubbletea `585149e`, reduxjs/redux `ce8d836`, pallets/click `08b803c`) found the map describing those repositories wrong in ways 1.17.3 still ships:
+
+- Go modules stopped at the first directory under a module root, so zk's `internal/adapter` (43 files) hid `sqlite`, `lsp`, `handlebars`, `markdown`, `fs`, and `fzf`. One import of a package became an edge to every file in it: bubbletea's tutorial "imported 36 modules" and the next flow step was `clipboard.go`. zk reported 831 import edges for 93 files.
+- Where to begin always said `` `main.go` under `cmd/` ``. A library with no `package main` was told the same thing. A tutorial folder named `commands` was enough to call the library a CLI, and zk's LSP adapter was not a second interface.
+- `Makefile` (`CGO_ENABLED`, `-tags`), `Taskfile.yaml`, and `tests/*.tesh` were "Standard toolchain".
+- `tutorials/` was product code. bubbletea's root package was "Repository root files" and "Leaf (consumed only)" because only tutorials imported it.
+- redux's Docusaurus `website/` outranked `src/` and its pages became the route map (`/index`, `/react-redux`, `/reselect`, `/toolkit`). `@theme/*`, `@theme-original/*`, `@site/*`, and `@docusaurus/*` were listed as runtime packages.
+- click's `tests/` (more files than `src/click`) was a high-priority core module. Product flows listed `tests/test_utils` as a shared library, and "used by N" counted test importers.
+- `docs/conf.py` alone opened a Documentation domain on a repository that already had product source.
+
+The fix is on main and is not in the 1.17.3 npm package. Publish and tag stay with a maintainer. Spring / ASP.NET detection and C# modules split by `.csproj` are still not built.
+
 ## Java and C# analysis (new in 1.17.0)
 
 1.17.0 builds the dependency graph and code health for `.java` and `.cs` files. Validated on google/gson, google/guava, mockito/mockito, App-vNext/Polly, and jbogard/MediatR. Edges come from type names, not a compiler, so they are close but not exact:
@@ -377,7 +391,7 @@ A shallow checkout (`fetch-depth: 1`) does not contain the base commit. The comm
 - [x] Obsidian vault publisher (1.13.0)
 - [x] VS Code extension ([Marketplace](https://marketplace.visualstudio.com/items?itemName=repolensdox.repolensdox))
 - [x] MCP server, GitHub Action, and docs badge (1.14.0)
-- [x] Sticky architecture pull request comment, code-health badge, and gallery explained pages (in the repo, not yet on npm)
+- [x] Sticky architecture pull request comment, code-health badge, and gallery explained pages (1.15.2)
 - [x] Registry name `io.github.CHAPIBUNNY/repolens` (1.14.1)
 
 ### Future

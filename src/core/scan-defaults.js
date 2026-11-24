@@ -1,7 +1,7 @@
 import { jvmPackageStart } from "../utils/path-roles.js";
 
 // Directories the scan skips unless scan.include_dev_artifacts is true.
-// Snapshots, samples, fixtures, examples, and generated output are dev tooling.
+// Snapshots, samples, fixtures, examples, tutorials, and generated output are dev tooling.
 // A project's own scan.ignore is still applied. The flag turns off only this list.
 
 export const DEV_ARTIFACT_IGNORE = [
@@ -11,6 +11,8 @@ export const DEV_ARTIFACT_IGNORE = [
   "**/sample/**",
   "**/examples/**",
   "**/example/**",
+  "**/tutorials/**",
+  "**/tutorial/**",
   "**/fixtures/**",
   "**/fixture/**",
   "**/__fixtures__/**",

@@ -5,9 +5,10 @@ import { info, warn } from "../utils/logger.js";
 import { trackScan } from "../utils/telemetry.js";
 import { detectMonorepo } from "../analyzers/monorepo-detector.js";
 import { isInsideRoot } from "../utils/safe-path.js";
-import { isNonProductPath, isTestPath, isToolingPath } from "../utils/path-roles.js";
+import { isDevArtifactPath, isNonProductPath, isTestPath, isToolingPath } from "../utils/path-roles.js";
 import { isDefaultDevArtifact, resolveUserScanIgnore } from "./scan-defaults.js";
 import { buildJvmModuleKeyer } from "./jvm-modules.js";
+import { goModuleDir, goPackageName, lspEvidenceIn } from "./go-modules.js";
 import { replaceBracketParams } from "../utils/route-params.js";
 import { detectSetupCommands } from "../utils/setup-commands.js";
 import { detectScriptFixtureDirs, fixtureDirOf } from "../utils/fixture-dirs.js";
@@ -89,6 +90,53 @@ function isVueRouterFile(content) {
   const hasConstructor = /new\s+VueRouter\s*\(/.test(content);
   const hasFactory = /createRouter\s*\(/.test(content) && hasImport;
   return hasImport || hasConstructor || hasFactory;
+}
+
+/** Sphinx `docs/conf.py` (or `doc/`, `documentation/`, `sphinx/`). Not a product module. */
+function isSphinxConfFile(file) {
+  const normalized = norm(file);
+  const parts = normalized.split("/");
+  const base = parts.pop() || "";
+  if (base !== "conf.py" && base !== "conf.py.in") return false;
+  return parts.some((segment) => /^(docs?|documentation|sphinx)$/i.test(segment));
+}
+
+/**
+ * Directories that are a documentation website (Docusaurus `website/`, a VitePress
+ * app, `docs-site/`), not the product. The repository root itself is never one:
+ * a config at the root must not hide `src/`.
+ */
+async function findDocsSiteRoots(repoRoot) {
+  const roots = new Set();
+  let found = [];
+  try {
+    found = await fg([
+      "**/docusaurus.config.{js,ts,mjs,cjs}",
+      "**/.vitepress/config.{js,ts,mjs,mts}",
+    ], {
+      cwd: repoRoot,
+      deep: 5,
+      onlyFiles: true,
+      followSymbolicLinks: false,
+      ignore: ["**/node_modules/**", "**/dist/**", "**/.git/**"],
+    });
+  } catch {
+    return [];
+  }
+  for (const file of found) {
+    const normalized = norm(file);
+    const vite = normalized.indexOf("/.vitepress/");
+    const folder = vite !== -1
+      ? normalized.slice(0, vite)
+      : path.posix.dirname(normalized);
+    if (!folder || folder === ".") continue;
+    roots.add(folder);
+  }
+  return [...roots].sort();
+}
+
+function isUnderDir(file, root) {
+  return file === root || file.startsWith(`${root}/`);
 }
 
 function isNextPage(file) {
@@ -533,10 +581,43 @@ async function extractRepoMetadata(repoRoot, files = []) {
   metadata.languages = new Set([...fileLanguages, ...manifestLanguages]);
 
   // De-duplicate frameworks (in case detected from multiple sources)
+  // Go: a product `package main` is a program. With none, the module is a library.
+  // A tutorial or example named `commands` is not that program. An `lsp` package,
+  // glsp import, or `lsp` command is a second interface next to the CLI or library.
+  const productGo = files.filter((file) => goModuleDir(file) !== null
+    && !isNonProductPath(file)
+    && !isDevArtifactPath(file)
+    && !fixtureDirOf(file, fixtureDirs));
+  if (metadata.languages.has("Go") || productGo.length > 0) {
+    const mains = [];
+    const lsp = [];
+    for (const file of productGo) {
+      let text = "";
+      try {
+        text = await fs.readFile(path.join(repoRoot, file), "utf8");
+      } catch {
+        text = "";
+      }
+      if (goPackageName(text) === "main") mains.push(file);
+      lsp.push(...lspEvidenceIn(file, text));
+    }
+    metadata.goMainFiles = mains.sort();
+    // package.json already decided library vs CLI. Otherwise a real `package main`
+    // is a program, and a module with none is a library.
+    if (!metadata.projectKind) metadata.projectKind = mains.length > 0 ? "cli" : "library";
+    metadata.lsp = lsp.length > 0 ? { evidence: [...new Set(lsp)].sort().slice(0, 4) } : null;
+  } else {
+    metadata.goMainFiles = [];
+    metadata.lsp = null;
+  }
+
+  metadata.setup = detectSetupCommands(repoRoot, metadata);
+  for (const tool of metadata.setup.buildTools || []) metadata.buildTools.push(tool);
+  for (const framework of metadata.setup.extraTestFrameworks || []) metadata.testFrameworks.push(framework);
+
   metadata.frameworks = [...new Set(metadata.frameworks)];
   metadata.testFrameworks = [...new Set(metadata.testFrameworks)];
   metadata.buildTools = [...new Set(metadata.buildTools)];
-  metadata.setup = detectSetupCommands(repoRoot, metadata);
 
   return metadata;
 }
@@ -718,6 +799,8 @@ export async function scanRepo(cfg) {
 
   const moduleCounts = new Map();
   const moduleTestCounts = new Map();
+  const moduleGoCounts = new Map();
+  const filesByModule = new Map();
   const flatKeys = new Set();
   // Fixture scripts per module; a module is a fixture project only when every one of its
   // files sits in a dir an npm `*-fixture` script builds.
@@ -732,18 +815,52 @@ export async function scanRepo(cfg) {
     // *_test.go as its own module (the filename under module_roots) splits
     // one package into a source module and a test module.
     if (/_test\.go$/.test(norm(file))) continue;
-    const key = jvmModuleKey(file) || moduleKeyForFile(file, cfg.module_roots || [], rootLabel);
+    // A Go module is the package directory. `internal/adapter/sqlite` is not
+    // the same module as `internal/adapter/lsp`, even when module_roots stops
+    // one folder down.
+    const goDir = goModuleDir(file);
+    const key = goDir !== null
+      ? (goDir || rootLabel)
+      : (jvmModuleKey(file) || moduleKeyForFile(file, cfg.module_roots || [], rootLabel));
     if (!norm(file).includes("/")) flatKeys.add(key);
     moduleCounts.set(key, (moduleCounts.get(key) || 0) + 1);
+    if (goDir !== null) moduleGoCounts.set(key, (moduleGoCounts.get(key) || 0) + 1);
+    if (!filesByModule.has(key)) filesByModule.set(key, []);
+    filesByModule.get(key).push(file);
     if (isTestPath(file)) moduleTestCounts.set(key, (moduleTestCounts.get(key) || 0) + 1);
     const fixture = fixtureDirOf(norm(file), fixtureDirs);
     if (!fixture) nonFixtureModules.add(key);
     else if (!moduleFixtureScripts.has(key)) moduleFixtureScripts.set(key, new Set([fixture.script]));
     else moduleFixtureScripts.get(key).add(fixture.script);
   }
+
+  // One Sphinx conf (`docs/conf.py`) is not a Documentation module when the
+  // repository already has product source.
+  const hasProductSource = [...filesByModule.values()].some((list) => list.some((file) =>
+    !isSphinxConfFile(file) && !isTestPath(file) && !isToolingPath(file) && !isDevArtifactPath(file)));
+  if (hasProductSource) {
+    for (const [key, list] of filesByModule) {
+      if (list.length > 0 && list.every(isSphinxConfFile)) {
+        moduleCounts.delete(key);
+        moduleTestCounts.delete(key);
+        moduleGoCounts.delete(key);
+        flatKeys.delete(key);
+        filesByModule.delete(key);
+      }
+    }
+  }
+
   const fixtureOf = (key) => (nonFixtureModules.has(key) || !moduleFixtureScripts.has(key)
     ? null
     : [...moduleFixtureScripts.get(key)].sort().join(", "));
+
+  const docsRoots = await findDocsSiteRoots(repoRoot);
+  const underDocsSite = (fileOrKey) => docsRoots.some((root) => isUnderDir(fileOrKey, root));
+  const hasProductOutsideDocs = files.some((file) => !underDocsSite(file)
+    && !isNonProductPath(file)
+    && !isDevArtifactPath(file)
+    && !isSphinxConfFile(file));
+  const hideDocsSiteRoutes = docsRoots.length > 0 && hasProductOutsideDocs;
 
   const modules = [...moduleCounts.entries()]
     .map(([key, fileCount]) => ({
@@ -751,11 +868,25 @@ export async function scanRepo(cfg) {
       fileCount,
       ...(moduleTestCounts.get(key) ? { testFileCount: moduleTestCounts.get(key) } : {}),
       ...(flatKeys.has(key) ? { flat: true } : {}),
+      ...(moduleGoCounts.get(key) === fileCount ? { goPackage: true } : {}),
+      ...(underDocsSite(key) ? { docsSite: true } : {}),
       ...(fixtureOf(key) ? { fixture: fixtureOf(key) } : {}),
     }))
     .sort((a, b) => b.fileCount - a.fileCount);
 
-  const apiFiles = files.filter((file) => isNextRoute(file) && !isNonProductPath(file));
+  for (const mod of modules) {
+    if (!mod.goPackage || !mod.flat) continue;
+    for (const file of filesByModule.get(mod.key) || []) {
+      const text = await readFileSafe(path.join(repoRoot, file));
+      if (goPackageName(text) === "main") {
+        mod.goMain = true;
+        break;
+      }
+    }
+  }
+
+  const skipDocsRoute = (file) => hideDocsSiteRoutes && underDocsSite(file);
+  const apiFiles = files.filter((file) => isNextRoute(file) && !isNonProductPath(file) && !skipDocsRoute(file));
   const api = [];
 
   // Extract Next.js API routes
@@ -774,7 +905,7 @@ export async function scanRepo(cfg) {
 
   // Extract Express.js routes. Tests and examples are not the product API.
   for (const file of files) {
-    if (isNonProductPath(file)) continue;
+    if (isNonProductPath(file) || skipDocsRoute(file)) continue;
     if (file.endsWith(".ts") || file.endsWith(".js")) {
       const absoluteFile = path.join(repoRoot, file);
       const content = await readFileSafe(absoluteFile);
@@ -793,7 +924,7 @@ export async function scanRepo(cfg) {
     }
   }
 
-  const pageFiles = files.filter((file) => isNextPage(file) && !isNonProductPath(file));
+  const pageFiles = files.filter((file) => isNextPage(file) && !isNonProductPath(file) && !skipDocsRoute(file));
   const pages = pageFiles.map((file) => ({
     file,
     path: routePathFromFile(file),
@@ -802,7 +933,7 @@ export async function scanRepo(cfg) {
 
   // Extract React Router routes
   for (const file of files) {
-    if (isNonProductPath(file)) continue;
+    if (isNonProductPath(file) || skipDocsRoute(file)) continue;
     if (file.endsWith(".tsx") || file.endsWith(".jsx")) {
       const absoluteFile = path.join(repoRoot, file);
       const content = await readFileSafe(absoluteFile);
@@ -816,7 +947,7 @@ export async function scanRepo(cfg) {
 
   // Extract Vue Router routes
   for (const file of files) {
-    if (isNonProductPath(file)) continue;
+    if (isNonProductPath(file) || skipDocsRoute(file)) continue;
     if (file.endsWith(".ts") || file.endsWith(".js") || file.endsWith(".vue")) {
       const absoluteFile = path.join(repoRoot, file);
       const content = await readFileSafe(absoluteFile);
