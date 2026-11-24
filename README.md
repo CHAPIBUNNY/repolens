@@ -13,6 +13,7 @@
 [![Tests](https://img.shields.io/github/actions/workflow/status/CHAPIBUNNY/repolens/test.yml?label=tests)](https://github.com/CHAPIBUNNY/repolens/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.CHAPIBUNNY%2Frepolens-6E56CF)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.CHAPIBUNNY/repolens)
+[![CHAPIBUNNY/repolens MCP server](https://glama.ai/mcp/servers/CHAPIBUNNY/repolens/badges/score.svg)](https://glama.ai/mcp/servers/CHAPIBUNNY/repolens)
 [![Gallery](https://img.shields.io/badge/Gallery-26_real_repos-0B5FFF)](https://chapibunny.github.io/repolens/)
 [![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=repolens&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBjaGFwcGlidW5ueS9yZXBvbGVucyIsIm1jcCJdfQ%3D%3D)
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=repolens&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40chappibunny%2Frepolens%22%2C%22mcp%22%5D%7D)
@@ -215,6 +216,7 @@ Cursor, Cline, Claude Desktop, Claude Code, and VS Code Copilot can call RepoLen
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=repolens&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40chappibunny%2Frepolens%22%2C%22mcp%22%5D%7D)
 
 [![RepoLens MCP server](https://mcprush.com/badge/chapibunny-repolens-mcp/card.svg)](https://mcprush.com/to/chapibunny-repolens-mcp?ref=badge)
+[![CHAPIBUNNY/repolens MCP server](https://glama.ai/mcp/servers/CHAPIBUNNY/repolens/badges/score.svg)](https://glama.ai/mcp/servers/CHAPIBUNNY/repolens)
 
 Copy-paste configs for Cursor, Claude Desktop, and VS Code are in [docs/MCP.md](docs/MCP.md).
 
