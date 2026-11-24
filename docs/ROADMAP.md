@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.17.3  
+**Current Version:** 1.17.4  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** November 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.17.3)
+## What's Shipped (v0.1.0 → v1.17.4)
 
 Everything below is live, tested, and available on npm.
 
@@ -165,6 +165,12 @@ Everything below is live, tested, and available on npm.
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
 
+## v1.17.4 — Gap-review accuracy (zk, bubbletea, redux, click)
+
+- ✅ Go modules are package directories; import edges and data-flow steps are per package, not per file
+- ✅ `tutorials/` and documentation websites are not the product; test trees do not outrank product modules in onboarding
+- ✅ Root Go library packages, real `package main` entry points, LSP as a second interface, Makefile/Taskfile/tesh tooling, and no Documentation module from a lone `docs/conf.py`
+
 ## v1.17.3 — Gap-test accuracy (dorny/test-reporter)
 
 - ✅ Root-files module named after the project, not the checkout folder, and not typed by keywords in that name
@@ -289,20 +295,6 @@ Everything below is live, tested, and available on npm.
 The [gallery](https://chapibunny.github.io/repolens/) is a static flat Material site of RepoLens output for public repositories. `.github/workflows/gallery.yml` rebuilds it. It is not a CLI feature and it is not part of the npm package.
 
 ---
-
-## On main, not yet published
-
-The 24 Nov 2026 gap review is fixed on main. It is not in the 1.17.3 npm package and it is not tagged. Spring / ASP.NET detection and C# modules split by `.csproj` are still open. Grounded AI explanations and Q&A is unchanged and still next below.
-
-- Go modules follow package directories, including packages nested under `adapter/`, `util/`, and `cli/`
-- Go import edges and data-flow steps are per package, not per file inside the package
-- Entry points use the real `package main` file; a library with none is not sent to `cmd/`
-- A `commands` folder under tutorials or examples is not a CLI; an LSP package or `lsp` command is a second interface
-- `Makefile` (`CGO_ENABLED`, `-tags`), `Taskfile.yaml`, and `tests/*.tesh` are detected
-- `tutorials/` joins the dev-artifact skip list unless `scan.include_dev_artifacts: true`
-- A docs site (Docusaurus `website/`, VitePress, `docs-site`) is not a library's route map or its top onboarding module; theme aliases are not runtime packages
-- A Sphinx `docs/conf.py` alone is not a Documentation module when product source exists
-- Test modules do not outrank product modules in onboarding, and product data flows do not count test importers as "used by"
 
 ## What's Next
 

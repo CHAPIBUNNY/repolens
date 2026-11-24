@@ -2,11 +2,9 @@
 
 All notable changes to RepoLens will be documented in this file.
 
-## Unreleased
+## 1.17.4 (2026-11-24)
 
-Accuracy fixes from the 24 Nov 2026 gap review (catch-up for the missed 23 Nov review). Not published and not tagged. The package version stays 1.17.3 until a maintainer releases it.
-
-Confirmed again on zk-org/zk `20fc540`, charmbracelet/bubbletea `585149e`, reduxjs/redux `ce8d836`, and pallets/click `08b803c`.
+Accuracy fixes from the 24 Nov 2026 gap review (catch-up for the missed 23 Nov review). Confirmed again on zk-org/zk `20fc540`, charmbracelet/bubbletea `585149e`, reduxjs/redux `ce8d836`, and pallets/click `08b803c`.
 
 ### Upgrade notes
 

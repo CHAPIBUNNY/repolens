@@ -3,9 +3,9 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** November 2026  
-**Version:** 1.17.3
+**Version:** 1.17.4
 
-## Go packages, docs sites, and onboarding rank (fixed after 1.17.3, not yet published)
+## Go packages, docs sites, and onboarding rank (fixed in 1.17.4)
 
 A gap review of 1.17.3 (zk-org/zk `20fc540`, charmbracelet/bubbletea `585149e`, reduxjs/redux `ce8d836`, pallets/click `08b803c`) found the map describing those repositories wrong in ways 1.17.3 still ships:
 
@@ -17,7 +17,7 @@ A gap review of 1.17.3 (zk-org/zk `20fc540`, charmbracelet/bubbletea `585149e`, 
 - click's `tests/` (more files than `src/click`) was a high-priority core module. Product flows listed `tests/test_utils` as a shared library, and "used by N" counted test importers.
 - `docs/conf.py` alone opened a Documentation domain on a repository that already had product source.
 
-The fix is on main and is not in the 1.17.3 npm package. Publish and tag stay with a maintainer. Spring / ASP.NET detection and C# modules split by `.csproj` are still not built.
+The fix ships in 1.17.4. Spring / ASP.NET detection and C# modules split by `.csproj` are still not built.
 
 ## Java and C# analysis (new in 1.17.0)
 
