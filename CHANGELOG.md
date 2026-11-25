@@ -2,6 +2,27 @@
 
 All notable changes to RepoLens will be documented in this file.
 
+## Unreleased
+
+Accuracy fixes from the 25 Nov 2026 gap test. Confirmed on published 1.17.4 against colinhacks/zod `d40c329`, fastapi/full-stack-fastapi-template `77e550a`, square/retrofit `6b82cb5`, and sinatra/sinatra `2e3f791`. spf13/cobra `adbc881` was re-checked and left unchanged.
+
+### Upgrade notes
+
+- **Workspace packages include exact paths.** `workspaces: ["frontend", "packages/*"]` lists `frontend` itself. It used to look for packages inside `frontend/` and report one package.
+- **Frameworks, test runners, and build tools come from workspace manifests.** A uv member `backend/pyproject.toml` and a workspace `frontend/package.json` count. `@playwright/test` is Playwright.
+- **`packageManager` chooses the install command.** `nub@0.8.3` stays `nub install` when `pnpm-lock.yaml` is also present. The monorepo label follows that tool (nub, bun, pnpm, yarn) instead of always saying npm/yarn.
+- **An Astro `website/` is a documentation site**, same as Docusaurus and VitePress. Its JavaScript is not a product language, not a code-health or import-graph input, and not a high-severity security finding when the repository has product source outside it.
+- **Gradle `rootProject.name` drops an aggregator suffix** (`retrofit-root` is retrofit), the same way a Maven `artifactId` already did.
+- **`demo`, `publish`, and `watch` diff against `origin/HEAD`** (the cloned default branch). A missing ref is described as a diff that could not be read, not as "no architecture changes".
+
+### Fixes
+
+- A root `hooks/` directory is "Hook scripts" and is not typed React Hooks unless that module imports React. Copier `hooks/post_gen_project.py` was "React Hooks".
+- Benchmark and docs directories (`packages/bench`, `packages/docs`) are not high-priority onboarding rows.
+- A `Rakefile` is Rake, not "Standard toolchain". A Gemfile with minitest and a Rake test task onboards with `bundle install` and `bundle exec rake test`.
+
+Ruby and Kotlin import analysis, FastAPI decorator routes, and TanStack Router file routes are still not built. See [KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md).
+
 ## 1.17.4 (2026-11-24)
 
 Accuracy fixes from the 24 Nov 2026 gap review (catch-up for the missed 23 Nov review). Confirmed again on zk-org/zk `20fc540`, charmbracelet/bubbletea `585149e`, reduxjs/redux `ce8d836`, and pallets/click `08b803c`.

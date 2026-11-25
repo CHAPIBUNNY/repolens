@@ -4,6 +4,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { excludeDocsSiteFiles } from "../core/docs-site.js";
 import { info, warn } from "../utils/logger.js";
 import { isBuildOrExamplePath } from "../utils/path-roles.js";
 
@@ -256,7 +257,9 @@ export async function analyzeSecurityPatterns(files, repoRoot) {
     filesWithFindings: new Set(),
   };
 
-  const jsFiles = files
+  const scoped = await excludeDocsSiteFiles(files, repoRoot);
+  if (scoped.excluded) result.docsSitesSkipped = scoped.roots;
+  const jsFiles = scoped.files
     .filter(f => JS_EXTENSIONS.some(ext => f.endsWith(ext)))
     .filter(f => !shouldSkipFile(f));
 

@@ -67,9 +67,9 @@ src/
     dependency-graph.js   # Import graph with cycle detection; hubs ignore tests/examples; runtime vs dev packages
     drift-detector.js     # Architecture drift detection
     jsdoc-analyzer.js     # JSDoc/TSDoc extraction for the API surface
-    monorepo-detector.js  # Monorepo workspace detection (npm/yarn/pnpm/Lerna)
+    monorepo-detector.js  # Monorepo workspace detection (npm/yarn/pnpm/bun/nub/Lerna); exact workspace paths count, not only globs
     codeowners.js         # CODEOWNERS file parser + ownership mapping
-    security-patterns.js  # Security anti-pattern detection (eval, XSS, SQL injection, CWE classification); fixed-string innerHTML ignored, examples/build scripts low severity
+    security-patterns.js  # Security anti-pattern detection (eval, XSS, SQL injection, CWE classification); fixed-string innerHTML ignored, examples/build scripts low severity; docs-site JS is not product security
     complexity-analyzer.js # Cyclomatic complexity + unified code health scoring
     maturity.js           # Maturity from version, history, tests, CI, docs, and dependency health
   ai/

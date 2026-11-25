@@ -113,6 +113,7 @@ export function renderSystemOverview(cfg, scan, depGraph = null) {
 }
 
 function catalogDescription(module, depRole, evidence = {}) {
+  if (module?.docsSite) return "Documentation website (not the product)";
   if (module?.goPackage && module.flat) {
     const base = module.goMain ? "Go command (package main)" : "Go library package";
     const role = depRole && depRole !== base ? depRole : "";

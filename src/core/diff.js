@@ -47,6 +47,29 @@ export function gitDiffFailureMessage(stderr = "", message = "") {
   return "git diff could not be read; continuing with an empty diff.";
 }
 
+function gitOutput(args, cwd) {
+  try {
+    return execFileSync("git", args, {
+      encoding: "utf8",
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Base ref for a local preview diff. `origin/HEAD` is the cloned default
+ * branch (`master`, `trunk`, `main`). A missing `origin/main` is not "no changes".
+ */
+export function resolveDefaultDiffBase(cwd = process.cwd()) {
+  const originHead = gitOutput(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], cwd);
+  if (originHead && isSafeGitRef(originHead)) return originHead;
+  if (gitOutput(["rev-parse", "--verify", "--quiet", "origin/main"], cwd) != null) return "origin/main";
+  return "HEAD";
+}
+
 export function getGitDiff(baseRef = "origin/main", cwd = process.cwd(), headRef) {
   if (!isSafeGitRef(baseRef)) {
     warn("git diff skipped: base ref contains unsupported characters.");
@@ -74,8 +97,9 @@ export function getGitDiff(baseRef = "origin/main", cwd = process.cwd(), headRef
     });
   } catch (error) {
     const stderr = typeof error.stderr === "string" ? error.stderr : "";
-    warn(gitDiffFailureMessage(stderr, error.message));
-    return emptyDiff();
+    const reason = gitDiffFailureMessage(stderr, error.message);
+    warn(reason);
+    return { ...emptyDiff(), unavailable: true, reason };
   }
 
   const lines = output.split("\n").filter(Boolean);

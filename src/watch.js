@@ -9,7 +9,7 @@ import { loadConfig } from "./core/config.js";
 import { scanRepo } from "./core/scan.js";
 import { generateDocumentSet } from "./docs/generate-doc-set.js";
 import { writeDocumentSet } from "./docs/write-doc-set.js";
-import { getGitDiff } from "./core/diff.js";
+import { getGitDiff, resolveDefaultDiffBase } from "./core/diff.js";
 import { info, warn, error } from "./utils/logger.js";
 
 const DEBOUNCE_MS = 500;
@@ -22,7 +22,7 @@ async function rebuild(configPath) {
   try {
     const cfg = await loadConfig(configPath);
     const scan = await scanRepo(cfg);
-    const rawDiff = getGitDiff("origin/main", cfg.__repoRoot || process.cwd());
+    const rawDiff = getGitDiff(resolveDefaultDiffBase(cfg.__repoRoot || process.cwd()), cfg.__repoRoot || process.cwd());
     const docSet = await generateDocumentSet(scan, cfg, rawDiff);
     const result = await writeDocumentSet(docSet, process.cwd());
     const elapsed = Date.now() - start;

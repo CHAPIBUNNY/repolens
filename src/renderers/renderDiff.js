@@ -87,6 +87,18 @@ export function buildArchitectureDiffData(diff) {
 }
 
 export function renderArchitectureDiff(diff) {
+  if (diff?.unavailable) {
+    const reason = diff.reason || "git diff could not be read";
+    return [
+      "# Architecture Diff",
+      "",
+      `RepoLens could not read a git diff (${reason}).`,
+      "",
+      "This is not a claim that the branch has no architecture changes.",
+      "",
+    ].join("\n");
+  }
+
   const data = buildArchitectureDiffData(diff);
 
   const lines = [

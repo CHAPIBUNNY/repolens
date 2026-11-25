@@ -50,7 +50,11 @@ function gradleRootProjectName(dir) {
     if (!raw) continue;
     const source = raw.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
     const match = source.match(/rootProject\.name\s*=\s*(['"])([^'"\n]+)\1/);
-    if (match) return clean(match[2]);
+    if (match) {
+      // Same suffix strip as a Maven aggregator (`retrofit-root` is retrofit).
+      const stripped = match[2].replace(/-(parent|root|aggregator|reactor|build|project|platform|all|bom)$/i, "");
+      return clean(stripped || match[2]);
+    }
   }
   return null;
 }

@@ -70,7 +70,13 @@ describe("git diff safety", () => {
       await fs.writeFile(path.join(repo, "tracked.js"), "export const n = 2;\n");
 
       expect(getGitDiff("HEAD", repo).modified).toEqual(["tracked.js"]);
-      expect(getGitDiff("HEAD", missing)).toEqual({ added: [], removed: [], modified: [] });
+      expect(getGitDiff("HEAD", missing)).toEqual({
+        added: [],
+        removed: [],
+        modified: [],
+        unavailable: true,
+        reason: "not a git repository",
+      });
 
       execFileSync("git", ["add", "tracked.js"], { cwd: repo, stdio: "ignore" });
       execFileSync("git", ["commit", "-m", "second"], { cwd: repo, stdio: "ignore" });
