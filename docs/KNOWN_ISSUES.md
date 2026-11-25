@@ -3,7 +3,19 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** November 2026  
-**Version:** 1.17.4
+**Version:** 1.17.4 (fixes below are unreleased; they ship in the next patch)
+
+## Mixed layouts, package managers, and docs sites (fixed, unreleased)
+
+A gap test of published 1.17.4 (colinhacks/zod `d40c329`, fastapi/full-stack-fastapi-template `77e550a`, square/retrofit `6b82cb5`, sinatra/sinatra `2e3f791`; cobra `adbc881` was already accurate) found:
+
+- An npm workspace path without a glob (`frontend`) was skipped. The FastAPI template reported one package (`emails`) and called itself a general-purpose project with a standard toolchain. FastAPI lives in `backend/pyproject.toml` (`[tool.uv.workspace] members`) and React, Vite, and Playwright live in `frontend/package.json`.
+- zod's `packageManager` is `nub@0.8.3`. Onboarding said `pnpm install` because `pnpm-lock.yaml` is still in the tree. `packages/bench` was a high-priority module.
+- retrofit's Astro `website/` was the largest module. Fifty high XSS findings came from generated `website/public/**/script.js`, and the tech stack listed JavaScript and TypeScript. The project was named `retrofit-root`.
+- `demo` always diffed `origin/main`. fastapi (`master`) and retrofit (`trunk`) logged a failed diff and the architecture page said no changes.
+- A root `hooks/post_gen_project.py` was labeled React Hooks. Sinatra's Rakefile still read as "Standard toolchain" (install was already `bundle install`, not npm).
+
+The fix is on main and is not in 1.17.4. Ruby import graphs, Kotlin analysis, FastAPI `@router.get` routes, and TanStack `createFileRoute` / file routes are still not built. A route map that finds none of those says none were detected; it does not invent routes.
 
 ## Go packages, docs sites, and onboarding rank (fixed in 1.17.4)
 

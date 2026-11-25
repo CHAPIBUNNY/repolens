@@ -722,6 +722,17 @@ export function renderCodeHealth(healthResult) {
 }
 
 export function renderSecurityHotspots(secResult) {
+  if (secResult && !secResult.detected && secResult.filesScanned === 0 && secResult.docsSitesSkipped?.length) {
+    const sites = secResult.docsSitesSkipped.map((root) => `\`${root}/\``).join(", ");
+    return [
+      "# Security Hotspots",
+      "",
+      `> Not scanned: JavaScript and TypeScript under the documentation site (${sites}) is not product source, and this repository has no other JavaScript or TypeScript product files.`,
+      "",
+      "No security result is implied for the other languages in this repository.",
+      "",
+    ].join("\n");
+  }
   if (secResult && !secResult.detected && secResult.filesScanned === 0) {
     // Nothing was scanned (no JavaScript/TypeScript product files): "no anti-patterns
     // detected" would read as a clean bill for a Python, Java, C#, or Rust codebase.

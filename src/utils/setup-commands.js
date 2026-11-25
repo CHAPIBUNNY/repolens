@@ -41,16 +41,15 @@ export function detectSetupCommands(repoRoot, metadata = {}) {
   const install = [];
   const test = [];
   const manifests = [];
+  const buildTools = [];
+  const extraTestFrameworks = [];
   const entries = listRoot(repoRoot);
   const has = (name) => entries.includes(name) && exists(repoRoot, name);
   const testFrameworks = (metadata.testFrameworks || []).map((name) => String(name).toLowerCase());
 
   if (has("package.json")) {
     const pkg = readJson(path.join(repoRoot, "package.json")) || {};
-    let pm = "npm";
-    if (has("pnpm-lock.yaml") || has("pnpm-workspace.yaml")) pm = "pnpm";
-    else if (has("yarn.lock")) pm = "yarn";
-    else if (has("bun.lockb") || has("bun.lock")) pm = "bun";
+    const pm = packageManagerBin(pkg, has);
     install.push(`${pm} install`);
     if (pkg.scripts && typeof pkg.scripts.test === "string") test.push(`${pm} test`);
     manifests.push({ file: "package.json", purpose: "Available scripts and dependencies" });
@@ -105,10 +104,20 @@ export function detectSetupCommands(repoRoot, metadata = {}) {
   if (has("Gemfile")) {
     install.push("bundle install");
     manifests.push({ file: "Gemfile", purpose: "Ruby dependencies" });
+    const gemfile = readText(repoRoot, "Gemfile");
+    if (/\bminitest\b/.test(gemfile)) extraTestFrameworks.push("Minitest");
+    if (/\brspec\b/.test(gemfile)) extraTestFrameworks.push("RSpec");
   }
 
-  const buildTools = [];
-  const extraTestFrameworks = [];
+  if (has("Rakefile")) {
+    buildTools.push("Rake");
+    manifests.push({ file: "Rakefile", purpose: "Rake tasks" });
+    const rake = readText(repoRoot, "Rakefile");
+    if (/task\s+default:\s*:test\b|Rake::TestTask|Minitest::TestTask|^\s*task\s+:test\b/m.test(rake)) {
+      test.push(has("Gemfile") ? "bundle exec rake test" : "rake test");
+    }
+  }
+
   const makefile = has("Makefile") ? "Makefile" : (has("makefile") ? "makefile" : null);
   if (makefile) {
     const text = readText(repoRoot, makefile);
@@ -138,6 +147,17 @@ export function detectSetupCommands(repoRoot, metadata = {}) {
   }
 
   return { install, test, manifests, buildTools, extraTestFrameworks };
+}
+
+// `packageManager` is the tool the repository actually runs (`nub@0.8.3`).
+// A leftover pnpm-lock.yaml must not turn that into `pnpm install`.
+function packageManagerBin(pkg, has) {
+  const declared = String(pkg.packageManager || "").split("@")[0].trim().toLowerCase();
+  if (/^(npm|pnpm|yarn|bun|nub)$/.test(declared)) return declared;
+  if (has("pnpm-lock.yaml") || has("pnpm-workspace.yaml")) return "pnpm";
+  if (has("yarn.lock")) return "yarn";
+  if (has("bun.lockb") || has("bun.lock")) return "bun";
+  return "npm";
 }
 
 function readText(dir, name, max = 200_000) {

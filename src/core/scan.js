@@ -14,6 +14,7 @@ import { detectSetupCommands } from "../utils/setup-commands.js";
 import { detectScriptFixtureDirs, fixtureDirOf } from "../utils/fixture-dirs.js";
 import { detectProjectName } from "../utils/project-name.js";
 import { detectGitHubAction } from "../utils/github-action-detect.js";
+import { excludeDocsSiteFiles, findDocsSiteRoots, isUnderDocsRoot } from "./docs-site.js";
 
 const norm = (p) => p.replace(/\\/g, "/");
 
@@ -99,40 +100,6 @@ function isSphinxConfFile(file) {
   const base = parts.pop() || "";
   if (base !== "conf.py" && base !== "conf.py.in") return false;
   return parts.some((segment) => /^(docs?|documentation|sphinx)$/i.test(segment));
-}
-
-/**
- * Directories that are a documentation website (Docusaurus `website/`, a VitePress
- * app, `docs-site/`), not the product. The repository root itself is never one:
- * a config at the root must not hide `src/`.
- */
-async function findDocsSiteRoots(repoRoot) {
-  const roots = new Set();
-  let found = [];
-  try {
-    found = await fg([
-      "**/docusaurus.config.{js,ts,mjs,cjs}",
-      "**/.vitepress/config.{js,ts,mjs,mts}",
-    ], {
-      cwd: repoRoot,
-      deep: 5,
-      onlyFiles: true,
-      followSymbolicLinks: false,
-      ignore: ["**/node_modules/**", "**/dist/**", "**/.git/**"],
-    });
-  } catch {
-    return [];
-  }
-  for (const file of found) {
-    const normalized = norm(file);
-    const vite = normalized.indexOf("/.vitepress/");
-    const folder = vite !== -1
-      ? normalized.slice(0, vite)
-      : path.posix.dirname(normalized);
-    if (!folder || folder === ".") continue;
-    roots.add(folder);
-  }
-  return [...roots].sort();
 }
 
 function isUnderDir(file, root) {
@@ -400,6 +367,128 @@ export async function detectJvmDotnetTooling(repoRoot, metadata, { skip = null }
   }
 }
 
+function applyPackageDependencySignals(allDeps, metadata) {
+  if (!allDeps) return;
+  if (allDeps["next"]) metadata.frameworks.push("Next.js");
+  if (allDeps["react"]) metadata.frameworks.push("React");
+  if (allDeps["vue"]) metadata.frameworks.push("Vue");
+  if (allDeps["angular"] || allDeps["@angular/core"]) metadata.frameworks.push("Angular");
+  if (allDeps["express"]) metadata.frameworks.push("Express");
+  if (allDeps["fastify"]) metadata.frameworks.push("Fastify");
+  if (allDeps["nestjs"] || allDeps["@nestjs/core"]) metadata.frameworks.push("NestJS");
+  if (allDeps["svelte"]) metadata.frameworks.push("Svelte");
+  if (allDeps["solid-js"]) metadata.frameworks.push("Solid");
+  if (allDeps["hono"]) metadata.frameworks.push("Hono");
+  if (allDeps["koa"]) metadata.frameworks.push("Koa");
+  if (allDeps["hapi"] || allDeps["@hapi/hapi"]) metadata.frameworks.push("Hapi");
+  if (allDeps["electron"]) metadata.frameworks.push("Electron");
+
+  if (allDeps["vitest"]) metadata.testFrameworks.push("Vitest");
+  if (allDeps["jest"]) metadata.testFrameworks.push("Jest");
+  if (allDeps["mocha"]) metadata.testFrameworks.push("Mocha");
+  if (allDeps["playwright"] || allDeps["@playwright/test"]) metadata.testFrameworks.push("Playwright");
+  if (allDeps["cypress"]) metadata.testFrameworks.push("Cypress");
+  if (allDeps["ava"]) metadata.testFrameworks.push("Ava");
+
+  if (allDeps["vite"]) metadata.buildTools.push("Vite");
+  if (allDeps["webpack"]) metadata.buildTools.push("Webpack");
+  if (allDeps["rollup"]) metadata.buildTools.push("Rollup");
+  if (allDeps["esbuild"]) metadata.buildTools.push("esbuild");
+  if (allDeps["turbo"]) metadata.buildTools.push("Turborepo");
+  if (allDeps["tsup"]) metadata.buildTools.push("tsup");
+  if (allDeps["swc"] || allDeps["@swc/core"]) metadata.buildTools.push("SWC");
+  if (allDeps["parcel"]) metadata.buildTools.push("Parcel");
+}
+
+function applyPythonManifestSignals(content, metadata, { poetry = false } = {}) {
+  if (/django/i.test(content)) metadata.frameworks.push("Django");
+  if (/fastapi/i.test(content)) metadata.frameworks.push("FastAPI");
+  if (/flask/i.test(content)) metadata.frameworks.push("Flask");
+  if (/pytest/i.test(content)) metadata.testFrameworks.push("pytest");
+  if (poetry && /poetry/i.test(content)) metadata.buildTools.push("Poetry");
+}
+
+function quotedList(body, key) {
+  const match = String(body || "").match(new RegExp(`(?:^|\\n)\\s*${key}\\s*=\\s*\\[([^\\]]*)\\]`));
+  if (!match) return [];
+  return [...match[1].matchAll(/["']([^"']+)["']/g)].map((item) => item[1]);
+}
+
+function uvWorkspaceMembers(content) {
+  const section = String(content || "").match(/\[tool\.uv\.workspace\][^\n]*\n([\s\S]*?)(?:\n\[|$)/);
+  if (!section) return [];
+  return quotedList(section[1], "members");
+}
+
+async function readUtf8(file) {
+  try {
+    return await fs.readFile(file, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Frameworks, test runners, and build tools declared by workspace packages and
+ * uv workspace members. The root manifest alone misses a FastAPI app in
+ * `backend/pyproject.toml` and React in `frontend/package.json`.
+ * A documentation website's package.json is not the product.
+ */
+async function absorbNestedManifests(repoRoot, metadata) {
+  const docsRoots = await findDocsSiteRoots(repoRoot);
+  const underDocs = (rel) => isUnderDocsRoot(rel, docsRoots);
+
+  const monorepo = await detectMonorepo(repoRoot, { quiet: true });
+  for (const pkg of monorepo.packages || []) {
+    if (underDocs(pkg.path)) continue;
+    const raw = await readUtf8(path.join(repoRoot, pkg.path, "package.json"));
+    if (!raw) continue;
+    try {
+      const manifest = JSON.parse(raw);
+      applyPackageDependencySignals({
+        ...manifest.dependencies,
+        ...manifest.devDependencies,
+        ...manifest.optionalDependencies,
+      }, metadata);
+    } catch {
+      // invalid package.json
+    }
+  }
+
+  const rootPy = await readUtf8(path.join(repoRoot, "pyproject.toml"));
+  const members = uvWorkspaceMembers(rootPy);
+  const seen = new Set();
+  for (const member of members) {
+    const pattern = String(member || "").replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "");
+    if (!pattern || pattern.split("/").includes("..") || pattern.startsWith("/")) continue;
+    const dirs = [];
+    if (!pattern.includes("*")) {
+      dirs.push(pattern);
+    } else {
+      const base = pattern.replace(/\/?\*.*$/, "");
+      const searchDir = path.resolve(repoRoot, base || ".");
+      if (!isInsideRoot(repoRoot, searchDir)) continue;
+      let entries = [];
+      try {
+        entries = await fs.readdir(searchDir, { withFileTypes: true });
+      } catch {
+        entries = [];
+      }
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const rel = path.relative(repoRoot, path.join(searchDir, entry.name)).replace(/\\/g, "/");
+        if (rel && !rel.startsWith("..")) dirs.push(rel);
+      }
+    }
+    for (const dir of dirs) {
+      if (seen.has(dir) || underDocs(dir) || isNonProductPath(dir)) continue;
+      seen.add(dir);
+      const content = await readUtf8(path.join(repoRoot, dir, "pyproject.toml"));
+      if (content) applyPythonManifestSignals(content, metadata, { poetry: true });
+    }
+  }
+}
+
 async function extractRepoMetadata(repoRoot, files = []) {
   const metadata = {
     hasPackageJson: false,
@@ -422,38 +511,7 @@ async function extractRepoMetadata(repoRoot, files = []) {
       ...pkg.optionalDependencies
     };
 
-    // Detect frameworks
-    if (allDeps["next"]) metadata.frameworks.push("Next.js");
-    if (allDeps["react"]) metadata.frameworks.push("React");
-    if (allDeps["vue"]) metadata.frameworks.push("Vue");
-    if (allDeps["angular"] || allDeps["@angular/core"]) metadata.frameworks.push("Angular");
-    if (allDeps["express"]) metadata.frameworks.push("Express");
-    if (allDeps["fastify"]) metadata.frameworks.push("Fastify");
-    if (allDeps["nestjs"] || allDeps["@nestjs/core"]) metadata.frameworks.push("NestJS");
-    if (allDeps["svelte"]) metadata.frameworks.push("Svelte");
-    if (allDeps["solid-js"]) metadata.frameworks.push("Solid");
-    if (allDeps["hono"]) metadata.frameworks.push("Hono");
-    if (allDeps["koa"]) metadata.frameworks.push("Koa");
-    if (allDeps["hapi"] || allDeps["@hapi/hapi"]) metadata.frameworks.push("Hapi");
-    if (allDeps["electron"]) metadata.frameworks.push("Electron");
-
-    // Detect test frameworks
-    if (allDeps["vitest"]) metadata.testFrameworks.push("Vitest");
-    if (allDeps["jest"]) metadata.testFrameworks.push("Jest");
-    if (allDeps["mocha"]) metadata.testFrameworks.push("Mocha");
-    if (allDeps["playwright"]) metadata.testFrameworks.push("Playwright");
-    if (allDeps["cypress"]) metadata.testFrameworks.push("Cypress");
-    if (allDeps["ava"]) metadata.testFrameworks.push("Ava");
-
-    // Detect build tools
-    if (allDeps["vite"]) metadata.buildTools.push("Vite");
-    if (allDeps["webpack"]) metadata.buildTools.push("Webpack");
-    if (allDeps["rollup"]) metadata.buildTools.push("Rollup");
-    if (allDeps["esbuild"]) metadata.buildTools.push("esbuild");
-    if (allDeps["turbo"]) metadata.buildTools.push("Turborepo");
-    if (allDeps["tsup"]) metadata.buildTools.push("tsup");
-    if (allDeps["swc"] || allDeps["@swc/core"]) metadata.buildTools.push("SWC");
-    if (allDeps["parcel"]) metadata.buildTools.push("Parcel");
+    applyPackageDependencySignals(allDeps, metadata);
 
     // Detect TypeScript from dependencies (supplements file detection)
     // A `typescript` devDependency alone does not make the source TypeScript: plain JavaScript
@@ -509,12 +567,7 @@ async function extractRepoMetadata(repoRoot, files = []) {
     const pyprojectContent = await fs.readFile(pyprojectPath, "utf8");
     metadata.languages.add("Python");
     
-    // Detect Python frameworks from pyproject.toml
-    if (/django/i.test(pyprojectContent)) metadata.frameworks.push("Django");
-    if (/fastapi/i.test(pyprojectContent)) metadata.frameworks.push("FastAPI");
-    if (/flask/i.test(pyprojectContent)) metadata.frameworks.push("Flask");
-    if (/pytest/i.test(pyprojectContent)) metadata.testFrameworks.push("pytest");
-    if (/poetry/i.test(pyprojectContent)) metadata.buildTools.push("Poetry");
+    applyPythonManifestSignals(pyprojectContent, metadata, { poetry: true });
   } catch {
     // No pyproject.toml
   }
@@ -525,10 +578,7 @@ async function extractRepoMetadata(repoRoot, files = []) {
     const reqContent = await fs.readFile(reqPath, "utf8");
     metadata.languages.add("Python");
     
-    if (/django/i.test(reqContent)) metadata.frameworks.push("Django");
-    if (/fastapi/i.test(reqContent)) metadata.frameworks.push("FastAPI");
-    if (/flask/i.test(reqContent)) metadata.frameworks.push("Flask");
-    if (/pytest/i.test(reqContent)) metadata.testFrameworks.push("pytest");
+    applyPythonManifestSignals(reqContent, metadata);
   } catch {
     // No requirements.txt
   }
@@ -574,8 +624,13 @@ async function extractRepoMetadata(repoRoot, files = []) {
   const isFixtureOrSample = (file) => Boolean(fixtureDirOf(file, fixtureDirs)) || isToolingPath(file);
   await detectJvmDotnetTooling(repoRoot, metadata, { skip: isFixtureOrSample });
 
-  // Merge languages detected from file extensions (product files; all files when there are none)
-  const productFiles = files.filter((file) => !isNonProductPath(file) && !fixtureDirOf(file, fixtureDirs));
+  await absorbNestedManifests(repoRoot, metadata);
+
+  // Merge languages detected from file extensions (product files; all files when there are none).
+  // A documentation website next to the product does not add its languages.
+  const docsScoped = await excludeDocsSiteFiles(files, repoRoot);
+  const languageFiles = docsScoped.files;
+  const productFiles = languageFiles.filter((file) => !isNonProductPath(file) && !fixtureDirOf(file, fixtureDirs));
   const fileLanguages = detectLanguagesFromFiles(productFiles.length > 0 ? productFiles : files);
   const manifestLanguages = [...metadata.languages];
   metadata.languages = new Set([...fileLanguages, ...manifestLanguages]);
@@ -872,7 +927,9 @@ export async function scanRepo(cfg) {
       ...(underDocsSite(key) ? { docsSite: true } : {}),
       ...(fixtureOf(key) ? { fixture: fixtureOf(key) } : {}),
     }))
-    .sort((a, b) => b.fileCount - a.fileCount);
+    .sort((a, b) => Number(Boolean(a.docsSite)) - Number(Boolean(b.docsSite))
+      || b.fileCount - a.fileCount
+      || String(a.key).localeCompare(String(b.key)));
 
   for (const mod of modules) {
     if (!mod.goPackage || !mod.flat) continue;

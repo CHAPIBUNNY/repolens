@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createInterface } from "node:readline/promises";
 import { loadConfig } from "./core/config.js";
 import { scanRepo } from "./core/scan.js";
-import { getGitDiff } from "./core/diff.js";
+import { getGitDiff, resolveDefaultDiffBase } from "./core/diff.js";
 import { runDoctor } from "./doctor.js";
 
 import {
@@ -523,7 +523,7 @@ async function main() {
       process.exit(EXIT_ERROR);
     }
 
-    const rawDiff = getGitDiff("origin/main", cfg.__repoRoot || process.cwd());
+    const rawDiff = getGitDiff(resolveDefaultDiffBase(cfg.__repoRoot || process.cwd()), cfg.__repoRoot || process.cwd());
     const diffData = buildArchitectureDiffData(rawDiff);
 
     try {
@@ -649,7 +649,7 @@ async function main() {
       info(`Detected ${scan.modules?.length || 0} modules, ${scan.filesCount || 0} files`);
       exitIfNoFilesScanned(scan, cfg);
 
-      const rawDiff = getGitDiff("origin/main", cfg.__repoRoot || targetDir);
+      const rawDiff = getGitDiff(resolveDefaultDiffBase(targetDir), cfg.__repoRoot || targetDir);
       
       info("Generating documentation set...");
       const renderTimer = startTimer("render");

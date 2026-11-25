@@ -43,6 +43,7 @@ import {
   packageLabelOf,
 } from "./java-csharp.js";
 import { computeLanguageCoverage, coverageLine } from "./language-coverage.js";
+import { excludeDocsSiteFiles } from "../core/docs-site.js";
 import { listWorkspacePackages } from "./workspace-packages.js";
 import { usageByName, declaredKinds, createElisionSettings, isTypeScriptFile } from "./ts-elision.js";
 import { createAliasResolver } from "./path-aliases.js";
@@ -278,7 +279,12 @@ function goEdgeKey(dir) {
 
 export async function analyzeDependencyGraph(files, repoRoot, { coverageFiles = files } = {}) {
   const result = emptyResult();
-  const coverage = computeLanguageCoverage(coverageFiles || files);
+  const scoped = await excludeDocsSiteFiles(files, repoRoot);
+  const coverageScoped = coverageFiles === files
+    ? scoped
+    : await excludeDocsSiteFiles(coverageFiles || files, repoRoot);
+  files = scoped.files;
+  const coverage = computeLanguageCoverage(coverageScoped.files);
   result.coverage = coverage;
   if (coverage.status === "unsupported") {
     info(`Dependency graph: not built — ${coverageLine(coverage, "import analysis")}`);

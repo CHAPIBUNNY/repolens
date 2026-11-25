@@ -1,6 +1,6 @@
 // Build structured AI context from deterministic scan results
 
-import { groupModulesByDomain, pathHasKeyword, stripContainerSegments, hasContainerSegment } from "./domain-inference.js";
+import { groupModulesByDomain, moduleEvidence, pathHasKeyword, stripContainerSegments, hasContainerSegment } from "./domain-inference.js";
 import { isDevArtifactPath, isTestPath, isToolingPath, trimTrailingSlashes } from "../utils/path-roles.js";
 
 /**
@@ -196,7 +196,7 @@ export function buildAIContext(scanResult, config, depGraph = null) {
       fileCount: m.fileCount,
       docsSite: Boolean(m.docsSite),
       type: m.fixture ? "test"
-        : (m.goPackage && m.flat ? (m.goMain ? "cli" : "library") : inferModuleType(m.flat ? "" : m.key)),
+        : (m.goPackage && m.flat ? (m.goMain ? "cli" : "library") : inferModuleType(m.flat ? "" : m.key, moduleEvidence(m.key, depGraph))),
       depRole: describeModuleRole(m, moduleMetrics),
     }));
   
@@ -277,7 +277,7 @@ export function buildAIContext(scanResult, config, depGraph = null) {
   };
 }
 
-function inferModuleType(modulePath) {
+function inferModuleType(modulePath, evidence = {}) {
   // `src` and `lib` only say where code lives. `lib/ogg` is typed by `ogg`, and a bare
   // `lib` is the project's source, not a "shared library" layer.
   const typedPath = stripContainerSegments(modulePath);
@@ -292,7 +292,7 @@ function inferModuleType(modulePath) {
   if (has("api") || has("endpoint")) return "api";
   if (has("component") || has("widget")) return "ui";
   if (has("lib") || has("util") || has("helper") || has("common") || has("shared")) return "library";
-  if (has("hook")) return "hooks";
+  if (has("hook") && evidence.react) return "hooks";
   if (has("store") || has("state") || has("redux") || has("zustand")) return "state";
   if (isFile ? (hasDirectory("page") || hasDirectory("route") || hasDirectory("view")) : (has("page") || has("route") || has("view"))) return "route";
   if (has("config") || has("setting") || has("env")) return "config";
@@ -554,7 +554,7 @@ export function buildModuleContext(modules, config, depGraph = null) {
       key: module.key,
       fileCount: module.fileCount,
       type: module.fixture ? "test"
-        : (module.goPackage && module.flat ? (module.goMain ? "cli" : "library") : inferModuleType(module.flat ? "" : module.key)),
+        : (module.goPackage && module.flat ? (module.goMain ? "cli" : "library") : inferModuleType(module.flat ? "" : module.key, moduleEvidence(module.key, depGraph))),
       depRole: describeModuleRole(module, moduleMetrics),
       domain: domain?.name || "Other",
       domainDescription: domain?.description || "Uncategorized"

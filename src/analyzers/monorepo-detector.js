@@ -11,16 +11,17 @@ import { loadYaml } from "../utils/yaml.js";
  * Detect monorepo workspaces in a repository.
  * Returns { isMonorepo, tool, packages[] } where each package has { name, path, packageJson }.
  */
-export async function detectMonorepo(repoRoot) {
+export async function detectMonorepo(repoRoot, { quiet = false } = {}) {
   const result = { isMonorepo: false, tool: null, packages: [] };
+  const log = (message) => { if (!quiet) info(message); };
 
   // 1. Check package.json workspaces (npm/yarn)
   const npmWorkspaces = await detectNpmWorkspaces(repoRoot);
   if (npmWorkspaces.length > 0) {
     result.isMonorepo = true;
-    result.tool = "npm/yarn workspaces";
+    result.tool = await workspaceToolLabel(repoRoot);
     result.packages = npmWorkspaces;
-    info(`Monorepo detected: ${result.tool} with ${result.packages.length} packages`);
+    log(`Monorepo detected: ${result.tool} with ${result.packages.length} packages`);
     return result;
   }
 
@@ -30,7 +31,7 @@ export async function detectMonorepo(repoRoot) {
     result.isMonorepo = true;
     result.tool = "pnpm workspaces";
     result.packages = pnpmWorkspaces;
-    info(`Monorepo detected: ${result.tool} with ${result.packages.length} packages`);
+    log(`Monorepo detected: ${result.tool} with ${result.packages.length} packages`);
     return result;
   }
 
@@ -40,7 +41,7 @@ export async function detectMonorepo(repoRoot) {
     result.isMonorepo = true;
     result.tool = "Lerna";
     result.packages = lernaPackages;
-    info(`Monorepo detected: ${result.tool} with ${result.packages.length} packages`);
+    log(`Monorepo detected: ${result.tool} with ${result.packages.length} packages`);
     return result;
   }
 
@@ -92,18 +93,78 @@ async function detectLerna(repoRoot) {
   }
 }
 
+async function fileExists(file) {
+  try {
+    await fs.access(file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Resolve workspace glob patterns to actual package directories.
+ * package.json `packageManager` wins over a leftover lockfile (zod is nub,
+ * and still ships pnpm-lock.yaml). Otherwise the lockfile names the tool.
+ */
+async function workspaceToolLabel(repoRoot) {
+  let declared = "";
+  try {
+    const pkg = JSON.parse(await fs.readFile(path.join(repoRoot, "package.json"), "utf8"));
+    declared = String(pkg.packageManager || "").split("@")[0].trim().toLowerCase();
+  } catch {
+    declared = "";
+  }
+  if (declared === "nub") return "nub workspaces";
+  if (declared === "bun" || await fileExists(path.join(repoRoot, "bun.lock")) || await fileExists(path.join(repoRoot, "bun.lockb"))) {
+    return "bun workspaces";
+  }
+  if (declared === "pnpm" || await fileExists(path.join(repoRoot, "pnpm-lock.yaml")) || await fileExists(path.join(repoRoot, "pnpm-workspace.yaml"))) {
+    return "pnpm workspaces";
+  }
+  if (declared === "yarn" || await fileExists(path.join(repoRoot, "yarn.lock"))) return "yarn workspaces";
+  if (declared === "npm") return "npm workspaces";
+  return "npm/yarn workspaces";
+}
+
+async function pushPackage(repoRoot, pkgDir, entryName, seen, packages) {
+  if (!isInsideRoot(repoRoot, pkgDir)) return;
+  const relativePath = path.relative(repoRoot, pkgDir).replace(/\\/g, "/");
+  if (!relativePath || relativePath === "." || relativePath.startsWith("..") || seen.has(relativePath)) return;
+  try {
+    const raw = await fs.readFile(path.join(pkgDir, "package.json"), "utf8");
+    const pkg = JSON.parse(raw);
+    seen.add(relativePath);
+    packages.push({
+      name: pkg.name || entryName || path.basename(pkgDir),
+      path: relativePath,
+      version: pkg.version,
+      dependencies: Object.keys(pkg.dependencies || {}),
+      devDependencies: Object.keys(pkg.devDependencies || {}),
+    });
+  } catch {
+    // No package.json in this directory, skip
+  }
+}
+
+/**
+ * Resolve workspace patterns to package directories.
+ * `packages/*` lists children. `frontend` is that directory, not its children.
  */
 async function resolveWorkspacePatterns(repoRoot, patterns) {
   const packages = [];
   const seen = new Set();
 
   for (const pattern of patterns) {
-    // Convert glob pattern to directory search
-    // e.g. "packages/*" → list dirs in packages/
     if (typeof pattern !== "string" || pattern.includes("\0")) continue;
-    const basePath = pattern.replace(/\/?\*.*$/, "") || ".";
+    const normalized = pattern.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "");
+    if (!normalized || normalized.split("/").includes("..")) continue;
+
+    if (!normalized.includes("*")) {
+      await pushPackage(repoRoot, path.resolve(repoRoot, normalized), path.posix.basename(normalized), seen, packages);
+      continue;
+    }
+
+    const basePath = normalized.replace(/\/?\*.*$/, "") || ".";
     const searchDir = path.resolve(repoRoot, basePath);
     if (!isInsideRoot(repoRoot, searchDir)) continue;
 
@@ -111,28 +172,7 @@ async function resolveWorkspacePatterns(repoRoot, patterns) {
       const entries = await fs.readdir(searchDir, { withFileTypes: true });
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
-
-        const pkgDir = path.join(searchDir, entry.name);
-        const pkgJsonPath = path.join(pkgDir, "package.json");
-
-        try {
-          const raw = await fs.readFile(pkgJsonPath, "utf8");
-          const pkg = JSON.parse(raw);
-          const relativePath = path.relative(repoRoot, pkgDir).replace(/\\/g, "/");
-
-          if (!seen.has(relativePath)) {
-            seen.add(relativePath);
-            packages.push({
-              name: pkg.name || entry.name,
-              path: relativePath,
-              version: pkg.version,
-              dependencies: Object.keys(pkg.dependencies || {}),
-              devDependencies: Object.keys(pkg.devDependencies || {}),
-            });
-          }
-        } catch {
-          // No package.json in this directory, skip
-        }
+        await pushPackage(repoRoot, path.join(searchDir, entry.name), entry.name, seen, packages);
       }
     } catch {
       // Directory doesn't exist, skip

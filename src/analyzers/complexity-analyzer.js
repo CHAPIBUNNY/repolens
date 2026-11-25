@@ -4,6 +4,7 @@
 
 import fs from "node:fs/promises";
 import { computeLanguageCoverage, coverageLine, filesForAnalysis, unanalyzedLanguageNames } from "./language-coverage.js";
+import { excludeDocsSiteFiles } from "../core/docs-site.js";
 import path from "node:path";
 import { info } from "../utils/logger.js";
 import { isTestPath } from "../utils/path-roles.js";
@@ -356,7 +357,12 @@ function functionsForLanguage(language, source) {
  * @returns {Promise<Object>} Complexity analysis results
  */
 export async function analyzeComplexity(files, repoRoot, { coverageFiles = files } = {}) {
-  const coverage = computeLanguageCoverage(coverageFiles || files);
+  const scoped = await excludeDocsSiteFiles(files, repoRoot);
+  const coverageScoped = coverageFiles === files
+    ? scoped
+    : await excludeDocsSiteFiles(coverageFiles || files, repoRoot);
+  files = scoped.files;
+  const coverage = computeLanguageCoverage(coverageScoped.files);
   const sourceFiles = filesForAnalysis(files, coverage)
     .filter(f => languageForFile(f))
     .filter(f => !shouldSkip(f));

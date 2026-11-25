@@ -1303,7 +1303,7 @@ ${context.repoRoots.map(root => {
   output += `|----------|--------|-------|------|----------------|\n`;
   
   const priorityModules = context.topModules
-    .filter((mod) => mod.type !== "test" && !mod.docsSite && !isTestPath(mod.key))
+    .filter((mod) => mod.type !== "test" && !mod.docsSite && !isTestPath(mod.key) && !isNonProductPath(mod.key))
     .slice(0, 10);
   const shownModules = priorityModules.length > 0 ? priorityModules : context.topModules.slice(0, 10);
   for (const [i, m] of shownModules.entries()) {
@@ -1551,7 +1551,7 @@ function describeRoot(root) {
   if (/^pages?$|^views?$|^screens?$/.test(lastSeg)) return "Application pages/views";
   if (/^utils?$|^helpers?$/.test(lastSeg)) return "Utility functions";
   if (/^services?$/.test(lastSeg)) return "Service layer";
-  if (/^hooks?$/.test(lastSeg)) return "Custom hooks";
+  if (/^hooks?$/.test(lastSeg)) return "Hook scripts";
   if (/^core$|^kernel$|^engine$/.test(lastSeg)) return "Core logic and foundations";
   if (/^analyz/.test(lastSeg)) return "Code analysis and detection";
   if (/^render/.test(lastSeg)) return "Rendering and output formatting";
