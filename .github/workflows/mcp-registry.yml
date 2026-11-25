@@ -3,7 +3,18 @@ name: Publish to MCP Registry
 on:
   release:
     types: [published]
+  workflow_run:
+    workflows: ["RepoLens Release"]
+    types: [completed]
   workflow_dispatch:
+
+# GITHUB_TOKEN-created GitHub Releases do not fire `on: release`.
+# `workflow_run` covers tag publishes from release.yml. A new npm
+# version can take a couple of minutes to become queryable, so the
+# publish step waits for that version before calling mcp-publisher.
+concurrency:
+  group: mcp-registry-publish
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -11,6 +22,7 @@ permissions:
 
 jobs:
   publish:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -23,5 +35,20 @@ jobs:
 
       - name: Login via GitHub OIDC and publish
         run: |
+          ver=$(python3 -c 'import json; print(json.load(open("server.json"))["version"])')
+          enc_pkg=$(python3 -c 'import json, urllib.parse; print(urllib.parse.quote(json.load(open("server.json"))["packages"][0]["identifier"]))')
+          for i in $(seq 1 12); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' "https://registry.npmjs.org/${enc_pkg}/${ver}")
+            if [ "$code" = "200" ]; then
+              echo "npm ${ver} is visible"
+              break
+            fi
+            if [ "$i" = "12" ]; then
+              echo "npm ${ver} still not visible after waiting (HTTP ${code}); publish may fail"
+            else
+              echo "npm ${ver} not visible yet (HTTP ${code}, attempt ${i}); waiting 20s"
+              sleep 20
+            fi
+          done
           /tmp/mcp-publisher login github-oidc
           /tmp/mcp-publisher publish
