@@ -3,9 +3,9 @@
 This document tracks known issues, limitations, and edge cases in RepoLens. We're committed to transparency about what works, what doesn't, and what we're working on.
 
 **Last Updated:** November 2026  
-**Version:** 1.17.4 (fixes below are unreleased; they ship in the next patch)
+**Version:** 1.17.5
 
-## Mixed layouts, package managers, and docs sites (fixed, unreleased)
+## Mixed layouts, package managers, and docs sites (fixed in 1.17.5)
 
 A gap test of published 1.17.4 (colinhacks/zod `d40c329`, fastapi/full-stack-fastapi-template `77e550a`, square/retrofit `6b82cb5`, sinatra/sinatra `2e3f791`; cobra `adbc881` was already accurate) found:
 
@@ -15,7 +15,7 @@ A gap test of published 1.17.4 (colinhacks/zod `d40c329`, fastapi/full-stack-fas
 - `demo` always diffed `origin/main`. fastapi (`master`) and retrofit (`trunk`) logged a failed diff and the architecture page said no changes.
 - A root `hooks/post_gen_project.py` was labeled React Hooks. Sinatra's Rakefile still read as "Standard toolchain" (install was already `bundle install`, not npm).
 
-The fix is on main and is not in 1.17.4. Ruby import graphs, Kotlin analysis, FastAPI `@router.get` routes, and TanStack `createFileRoute` / file routes are still not built. A route map that finds none of those says none were detected; it does not invent routes.
+The fix ships in 1.17.5. Ruby import graphs, Kotlin analysis, FastAPI `@router.get` routes, and TanStack `createFileRoute` / file routes are still not built. A route map that finds none of those says none were detected; it does not invent routes.
 
 ## Go packages, docs sites, and onboarding rank (fixed in 1.17.4)
 

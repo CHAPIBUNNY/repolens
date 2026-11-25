@@ -245,9 +245,9 @@ If `npx` reports `Unknown command: mcp`, an `.npmrc` with `min-release-age` (or 
 
 ## GitHub Action
 
-`action.yml` is a composite action named **RepoLens Architecture Docs**. `publish`, `demo`, and `doctor` run the published npm package (`npx --force --yes @chappibunny/repolens@1.17.4`). `comment` and `badge` run from the action checkout. Inputs are `command` (`publish`, `demo`, `doctor`, `comment`, or `badge`), `config`, `node-version`, `pr-comment`, `version`, `badge-out`, `badge-url`, and `badge-link`. The action passes `--force` so a repository `devEngines` pin does not stop `npx` on npm versions that enforce `devEngines` (newer npm). Node 20's bundled npm does not enforce that field. From a shell, use the same flag: `npx --force --yes @chappibunny/repolens demo`. `--ignore-engines` does not skip `devEngines`.
+`action.yml` is a composite action named **RepoLens Architecture Docs**. `publish`, `demo`, and `doctor` run the published npm package (`npx --force --yes @chappibunny/repolens@1.17.5`). `comment` and `badge` run from the action checkout. Inputs are `command` (`publish`, `demo`, `doctor`, `comment`, or `badge`), `config`, `node-version`, `pr-comment`, `version`, `badge-out`, `badge-url`, and `badge-link`. The action passes `--force` so a repository `devEngines` pin does not stop `npx` on npm versions that enforce `devEngines` (newer npm). Node 20's bundled npm does not enforce that field. From a shell, use the same flag: `npx --force --yes @chappibunny/repolens demo`. `--ignore-engines` does not skip `devEngines`.
 
-Publishing docs (the npm package at tag `v1.17.4`):
+Publishing docs (the npm package at tag `v1.17.5`):
 
 ```yaml
 name: Architecture docs
@@ -263,7 +263,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      - uses: CHAPIBUNNY/repolens@v1.17.4
+      - uses: CHAPIBUNNY/repolens@v1.17.5
         with:
           command: publish
           config: .repolens.yml
@@ -287,7 +287,7 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
-      - uses: CHAPIBUNNY/repolens@v1.17.4
+      - uses: CHAPIBUNNY/repolens@v1.17.5
         with:
           command: comment
 ```
@@ -296,7 +296,7 @@ jobs:
 
 `pr-comment: true` on `publish`, `demo`, or `doctor` (when the action ref contains this change) runs the same comment after the package and turns the package's older comment off, so the pull request still gets one comment.
 
-The action is listed on the GitHub Marketplace only after a release is published with **Publish this Action to the GitHub Marketplace** checked. Those steps are in [docs/RELEASE.md](docs/RELEASE.md). The tag `v1.17.4` has to exist before `uses: CHAPIBUNNY/repolens@v1.17.4` resolves, and `@chappibunny/repolens@1.17.4` has to be on npm before `publish` can install it. `command: comment` and `command: badge` do not install that package.
+The action is listed on the GitHub Marketplace only after a release is published with **Publish this Action to the GitHub Marketplace** checked. Those steps are in [docs/RELEASE.md](docs/RELEASE.md). The tag `v1.17.5` has to exist before `uses: CHAPIBUNNY/repolens@v1.17.5` resolves, and `@chappibunny/repolens@1.17.5` has to be on npm before `publish` can install it. `command: comment` and `command: badge` do not install that package.
 
 ## Add the badge to your repo
 
@@ -332,7 +332,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      - uses: CHAPIBUNNY/repolens@v1.17.4
+      - uses: CHAPIBUNNY/repolens@v1.17.5
         with:
           command: badge
           badge-url: https://USER.github.io/REPO/repolens-badge.json
@@ -361,7 +361,7 @@ Gallery repositories already publish this. Each one has a [score page](https://c
 
 Published system maps are Unicode diagrams drawn from import edges. RepoLens does not emit Mermaid.
 
-The publisher set is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). 1.14.0 adds the MCP server, the Marketplace action, and the docs badge. 1.14.1 sets the registry name to `io.github.CHAPIBUNNY/repolens`. 1.14.2 adds the gallery link to the badge line, `glama.json`, and `CITATION.cff`. 1.14.3 adds Cline setup docs and `llms-install.md`. 1.15.0 detects repository languages in `init --quick`, refuses empty scans, and adds per-command help. 1.15.1 makes `watch` exit 2 when those globs match nothing, and scores code health for Python and Go as well as JavaScript and TypeScript. 1.15.2 reads Python and Go imports in the dependency graph, skips comment and type-only imports, adds `repolens badge` and `repolens comment`, and adds gallery explained pages plus `llms.txt`. 1.15.3 skips Python `TYPE_CHECKING` imports, omits Node.js built-ins from external packages, groups Go hubs by package, and ignores test files as architecture-pattern evidence. 1.15.4 names the project from `package.json`, scores maturity from version, history, tests, CI, and docs, reports circular dependencies as findings, drops self-imports and noise data flows, and stops classifying `index` and `core` files by name. 1.15.5 reads a flat `src/` as one module, tells a library from a CLI by its `package.json`, splits runtime from development packages, keeps tests, examples, and build scripts out of hubs and security severity, and skips empty Route Map and GraphQL pages. 1.16.0 adds `repolens app` (a self-hosted GitHub App webhook), names a flat package after its directory, treats a framework description as a library when `main` is absent, and keeps test and example routes out of the product API. 1.16.1 skips snapshot, sample, fixture, example, and generated trees in the file count, orphan list, and type graph, and labels a call-heavy two-folder cycle as mutual recursion rather than a high-priority refactor. 1.17.0 adds Java and C# import graphs, package / namespace cycles, and code health. Unreleased work on main (not published, version still 1.17.4) treats each Go package directory as a module, counts Go imports per package, skips `tutorials/` unless `scan.include_dev_artifacts` is set, and keeps a docs site and test trees from outranking the product. Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md). The detail is in [CHANGELOG.md](CHANGELOG.md).
+The publisher set is Notion, Confluence, GitHub Wiki, Obsidian, and Markdown (`src/publishers`, 7 files). 1.14.0 adds the MCP server, the Marketplace action, and the docs badge. 1.14.1 sets the registry name to `io.github.CHAPIBUNNY/repolens`. 1.14.2 adds the gallery link to the badge line, `glama.json`, and `CITATION.cff`. 1.14.3 adds Cline setup docs and `llms-install.md`. 1.15.0 detects repository languages in `init --quick`, refuses empty scans, and adds per-command help. 1.15.1 makes `watch` exit 2 when those globs match nothing, and scores code health for Python and Go as well as JavaScript and TypeScript. 1.15.2 reads Python and Go imports in the dependency graph, skips comment and type-only imports, adds `repolens badge` and `repolens comment`, and adds gallery explained pages plus `llms.txt`. 1.15.3 skips Python `TYPE_CHECKING` imports, omits Node.js built-ins from external packages, groups Go hubs by package, and ignores test files as architecture-pattern evidence. 1.15.4 names the project from `package.json`, scores maturity from version, history, tests, CI, and docs, reports circular dependencies as findings, drops self-imports and noise data flows, and stops classifying `index` and `core` files by name. 1.15.5 reads a flat `src/` as one module, tells a library from a CLI by its `package.json`, splits runtime from development packages, keeps tests, examples, and build scripts out of hubs and security severity, and skips empty Route Map and GraphQL pages. 1.16.0 adds `repolens app` (a self-hosted GitHub App webhook), names a flat package after its directory, treats a framework description as a library when `main` is absent, and keeps test and example routes out of the product API. 1.16.1 skips snapshot, sample, fixture, example, and generated trees in the file count, orphan list, and type graph, and labels a call-heavy two-folder cycle as mutual recursion rather than a high-priority refactor. 1.17.0 adds Java and C# import graphs, package / namespace cycles, and code health. Unreleased work on main (not published, version still 1.17.5) treats each Go package directory as a module, counts Go imports per package, skips `tutorials/` unless `scan.include_dev_artifacts` is set, and keeps a docs site and test trees from outranking the product. Layout and counts are in [ARCHITECTURE.md](docs/ARCHITECTURE.md). The detail is in [CHANGELOG.md](CHANGELOG.md).
 
 ### System Overview (Technical Profile)
 

@@ -2,7 +2,7 @@
 
 All notable changes to RepoLens will be documented in this file.
 
-## Unreleased
+## 1.17.5 (2026-11-25)
 
 Accuracy fixes from the 25 Nov 2026 gap test. Confirmed on published 1.17.4 against colinhacks/zod `d40c329`, fastapi/full-stack-fastapi-template `77e550a`, square/retrofit `6b82cb5`, and sinatra/sinatra `2e3f791`. spf13/cobra `adbc881` was re-checked and left unchanged.
 

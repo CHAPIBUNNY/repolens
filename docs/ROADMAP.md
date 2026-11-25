@@ -2,13 +2,13 @@
 
 This document outlines the development path for RepoLens — what's shipped, what's next, and where we're headed.
 
-**Current Version:** 1.17.4  
+**Current Version:** 1.17.5  
 **npm Package:** `@chappibunny/repolens`  
 **Last Updated:** November 2026
 
 ---
 
-## What's Shipped (v0.1.0 → v1.17.4)
+## What's Shipped (v0.1.0 → v1.17.5)
 
 Everything below is live, tested, and available on npm.
 
@@ -164,6 +164,12 @@ Everything below is live, tested, and available on npm.
 - ✅ `server.json` for the MCP Registry (`io.github.CHAPIBUNNY/repolens`) and `smithery.yaml`
 - ✅ Composite GitHub Action **RepoLens Architecture Docs** (`action.yml`). Marketplace listing is a release checkbox
 - ✅ Docs by RepoLens badge on generated Markdown, on by default, `branding: false` to disable
+
+## v1.17.5 — Gap-test accuracy (zod, FastAPI template, retrofit, sinatra)
+
+- ✅ Workspace paths without a glob are packages; frameworks, test runners, and build tools come from workspace manifests; `packageManager` chooses the install command
+- ✅ An Astro `website/` is a documentation site; Gradle `rootProject.name` drops an aggregator suffix
+- ✅ `demo`/`publish`/`watch` diff against `origin/HEAD`; a root `hooks/` folder is not React Hooks; a Rakefile is Rake
 
 ## v1.17.4 — Gap-review accuracy (zk, bubbletea, redux, click)
 
